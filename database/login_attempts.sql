@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_login_time ON login_attempts(attempt_time);
  
  
  
+-- Logic to track failed login attempts per IP
