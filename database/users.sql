@@ -47,3 +47,4 @@ ORDER BY ordinal_position;
  
  
 -- Logic for manufacturer-specific permissions
+-- Add unique constraint to email field
