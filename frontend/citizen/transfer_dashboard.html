@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transfer TX20251119005 - Blockchain Land Records</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root { --primary: #2e7d32; --warning: #ff9800; --success: #4caf50; --danger: #f44336; }
+    .step { opacity: 0.5; pointer-events: none; }
+    .step.active { opacity: 1; pointer-events: auto; }
+    .step.completed { opacity: 1; }
+    .status-badge { font-size: 0.9rem; padding: 0.5rem 1rem; }
+    .doc-item { border: 1px dashed #ddd; border-radius: 8px; padding: 1rem; background: #f8f9fa; }
+  </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-success">
+  <div class="container">
+    <a class="navbar-brand" href="citizen_dashboard.html">Blockchain Land Records</a>
+  </div>
+</nav>
+
+<div class="container py-5">
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+
+      <!-- Header -->
+      <div class="card mb-4">
+        <div class="card-body text-center">
+          <h3>Property Transfer Dashboard</h3>
+          <h5 class="text-muted">TX20251119005</h5>
+          <p><strong>PK-PB-LHR-2025-000123</strong> • 10 Marla Residential Plot</p>
+          <span class="badge bg-warning status-badge">Awaiting Tax Payment</span>
+        </div>
+      </div>
+
+      <!-- Participants -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card text-center">
+            <div class="card-body">
+              <i class="fas fa-user text-primary fa-2x mb-2"></i>
+              <h6>Seller (You)</h6>
+              <p>Ahmed Ali<br>35602-1234567-1</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card text-center">
+            <div class="card-body">
+              <i class="fas fa-user text-success fa-2x mb-2"></i>
+              <h6>Buyer</h6>
+              <p>Muhammad Khan<br>35201-9876543-1</p>
+              <span class="badge bg-success">Accepted Request</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer Steps -->
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h5>Transfer Progress</h5>
+        </div>
+        <div class="card-body">
+
+          <!-- Step 1: Request Sent -->
+          <div class="d-flex align-items-center mb-4 step completed">
+            <div class="flex-shrink-0"><i class="fas fa-check-circle text-success fa-2x"></i></div>
+            <div class="flex-grow-1 ms-3"><strong>1. Transfer Request Sent & Accepted</strong><br><small>19 Nov 2025, 14:20</small></div>
+          </div>
+
+          <!-- Step 2: Tax Calculation -->
+          <div class="d-flex align-items-center mb-4 step completed">
+            <div class="flex-shrink-0"><i class="fas fa-check-circle text-success fa-2x"></i></div>
+            <div class="flex-grow-1 ms-3"><strong>2. Taxes & Fees Calculated</strong><br>
+              <small>Total: <strong>PKR 425,000</strong> • Challan 32-A Generated</small>
+              <a href="#" class="btn btn-sm btn-outline-success mt-2">Download Challan</a>
+            </div>
+          </div>
+
+          <!-- Step 3: Tax Payment Proof (UC009 + UC021) -->
+          <div class="d-flex align-items-center mb-4 step active">
+            <div class="flex-shrink-0"><i class="fas fa-clock text-warning fa-2x"></i></div>
+            <div class="flex-grow-1 ms-3">
+              <strong>3. Upload Tax Payment & P2P Payment Proof</strong>
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <label>Paid Challan 32-A (Bank Stamped)</label>
+                  <input type="file" class="form-control">
+                </div>
+                <div class="col-md-6">
+                  <label>P2P Payment Proof (UC021)</label>
+                  <input type="file" class="form-control">
+                  <small class="text-muted">Bank receipt, crypto tx, cash acknowledgment</small>
+                </div>
+              </div>
+              <button class="btn btn-success mt-3">Upload & Submit for Verification</button>
+            </div>
+          </div>
+
+          <!-- Remaining Steps (will activate later) -->
+          <div class="d-flex align-items-center mb-4 step">
+            <div class="flex-shrink-0"><i class="fas fa-file-signature fa-2x"></i></div>
+            <div class="flex-grow-1 ms-3"><strong>4. Upload Sale Deed & Documents</strong></div>
+          </div>
+          <div class="d-flex align-items-center mb-4 step">
+            <div class="flex-shrink-0"><i class="fas fa-gavel fa-2x"></i></div>
+            <div class="flex-grow-1 ms-3"><strong>5. Officer & Notary Verification</strong></div>
+          </div>
+          <div class="d-flex align-items-center step">
+            <div class="flex-shrink-0"><i class="fas fa-cube fa-2x text-primary"></i></div>
+            <div class="flex-grow-1 ms-3"><strong>6. Smart Contract Execution → Ownership Transferred!</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Success (shown when complete) -->
+      <div class="card mt-4 text-center bg-success text-white" style="display:none;">
+        <div class="card-body">
+          <i class="fas fa-trophy fa-4x mb-3"></i>
+          <h2>Transfer Completed Successfully!</h2>
+          <p>New Fard issued to buyer • View on blockchain explorer</p>
+          <a href="property_details.html?id=PK-PB-LHR-2025-000123" class="btn btn-light btn-lg">View Updated Record</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

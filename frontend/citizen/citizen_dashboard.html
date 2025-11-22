@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citizen Dashboard – Punjab Blockchain Land Records</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+:root {
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --secondary: #4caf50;
+  --warning: #ff9800;
+  --danger: #d32f2f;
+  --light-bg: #f0f7f0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to bottom, #f0f7f0, #e8f5e8);
+  margin: 0;
+  min-height: 100vh;
+  padding-top: 70px; 
+}
+
+/* Navbar */
+.navbar {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+/* Top Navbar Buttons */
+.top-action-btn {
+  border-radius: 20px;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.9rem;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s;
+}
+.top-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+/* Badges */
+.badge-pulse, .badge-upload {
+  font-size: 0.65rem;
+  padding: 0.25em 0.45em;
+  border-radius: 10px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  animation: pulse 2s infinite;
+}
+.badge-pulse { background: var(--danger); color: #fff; }
+.badge-upload { background: var(--warning); color: #000; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Stat Cards */
+.stat-card {
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transition: all 0.3s;
+  padding: 1.5rem;
+  text-align: center;
+  background: #fff;
+}
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+}
+
+/* Quick Action Buttons */
+.quick-btn {
+  border-radius: 14px;
+  padding: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.quick-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+/* Highlight Card */
+.highlight-card {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  background: #e8f5e8;
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold fs-4" href="#">
+      <i class="fas fa-landmark me-2"></i>Blockchain Land Records
+    </a>
+    <div class="d-flex align-items-center gap-2">
+
+      <!-- Incoming Transfers -->
+      <a href="transfer_dashboard.html?type=incoming" 
+         class="btn btn-outline-warning top-action-btn position-relative">
+        <i class="fas fa-inbox fa-sm me-1"></i> Incoming Transfers
+        <span class="badge badge-pulse">1 NEW</span>
+      </a>
+
+      <!-- Upload Payment Proof -->
+      <a href="record_p2p_payment.html" 
+         class="btn btn-outline-success top-action-btn position-relative">
+        <i class="fas fa-upload fa-sm me-1"></i> Upload Payment Proof
+        <span class="badge badge-upload">UC021</span>
+      </a>
+
+      <!-- User + Logout -->
+      <div class="d-flex align-items-center text-white border-start border-white ps-2">
+        <span class="me-2"><i class="fas fa-user-circle fa-lg me-1"></i><strong>Ahmed Ali</strong></span>
+        <a href="../auth/login.html" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </div>
+
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN DASHBOARD -->
+<div class="container py-5">
+
+  <!-- Welcome -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="text-success">Welcome back, Ahmed Ali!</h2>
+      <p class="text-muted fs-6">Blockchain ID: <code class="bg-light px-2 py-1 rounded">blk1Pk7x9aB3dF8gH9jK2mN4pQ5rS7tU...</code></p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-4 mb-5">
+    <div class="col-lg-3 col-md-6">
+      <div class="stat-card">
+        <i class="fas fa-home text-success fa-3x mb-2"></i>
+        <h3 class="fw-bold text-success">12</h3>
+        <p class="text-muted mb-0">Total Properties</p>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stat-card">
+        <i class="fas fa-exchange-alt text-warning fa-3x mb-2"></i>
+        <h3 class="fw-bold text-warning">3</h3>
+        <p class="text-muted mb-0">Active Transfers</p>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stat-card">
+        <i class="fas fa-bell text-primary fa-3x mb-2"></i>
+        <h3 class="fw-bold text-primary">6</h3>
+        <p class="text-muted mb-0">Notifications</p>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stat-card">
+        <i class="fas fa-shield-alt text-success fa-3x mb-2"></i>
+        <h3 class="fw-bold text-success">100%</h3>
+        <p class="text-muted mb-0">Records Secure</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row">
+    <div class="col-lg-8">
+      <h4 class="mb-3">Quick Actions</h4>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <a href="register_property.html" class="btn btn-success quick-btn w-100">
+            <i class="fas fa-plus fa-lg me-2"></i> Register New Property
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="my_properties.html" class="btn btn-outline-success quick-btn w-100">
+            <i class="fas fa-list fa-lg me-2"></i> My Properties
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="initiate_transfer.html" class="btn btn-outline-primary quick-btn w-100">
+            <i class="fas fa-exchange-alt fa-lg me-2"></i> Initiate Transfer
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="validate_integrity.html" class="btn highlight-card quick-btn w-100">
+            <i class="fas fa-shield-alt fa-lg me-2"></i> Validate Document Integrity
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

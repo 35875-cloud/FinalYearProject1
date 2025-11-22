@@ -195,6 +195,15 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         
+        .userid-info {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--primary-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 0 15px;
@@ -227,7 +236,7 @@
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand text-white" href="citizen_dashboard.html">
+            <a class="navbar-brand text-white" href="../citizen/citizen_dashboard.html">
                 <i class="fas fa-landmark me-2"></i>Blockchain Land Records
             </a>
         </div>
@@ -252,19 +261,27 @@
                                     <h5 class="mb-4">Sign in to your account</h5>
                                     <form id="loginFormSubmit">
                                         <div class="mb-4">
-                                            <label class="form-label">Username (Email or CNIC)</label>
+                                            <label class="form-label">UserID (Blockchain ID)</label>
                                             <div class="input-group">
-                                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                                <input type="text" class="form-control" placeholder="Enter email or CNIC" required>
+                                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                                <input type="text" class="form-control" placeholder="Enter your Blockchain ID" id="userId" required>
+                                            </div>
+                                            <div class="userid-info">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Your UserID is the Blockchain ID created during registration
                                             </div>
                                         </div>
                                         <div class="mb-4">
                                             <label class="form-label">Password</label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                                <input type="password" class="form-control" placeholder="Enter your password" required>
+                                                <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required>
+                                                <span class="input-group-text" style="cursor:pointer;" id="toggleLoginPassword">
+                                                    <i class="fas fa-eye"></i>
+                                                </span>
                                             </div>
                                         </div>
+
                                         <div class="mb-4 d-flex justify-content-between align-items-center">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="rememberMe">
@@ -285,7 +302,7 @@
                                     <div class="register-section">
                                         <h5><i class="fas fa-user-plus me-2"></i>New to Blockchain Land Records?</h5>
                                         <p>Create an account to access land record services</p>
-                                        <a href="register.html" class="btn btn-outline-primary">
+                                        <a href="../auth/register.html" class="btn btn-outline-primary">
                                             <i class="fas fa-user-plus me-2"></i>Register Now
                                         </a>
                                     </div>
@@ -294,13 +311,13 @@
                                 <!-- Forgot Password Form -->
                                 <div id="forgotPasswordForm" style="display:none;" class="form-section">
                                     <h5 class="mb-4">Reset Your Password</h5>
-                                    <p class="text-muted mb-4">Enter your email or mobile number to receive a password reset OTP.</p>
+                                    <p class="text-muted mb-4">Enter your UserID (Blockchain ID) to receive a password reset OTP on your registered mobile.</p>
                                     <form id="resetForm">
                                         <div class="mb-4">
-                                            <label class="form-label">Email or Mobile</label>
+                                            <label class="form-label">UserID (Blockchain ID)</label>
                                             <div class="input-group">
-                                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                                <input type="text" class="form-control" placeholder="Enter email or mobile number" required>
+                                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                                <input type="text" class="form-control" placeholder="Enter your Blockchain ID" id="forgotUserId" required>
                                             </div>
                                         </div>
                                         <div class="d-flex justify-content-between">
@@ -317,7 +334,7 @@
                                 <!-- OTP Verification Form -->
                                 <div id="otpForm" style="display:none;" class="form-section">
                                     <h5 class="mb-4">Enter Verification Code</h5>
-                                    <p class="text-muted mb-4">We've sent a 6-digit verification code to your registered email/mobile.</p>
+                                    <p class="text-muted mb-4">We've sent a 6-digit verification code to your registered mobile number.</p>
                                     <form id="otpFormSubmit">
                                         <div class="mb-4">
                                             <label class="form-label">OTP Code</label>
@@ -352,41 +369,137 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Login form submission
-        document.getElementById('loginFormSubmit').addEventListener('submit', (e) => {
-            e.preventDefault();
-            // Simulate login success and redirection
-            alert('Login successful! Redirecting to Citizen Dashboard.');
-            window.location.href = 'citizen_dashboard.html';
+        // Elements
+        const loginForm = document.getElementById('loginFormSubmit');
+        const userIdInput = document.getElementById('userId');
+        const loginPassword = document.getElementById('loginPassword');
+        const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+
+        // Forgot password elements
+        const forgotForm = document.getElementById('resetForm');
+        const forgotUserIdInput = document.getElementById('forgotUserId');
+        const otpForm = document.getElementById('otpForm');
+        const successMessage = document.getElementById('successMessage');
+
+        // Create error message spans after input groups
+        const userIdError = document.createElement('div');
+        userIdError.className = 'text-danger small mt-1';
+        loginForm.querySelector('.input-group').after(userIdError);
+
+        const passwordError = document.createElement('div');
+        passwordError.className = 'text-danger small mt-1';
+        loginPassword.parentNode.after(passwordError);
+
+        const forgotError = document.createElement('div');
+        forgotError.className = 'text-danger small mt-1';
+        forgotForm.querySelector('.input-group').after(forgotError);
+
+        // Regex
+        const userIdRegex = /^blk[a-z0-9]{8,}$/; // Blockchain ID format: starts with "blk" followed by 8+ alphanumeric chars
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+        // Toggle login password visibility
+        toggleLoginPassword.addEventListener('click', () => {
+            if (loginPassword.type === 'password') {
+                loginPassword.type = 'text';
+                toggleLoginPassword.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                loginPassword.type = 'password';
+                toggleLoginPassword.innerHTML = '<i class="fas fa-eye"></i>';
+            }
         });
-        
-        // Forgot password form submission
-        document.getElementById('resetForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            document.getElementById('forgotPasswordForm').style.display = 'none';
-            document.getElementById('otpForm').style.display = 'block';
+
+        // Login validation
+        userIdInput.addEventListener('input', () => {
+            const value = userIdInput.value.trim();
+            if (value === '') userIdError.textContent = 'UserID is required.';
+            else if (!userIdRegex.test(value)) userIdError.textContent = 'Enter a valid Blockchain ID (starts with "blk").';
+            else userIdError.textContent = '';
         });
-        
-        // OTP form submission
-        document.getElementById('otpFormSubmit').addEventListener('submit', (e) => {
-            e.preventDefault();
-            document.getElementById('otpForm').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'block';
+
+        loginPassword.addEventListener('input', () => {
+            const value = loginPassword.value;
+            if (value === '') passwordError.textContent = 'Password is required.';
+            else if (!passwordRegex.test(value)) passwordError.textContent = 'Password must be 8+ chars with uppercase, lowercase, number, special char.';
+            else passwordError.textContent = '';
         });
-        
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let valid = true;
+
+            // Validate UserID
+            const userIdVal = userIdInput.value.trim();
+            if (userIdVal === '') { 
+                userIdError.textContent = 'UserID is required.'; 
+                valid = false; 
+            }
+            else if (!userIdRegex.test(userIdVal)) { 
+                userIdError.textContent = 'Enter a valid Blockchain ID (starts with "blk").'; 
+                valid = false; 
+            }
+            else userIdError.textContent = '';
+
+            // Validate password
+            const pVal = loginPassword.value;
+            if (pVal === '') { 
+                passwordError.textContent = 'Password is required.'; 
+                valid = false; 
+            }
+            else if (!passwordRegex.test(pVal)) { 
+                passwordError.textContent = 'Password must be 8+ chars with uppercase, lowercase, number, special char.'; 
+                valid = false; 
+            }
+            else passwordError.textContent = '';
+
+            if (!valid) return;
+
+            // If valid
+            window.location.href = '../citizen/citizen_dashboard.html';
+        });
+
+        // Forgot password validation
+        forgotUserIdInput.addEventListener('input', () => {
+            const value = forgotUserIdInput.value.trim();
+            if (value === '') forgotError.textContent = 'UserID is required.';
+            else if (!userIdRegex.test(value)) forgotError.textContent = 'Enter a valid Blockchain ID (starts with "blk").';
+            else forgotError.textContent = '';
+        });
+
+        // Show/hide forms
         function showForgotPassword() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('forgotPasswordForm').style.display = 'block';
-            document.getElementById('otpForm').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'none';
+            otpForm.style.display = 'none';
+            successMessage.style.display = 'none';
         }
-        
+
         function showLoginForm() {
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('forgotPasswordForm').style.display = 'none';
-            document.getElementById('otpForm').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'none';
+            otpForm.style.display = 'none';
+            successMessage.style.display = 'none';
         }
+
+        // Forgot password submit
+        forgotForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = forgotUserIdInput.value.trim();
+            if (val === '' || !userIdRegex.test(val)) {
+                forgotError.textContent = 'Enter a valid Blockchain ID (starts with "blk").';
+                return;
+            }
+            forgotError.textContent = '';
+            document.getElementById('forgotPasswordForm').style.display = 'none';
+            otpForm.style.display = 'block';
+        });
+
+        // OTP form submit
+        document.getElementById('otpFormSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            otpForm.style.display = 'none';
+            successMessage.style.display = 'block';
+        });
     </script>
 </body>
 </html>
