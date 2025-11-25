@@ -48,3 +48,4 @@ ORDER BY ordinal_position;
  
 -- Logic for manufacturer-specific permissions
 -- Add unique constraint to email field
+-- Define role hierarchy for admin vs manufacturer
