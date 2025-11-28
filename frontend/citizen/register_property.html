@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Register New Property - Step-by-Step</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,31 +12,30 @@
     :root { --primary: #2e7d32; }
     .step { display: none; }
     .step.active { display: block; }
-    .progress .progress-bar { background: var(--primary); }
+    .progress .progress-bar { background: var(--primary); transition: width .25s ease; }
     canvas { background:#fff; }
+    #landPicPreview { max-width:250px; border-radius:8px; border:1px solid #ccc; display:none; }
+    #signature-preview { display:none; margin-top:15px; max-width:100%; border:1px solid #ccc; }
   </style>
 </head>
 
 <body class="bg-light">
-
 <div class="container py-5">
   <div class="row justify-content-center">
     <div class="col-lg-10">
       <div class="card shadow">
-
         <div class="card-header bg-success text-white text-center">
           <h4>Register New Property (UC004)</h4>
         </div>
 
         <div class="card-body">
-
           <!-- Progress -->
           <div class="progress mb-4" style="height: 8px;">
-            <div class="progress-bar" style="width: 14%;"></div>
+            <div class="progress-bar" style="width: 25%;"></div>
           </div>
 
           <div class="text-center mb-4">
-            <strong>Step <span id="currentStep">1</span> of 7</strong>
+            <strong>Step <span id="currentStep">1</span> of 4</strong>
           </div>
 
           <!-- STEP 1 -->
@@ -46,11 +45,11 @@
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label>Property Type *</label>
-                <select class="form-select" required>
+                <select class="form-select" id="propertyType" required>
                   <option>Residential Plot</option>
                   <option>Commercial Plot</option>
                   <option>Agricultural Land</option>
-                  <option>House/Flat</option>
+                  <option>House</option>
                 </select>
               </div>
 
@@ -61,25 +60,32 @@
 
               <div class="col-md-6 mb-3">
                 <label>Tehsil *</label>
-                <select class="form-select"><option>Cantt</option></select>
+                <select class="form-select" id="tehsil"><option>Cantt</option></select>
               </div>
 
               <div class="col-md-6 mb-3">
                 <label>Mauza *</label>
-                <input type="text" class="form-control" placeholder="e.g. Gulberg" required>
+                <input type="text" class="form-control" id="mauza" placeholder="e.g. Gulberg" required>
               </div>
             </div>
 
-            <button class="btn btn-success float-end" onclick="nextStep(2)">Next</button>
+            <button class="btn btn-success float-end" onclick="goToStep(2)">Next</button>
           </div>
 
           <!-- STEP 2 -->
           <div class="step" id="step2">
-            <h5>2. Patwari Details & Khasra Areas</h5>
+            <h5>2. Patwari Details, Khasra Areas & Land Picture</h5>
 
             <div class="row mb-3">
-              <div class="col-md-4"><input type="text" class="form-control" placeholder="Khewat *"></div>
-              <div class="col-md-4"><input type="text" class="form-control" placeholder="Khatooni *"></div>
+              <div class="col-md-4"><input type="text" class="form-control" id="khewat" placeholder="Khewat *"></div>
+              <div class="col-md-4"><input type="text" class="form-control" id="khatooni" placeholder="Khatooni *"></div>
+            </div>
+
+            <!-- IMAGE UPLOAD (LAND PICTURE) -->
+            <div class="mb-3">
+              <label class="form-label">Upload Land Picture *</label>
+              <input type="file" class="form-control" accept="image/*" id="landPicInput">
+              <img id="landPicPreview" alt="Land Image Preview" />
             </div>
 
             <table class="table" id="khasraTable">
@@ -88,7 +94,7 @@
                 <tr>
                   <td><input type="text" class="form-control" placeholder="112/1"></td>
                   <td><input type="number" class="form-control area-input" placeholder="5" onchange="calcTotal()"></td>
-                  <td><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove(); calcTotal()">X</button></td>
+                  <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calcTotal()">X</button></td>
                 </tr>
               </tbody>
             </table>
@@ -97,41 +103,13 @@
 
             <p class="mt-3"><strong>Total Area: <span id="totalArea">0</span> Marla | <span id="kanal">0</span> Kanal</strong></p>
 
-            <button class="btn btn-secondary me-2" onclick="prevStep(1)">Back</button>
-            <button class="btn btn-success float-end" onclick="nextStep(3)">Next</button>
+            <button class="btn btn-secondary me-2" onclick="goToStep(1)">Back</button>
+            <button class="btn btn-success float-end" onclick="validateStep2()">Next</button>
           </div>
 
-          <!-- STEP 3 -->
+          <!-- STEP 3 - DIGITAL SIGNATURE -->
           <div class="step" id="step3">
-            <h5>3. Ownership Details</h5>
-            <p>(Your content for Step 3 goes here)</p>
-
-            <button class="btn btn-secondary me-2" onclick="prevStep(2)">Back</button>
-            <button class="btn btn-success float-end" onclick="nextStep(4)">Next</button>
-          </div>
-
-          <!-- STEP 4 -->
-          <div class="step" id="step4">
-            <h5>4. Upload Documents</h5>
-            <p>(Your upload fields go here)</p>
-
-            <button class="btn btn-secondary me-2" onclick="prevStep(3)">Back</button>
-            <button class="btn btn-success float-end" onclick="nextStep(5)">Next</button>
-          </div>
-
-          <!-- STEP 5 -->
-          <div class="step" id="step5">
-            <h5>5. Review Information</h5>
-            <p>(Review summary goes here)</p>
-
-            <button class="btn btn-secondary me-2" onclick="prevStep(4)">Back</button>
-            <button class="btn btn-success float-end" onclick="nextStep(6)">Next</button>
-          </div>
-
-          <!-- STEP 6 - DIGITAL SIGNATURE -->
-          <div class="step" id="step6">
-            <h5>6. Owner Digital Signature</h5>
-
+            <h5>3. Owner Digital Signature</h5>
             <p>Please sign below to authorize the property registration.</p>
 
             <canvas id="signature-pad" style="border:2px solid #333; width:100%; height:200px; border-radius:8px;"></canvas>
@@ -141,24 +119,22 @@
               <button class="btn btn-primary btn-sm" id="save-btn"><i class="fas fa-save"></i> Save Signature</button>
             </div>
 
-            <img id="signature-preview" style="display:none; margin-top:15px; max-width:100%; border:1px solid #ccc;" />
+            <img id="signature-preview" alt="Signature preview" />
 
-            <button class="btn btn-secondary mt-4 me-2" onclick="prevStep(5)">Back</button>
+            <button class="btn btn-secondary mt-4 me-2" onclick="goToStep(2)">Back</button>
             <button class="btn btn-success mt-4 float-end" onclick="validateSignature()">Next</button>
           </div>
 
-          <!-- STEP 7 -->
-          <div class="step" id="step7">
-            <h5>7. Registration Complete!</h5>
+          <!-- STEP 4 -->
+          <div class="step" id="step4">
+            <h5>4. Registration Complete!</h5>
 
             <div class="alert alert-success text-center">
               <h4>Property Registered Successfully!</h4>
               <p>Property ID: <strong>PK-PB-LHR-2025-001234</strong></p>
-
               <a href="property_details.html?id=PK-PB-LHR-2025-001234" class="btn btn-success">View Property</a>
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -169,76 +145,139 @@
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 
 <script>
-// === Step Controls ===
-let current = 1;
-function nextStep(n){ document.getElementById('step'+current).classList.remove('active'); current=n; document.getElementById('step'+n).classList.add('active'); updateProgress(); }
-function prevStep(n){ nextStep(n); }
+document.addEventListener('DOMContentLoaded', () => {
 
-function updateProgress(){
-  document.querySelector('.progress-bar').style.width = (current * 14.28) + '%';
-  document.getElementById('currentStep').textContent = current;
-}
+  window.currentStep = 1;
+  const totalSteps = 4;
 
-// === Khasra Add/Remove ===
-function addKhasra(){
-  const row = `<tr>
+  function updateProgressUI() {
+    const pct = (window.currentStep / totalSteps) * 100;
+    document.querySelector('.progress-bar').style.width = pct + '%';
+    document.getElementById('currentStep').textContent = window.currentStep;
+  }
+  updateProgressUI();
+
+  window.goToStep = function(step) {
+    if (step < 1 || step > totalSteps) return;
+    document.getElementById('step' + window.currentStep).classList.remove('active');
+    window.currentStep = step;
+    document.getElementById('step' + window.currentStep).classList.add('active');
+    updateProgressUI();
+    if (step === 3) initSignaturePad();
+  };
+
+  window.addKhasra = function() {
+    const row = `<tr>
       <td><input type="text" class="form-control"></td>
       <td><input type="number" class="form-control area-input" onchange="calcTotal()"></td>
-      <td><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove(); calcTotal()">X</button></td>
+      <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calcTotal()">X</button></td>
     </tr>`;
-  document.querySelector('#khasraTable tbody').insertAdjacentHTML('beforeend', row);
-}
-function calcTotal(){
-  let total = 0;
-  document.querySelectorAll('.area-input').forEach(i => total += parseFloat(i.value) || 0);
-  document.getElementById('totalArea').textContent = total;
-  document.getElementById('kanal').textContent = (total / 20).toFixed(2);
-}
+    document.querySelector('#khasraTable tbody').insertAdjacentHTML('beforeend', row);
+  };
 
-// === Signature Pad Setup ===
-let signaturePad;
-const canvas = document.getElementById("signature-pad");
+  window.calcTotal = function(){
+    let total = 0;
+    document.querySelectorAll('.area-input').forEach(i => total += parseFloat(i.value) || 0);
+    document.getElementById('totalArea').textContent = total;
+    document.getElementById('kanal').textContent = (total / 20).toFixed(2);
+  };
 
-function initSignaturePad(){
-  if (!canvas) return;
-  const ratio = Math.max(window.devicePixelRatio || 1, 1);
-  canvas.width = canvas.offsetWidth * ratio;
-  canvas.height = canvas.offsetHeight * ratio;
-  canvas.getContext("2d").scale(ratio, ratio);
-  signaturePad = new SignaturePad(canvas);
-}
+  /* LAND PICTURE PREVIEW */
+  const landPicInput = document.getElementById('landPicInput');
+  const landPicPreview = document.getElementById('landPicPreview');
 
-window.onload = initSignaturePad;
-window.onresize = initSignaturePad;
+  landPicInput.addEventListener('change', () => {
+    const file = landPicInput.files[0];
+    if (!file) {
+      landPicPreview.style.display = 'none';
+      landPicPreview.src = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      landPicPreview.src = e.target.result;
+      landPicPreview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
 
-// Clear Signature
-document.getElementById("clear-btn").onclick = function(){
-  signaturePad.clear();
-};
+  window.validateStep2 = function() {
+    if (!landPicInput.files[0]) {
+      alert('Please upload land picture before continuing.');
+      return;
+    }
+    goToStep(3);
+  };
 
-// Save Signature
-document.getElementById("save-btn").onclick = function(){
-  if (signaturePad.isEmpty()){
-    alert("Please sign first.");
-    return;
+  /* SIGNATURE */
+  let signaturePad = null;
+  const canvas = document.getElementById('signature-pad');
+  const clearBtn = document.getElementById('clear-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const sigPreview = document.getElementById('signature-preview');
+
+  function resizeSignatureCanvas(preserveDataURL) {
+    const dataUrl = preserveDataURL && signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL() : null;
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const computedStyle = getComputedStyle(canvas);
+    const cssWidth = parseFloat(computedStyle.width);
+    const cssHeight = parseFloat(computedStyle.height);
+
+    canvas.width = Math.round(cssWidth * ratio);
+    canvas.height = Math.round(cssHeight * ratio);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)' });
+
+    if (dataUrl) signaturePad.fromDataURL(dataUrl);
   }
-  let dataURL = signaturePad.toDataURL();
-  let img = document.getElementById("signature-preview");
-  img.src = dataURL;
-  img.style.display = "block";
-  img.setAttribute("data-signature", dataURL);
-  alert("Signature saved!");
-};
 
-// Validate Before Final Step
-function validateSignature(){
-  const sig = document.getElementById("signature-preview").getAttribute("data-signature");
-  if (!sig){
-    alert("Please sign and save signature before continuing.");
-    return;
-  }
-  nextStep(7);
-}
+  window.initSignaturePad = function() {
+    if (!canvas) return;
+    resizeSignatureCanvas(true);
+  };
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('step3').classList.contains('active')) {
+      resizeSignatureCanvas(true);
+    } else {
+      resizeSignatureCanvas(true);
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    if (!signaturePad) initSignaturePad();
+    signaturePad.clear();
+    sigPreview.style.display = 'none';
+    sigPreview.src = '';
+  });
+
+  saveBtn.addEventListener('click', () => {
+    if (!signaturePad) initSignaturePad();
+    if (signaturePad.isEmpty()) {
+      alert('Please sign first.');
+      return;
+    }
+    const dataURL = signaturePad.toDataURL();
+    sigPreview.src = dataURL;
+    sigPreview.style.display = 'block';
+    sigPreview.setAttribute('data-signature', dataURL);
+    alert('Signature saved!');
+  });
+
+  window.validateSignature = function() {
+    const sig = sigPreview.getAttribute('data-signature');
+    if (!sig) {
+      alert('Please sign and save signature before continuing.');
+      return;
+    }
+    goToStep(4);
+  };
+
+  initSignaturePad();
+});
 </script>
 
 </body>
