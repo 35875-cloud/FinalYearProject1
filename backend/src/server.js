@@ -1,36 +1,17 @@
+const express = require("express");
+const cors = require("cors");
 require("dotenv").config();
-const app = require("./app");
 
-const PORT = process.env.PORT || 5000;
+const app = express();
 
-app.listen(PORT, () => {
-  console.log("===========================================");
-  console.log(`🚀 Backend running at: http://localhost:${PORT}`);
-  console.log("===========================================");
-});
-const os = require("os");
-const networkInterfaces = os.networkInterfaces();
-let localIP = "localhost";
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
-for (let iface of Object.values(networkInterfaces)) {
-  for (let alias of iface) {
-    if (alias.family === "IPv4" && !alias.internal) {
-      localIP = alias.address;
-    }
-  }
-}
+// DB Connection
+require("./config/db");
 
-app.listen(PORT, () => {
-  console.log("===========================================");
-  console.log(`🚀 Backend running locally:  http://localhost:${PORT}`);
-  console.log(`🌐 Backend on network:     http://${localIP}:${PORT}`);
-  console.log("===========================================");
-});
+// Load routes (CORRECT PATH)
+app.use("/api/auth", require("./routes/auth"));
 
-
-// const db = require("./config/db");
-
-// db.authenticate()
-//   .then(() => console.log("Database connected"))
-//   .catch(err => console.log("DB error:", err));
-// db.sync({ force: false });
+app.listen(4000, () => console.log("🚀 Server running on port 4000"));

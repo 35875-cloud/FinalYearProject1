@@ -25,6 +25,8 @@
     "password-validator": "^5.3.0",
     "pg": "^8.16.3",
     "sequelize": "^6.37.7",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
     "uuid": "^13.0.0",
     "web3": "^4.16.0"
   },
