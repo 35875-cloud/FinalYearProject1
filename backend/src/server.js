@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// DB Connection
+// DB Connection//
 require("./config/db");
 
 // Load routes (CORRECT PATH)
