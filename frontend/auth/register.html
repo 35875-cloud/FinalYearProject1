@@ -344,8 +344,10 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
+let tempUser = {}; // store temporary info until OTP is verified
+
 document.getElementById("registerForm").addEventListener("submit", async function (e) {
-    e.preventDefault(); // Stop form reload
+    e.preventDefault();
 
     const name = document.getElementById("name").value.trim();
     const cnic = document.getElementById("cnic").value.trim();
@@ -353,35 +355,74 @@ document.getElementById("registerForm").addEventListener("submit", async functio
     const mobile = document.getElementById("mobile").value.trim();
     const password = document.getElementById("password").value.trim();
 
-    // Validate
-    if (!name || !cnic || !email || !mobile || !password) {
-        return alert("All fields are required.");
-    }
-
     const data = { name, cnic, email, mobile, password };
+    tempUser = data; // store for next step (OTP verification)
 
     try {
-        const res = await fetch("http://localhost:4000/api/auth/register-citizen", {
+        const res = await fetch("http://127.0.0.1:4000/api/auth/register-citizen", {
+
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         });
 
         const result = await res.json();
+        console.log(result);
 
         if (result.success) {
-            alert("Registered Successfully! Your UserID is: " + result.userID);
-            window.location.href = "login.html";
+            // hide register form
+            document.getElementById("registerForm").style.display = "none";
+            // show OTP form
+            document.getElementById("otpForm").style.display = "block";
+
+            // show user email on screen
+            document.getElementById("emailNumberDisplay").innerText = email;
+
         } else {
-            alert(result.message || "Registration failed");
+            alert(result.message);
         }
 
     } catch (err) {
-        console.log(err);
-        alert("Server unreachable. Make sure backend is running.");
+        alert("Server unreachable.");
     }
 });
+
+// VERIFY OTP
+document.getElementById("verifyOtp").addEventListener("click", async function () {
+    const otp = document.getElementById("emailOtp").value.trim();
+    if (!otp) return alert("Enter OTP");
+
+    const data = { ...tempUser, otp }; // combine user data + OTP
+
+    try {
+        const res = await fetch("http://127.0.0.1:4000/api/auth/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        console.log(result);
+
+        if (result.success) {
+            // hide OTP form
+            document.getElementById("otpForm").style.display = "none";
+
+            // show success message
+document.getElementById("successMessage").style.display = "block";
+            document.getElementById("bkId").innerText = result.userID;
+        } else {
+            alert(result.message);
+        }
+
+    } catch (err) {
+        alert("Server unreachable.");
+    }
+});
+console.log("📩 Request received at /register-citizen");
+
 </script>
+
 
 
 </body>

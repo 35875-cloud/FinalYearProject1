@@ -1,53 +1,35 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
-
 const bcrypt = require("bcrypt");
+const { v4: uuidv4 } = require("uuid");
 
-// Citizen registration
 router.post("/register-citizen", async (req, res) => {
     try {
         const { name, cnic, email, mobile, password } = req.body;
 
-        // Check duplicate CNIC
-        const checkCnic = await pool.query(
-            "SELECT * FROM users WHERE cnic = $1",
-            [cnic]
-        );
+        console.log("📩 Received:", req.body);
 
-        if (checkCnic.rows.length > 0) {
-            return res.json({ success: false, message: "CNIC already registered" });
-        }
-
-        // Hash Password
         const hash = await bcrypt.hash(password, 10);
-
-        // Generate UserID
+        const id = uuidv4();
         const userID = "USR" + Math.floor(100000 + Math.random() * 900000);
 
-        // Insert user into DB
         await pool.query(
-            `INSERT INTO users (user_id, name, cnic, email, mobile, password_hash, role)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [userID, name, cnic, email, mobile, hash, "CITIZEN"]
+            `INSERT INTO users (id, user_id, name, cnic, email, mobile, password_hash, role)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [id, userID, name, cnic, email, mobile, hash, "CITIZEN"]
         );
 
-        res.json({
-            success: true,
-            message: "User registered",
-            userID
-        });
+        res.json({ success: true, userID });
 
-    }catch (err) {
-    console.error("🔥 REAL REGISTRATION ERROR:", err.message);
-    res.status(500).json({ success: false, message: err.message });
-}
-
+    } catch (err) {
+        console.error("🔥 ERROR:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 router.get("/test", (req, res) => {
-    res.json({ success: true, message: "Auth route is working!" });
+    res.json({ success: true, message: "Backend is running fine!" });
 });
-
 
 module.exports = router;
