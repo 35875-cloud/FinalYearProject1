@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const nacl = require("tweetnacl"); 
 const CryptoJS = require("crypto-js");
 
-// ---------------------------------------------------
+// /---------------------------------------------------
 // REGISTER CITIZEN
 // ---------------------------------------------------
 exports.registerCitizen = async (req, res) => {
