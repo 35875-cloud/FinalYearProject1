@@ -1,21 +1,15 @@
-// src/server.js
 const express = require("express");
 const cors = require("cors");
+const app = express();
 require("dotenv").config();
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// Debug log all requests
-app.use((req, res, next) => {
-    console.log("➡️", req.method, req.url);
-    next();
-});
+// MIDDLEWARE
+app.use(cors());          // FIXES "Failed to fetch"
+app.use(express.json());  // FIXES req.body undefined
 
 // ROUTES
 app.use("/api/auth", require("./routes/auth"));
 
-const PORT = 4000;
-app.listen(PORT, () => console.log("🚀 Server running on port " + PORT));
+app.listen(4000, () => {
+    console.log("🚀 Server running on 4000");
+});

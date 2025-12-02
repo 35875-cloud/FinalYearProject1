@@ -1,641 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blockchain Land Records - Secure & Transparent Property Management</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Punjab Land Records</title>
+
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Custom CSS -->
   <style>
-    :root {
-      --primary-color: #2e7d32;
-      --primary-dark: #1b5e20;
-      --primary-light: #4caf50;
-      --secondary-color: #1565c0;
-      --accent-color: #ff9800;
-      --light-bg: #f8f9fa;
-      --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-      --transition: all 0.3s ease;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      overflow-x: hidden;
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      transition: 0.3s;
     }
-    
-    /* Navigation */
+
+    /* Navbar */
     .navbar {
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-      padding: 1rem 0;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      position: fixed;
-      width: 100%;
-      top: 0;
-      z-index: 1000;
-      transition: var(--transition);
+      background: #2e7d32; /* Green */
     }
-    
-    .navbar-brand {
-      font-weight: 700;
-      font-size: 1.5rem;
+
+    .navbar-brand,
+    .navbar-nav .nav-link {
+      color: #fff !important;
+      font-weight: 600;
     }
-    
-    .nav-link {
-      font-weight: 500;
-      transition: var(--transition);
-      margin: 0 0.5rem;
+
+    .theme-toggle {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
     }
-    
-    .nav-link:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-    }
-    
-    .btn-outline-light:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-    
+
     /* Hero Section */
     .hero {
-      background: linear-gradient(135deg, rgba(46, 125, 50, 0.9), rgba(21, 101, 192, 0.8)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%232e7d32"/><path d="M0 0L100 100M100 0L0 100" stroke="%231b5e20" stroke-width="1"/></svg>');
-      background-size: cover;
-      background-position: center;
+      background: url('https://images.pexels.com/photos/158827/field-corn-harvest-countryside-158827.jpeg') 
+                  no-repeat center/cover;
+      padding: 130px 0;
       color: white;
-      padding: 10rem 0 6rem;
       text-align: center;
-      margin-top: 76px;
+      position: relative;
     }
-    
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
     .hero h1 {
-      font-size: 3.5rem;
+      font-size: 48px;
       font-weight: 700;
-      margin-bottom: 1.5rem;
     }
-    
+
     .hero p {
-      font-size: 1.25rem;
-      max-width: 700px;
-      margin: 0 auto 2rem;
-      opacity: 0.9;
+      font-size: 20px;
+      margin: 15px 0 25px;
     }
-    
-    .btn-hero {
-      background: white;
-      color: var(--primary-dark);
+
+    .btn-primary {
+      background: #2e7d32;
       border: none;
-      padding: 0.75rem 2rem;
-      font-weight: 600;
-      border-radius: 50px;
-      transition: var(--transition);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      padding: 12px 28px;
+      font-size: 18px;
+      border-radius: 6px;
     }
-    
-    .btn-hero:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-      background: white;
-      color: var(--primary-dark);
-    }
-    
-    /* Features Section */
-    .features {
-      padding: 5rem 0;
-      background-color: var(--light-bg);
-    }
-    
+
+    /* Section Titles */
     .section-title {
       text-align: center;
-      margin-bottom: 3rem;
+      margin: 60px 0 30px;
     }
-    
+
     .section-title h2 {
-      font-size: 2.5rem;
       font-weight: 700;
-      color: var(--primary-dark);
-      margin-bottom: 1rem;
+      font-size: 32px;
     }
-    
-    .section-title p {
-      font-size: 1.1rem;
-      color: #666;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-    
+
+    /* Feature Cards */
     .feature-card {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: var(--card-shadow);
-      transition: var(--transition);
-      height: 100%;
+      padding: 20px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       text-align: center;
+      transition: all 0.3s ease;
     }
-    
+
+    .feature-card i {
+      font-size: 40px;
+      color: #2e7d32;
+      margin-bottom: 15px;
+    }
+
     .feature-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      transform: translateY(-5px);
     }
-    
-    .feature-icon {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.5rem;
-      color: white;
-      font-size: 1.75rem;
-    }
-    
-    .feature-card h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--primary-dark);
-    }
-    
-    /* How It Works */
-    .how-it-works {
-      padding: 5rem 0;
-      background: white;
-    }
-    
+
+    /* Improved How It Works */
     .step-card {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: var(--card-shadow);
-      transition: var(--transition);
-      height: 100%;
-      position: relative;
-      border-top: 4px solid var(--primary-color);
+      padding: 25px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      border-top: 4px solid #2e7d32;
+      min-height: 220px;
     }
-    
+
     .step-number {
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 40px;
-      height: 40px;
-      background: var(--primary-color);
+      background: #2e7d32;
       color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-    }
-    
-    .step-card h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 1.5rem 0 1rem;
-      color: var(--primary-dark);
-    }
-    
-    /* Testimonials */
-    .testimonials {
-      padding: 5rem 0;
-      background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
-      color: white;
-    }
-    
-    .testimonial-card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 2rem;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .testimonial-text {
-      font-style: italic;
-      margin-bottom: 1.5rem;
-    }
-    
-    .testimonial-author {
-      display: flex;
-      align-items: center;
-    }
-    
-    .author-avatar {
       width: 50px;
       height: 50px;
       border-radius: 50%;
-      background: white;
+      margin: 0 auto 15px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--primary-color);
-      font-weight: 700;
-      margin-right: 1rem;
+      font-weight: bold;
     }
-    
+
+    /* Testimonials */
+    .testimonials {
+      background: #2e7d32;
+      padding: 50px 0;
+    }
+
+    .testimonial-card {
+      padding: 25px;
+      background: #fff;
+      border-radius: 10px;
+      min-height: 200px;
+    }
+
     /* Footer */
     .footer {
+      background: #1b1b1b;
+      color: #ccc;
+      padding: 40px 0 20px;
+    }
+
+    /* Dark Mode */
+    .dark-mode {
       background: #1a1a1a;
-      color: white;
-      padding: 4rem 0 2rem;
+      color: #eee;
     }
-    
-    .footer h5 {
-      font-weight: 600;
-      margin-bottom: 1.5rem;
-      color: var(--primary-light);
-    }
-    
-    .footer ul {
-      list-style: none;
-      padding: 0;
-    }
-    
-    .footer ul li {
-      margin-bottom: 0.75rem;
-    }
-    
-    .footer ul li a {
-      color: #bbb;
-      text-decoration: none;
-      transition: var(--transition);
-    }
-    
-    .footer ul li a:hover {
-      color: white;
-      padding-left: 5px;
-    }
-    
-    .social-links {
-      display: flex;
-      gap: 1rem;
-    }
-    
-    .social-links a {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      transition: var(--transition);
-    }
-    
-    .social-links a:hover {
-      background: var(--primary-color);
-      transform: translateY(-3px);
-    }
-    
-    .copyright {
-      border-top: 1px solid #333;
-      padding-top: 2rem;
-      margin-top: 3rem;
-      text-align: center;
-      color: #999;
-    }
-    
-    /* Responsive Adjustments */
-    @media (max-width: 768px) {
-      .hero h1 {
-        font-size: 2.5rem;
-      }
-      
-      .hero p {
-        font-size: 1.1rem;
-      }
-      
-      .section-title h2 {
-        font-size: 2rem;
-      }
-      
-      .feature-card, .step-card {
-        margin-bottom: 1.5rem;
-      }
-      
-      .navbar-collapse {
-        background: var(--primary-dark);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-      }
-    }
-    
-    @media (max-width: 576px) {
-      .hero {
-        padding: 8rem 0 4rem;
-      }
-      
-      .hero h1 {
-        font-size: 2rem;
-      }
-      
-      .features, .how-it-works, .testimonials {
-        padding: 3rem 0;
-      }
-    }
-    /* Theme toggle button style */
-.theme-toggle i {
-  font-size: 1.2rem;
-  transition: 0.3s;
-}
 
-.theme-toggle:hover i {
-  color: #ffeb3b;
-}
+    .dark-mode .navbar {
+      background: #0d3d0f;
+    }
 
-/* Default (light mode) */
-:root {
-  --bg: white;
-  --text: #333;
-  --nav: #2e7d32;
-}
+    .dark-mode .feature-card,
+    .dark-mode .step-card,
+    .dark-mode .testimonial-card {
+      background: #222;
+      color: #eee;
+    }
 
-/* DARK MODE */
-.dark-mode {
-  --bg: #121212;
-  --text: #f1f1f1;
-  --nav: #1b5e20;
-}
-
-/* Apply theme to body */
-body {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.navbar {
-  background: var(--nav) !important;
-}
+    .dark-mode .footer {
+      background: #000;
+      color: #ddd;
+    }
 
   </style>
 </head>
-<body>
-  <!-- Navigation -->
-  <nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-      <a class="navbar-brand" href="#">
-        <i class="fas fa-landmark me-2"></i>Blockchain Land Records
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
 
-          <li class="nav-item">
-            <a class="nav-link" href="#features">Features</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#how-it-works">How It Works</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#testimonials">Testimonials</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="../auth/login.html">Login</a>
-          </li>
-          
-        </ul>
-      </div>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg px-4">
+    <a class="navbar-brand" href="#">Punjab Land Records</a>
+
+    <div class="ms-auto">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode">
+  <i class="fas fa-moon"></i>
+</button>
+
     </div>
   </nav>
 
   <!-- Hero Section -->
   <section class="hero">
-    <div class="container">
-      <h1>Revolutionizing Land Records with Blockchain</h1>
-      <p>Secure, transparent, and tamper-proof property management system powered by blockchain technology. Register, verify, and transfer properties with complete confidence.</p>
-      <a href="../auth/register.html" class="btn btn-hero btn-lg">Create Your Account</a>
+    <div class="hero-content">
+      <h1>Modern & Secure Land Record System</h1>
+      <p>Easy access to land ownership details and property records.</p>
+      <a href="../auth/login.html" class="btn btn-primary">Get Started</a>
     </div>
   </section>
 
-  <!-- Features Section -->
-  <section class="features" id="features">
-    <div class="container">
-      <div class="section-title">
-        <h2>Why Choose Blockchain Land Records?</h2>
-        <p>Our platform offers cutting-edge solutions for modern property management</p>
-      </div>
-      <div class="row">
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-shield-alt"></i>
-            </div>
-            <h3>Secure & Tamper-Proof</h3>
-            <p>Blockchain technology ensures that all land records are encrypted and immutable, preventing fraud and unauthorized changes.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-eye"></i>
-            </div>
-            <h3>Complete Transparency</h3>
-            <p>View complete ownership history and transaction records with full transparency and audit trails.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-bolt"></i>
-            </div>
-            <h3>Fast Processing</h3>
-            <p>Reduce property transfer times from weeks to minutes with our streamlined digital process.</p>
-          </div>
+  <!-- Features -->
+  <section id="features" class="container my-5">
+    <div class="section-title">
+      <h2>Key Features</h2>
+      <p>Everything you need for transparent land management</p>
+    </div>
+
+    <div class="row">
+
+      <div class="col-md-4 mb-4">
+        <div class="feature-card">
+          <i class="fas fa-file-alt"></i>
+          <h4>Accurate Land Records</h4>
+          <p>View verified and updated property information anytime.</p>
         </div>
       </div>
-      <div class="row mt-4">
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-file-contract"></i>
-            </div>
-            <h3>Digital Agreements</h3>
-            <p>Sign property agreements digitally with secure authentication and legally binding electronic signatures.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-search"></i>
-            </div>
-            <h3>Easy Verification</h3>
-            <p>Quickly verify property details, ownership history, and legal status with our search tools.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-mobile-alt"></i>
-            </div>
-            <h3>User Friendly</h3>
-            <p>Access all features from any device with our fully responsive design.</p>
-          </div>
+
+      <div class="col-md-4 mb-4">
+        <div class="feature-card">
+          <i class="fas fa-search-location"></i>
+          <h4>Land Search</h4>
+          <p>Instant search by CNIC, ownership, or property ID.</p>
         </div>
       </div>
+
+      <div class="col-md-4 mb-4">
+        <div class="feature-card">
+          <i class="fas fa-exchange-alt"></i>
+          <h4>Ownership Transfer</h4>
+          <p>Initiate secure land transfer requests easily.</p>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- How It Works -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="container">
-      <div class="section-title">
-        <h2>How It Works</h2>
-        <p>Simple steps to manage your property records securely</p>
-      </div>
-      <div class="row">
-        <div class="col-md-4 mb-4">
-          <div class="step-card">
-            <div class="step-number">1</div>
-            <h3>Login to Your Account</h3>
-            <p>Access your secure account with your credentials to manage your blockchain land records.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="step-card">
-            <div class="step-number">2</div>
-            <h3>Manage Your Properties</h3>
-            <p>View, update, and manage your registered properties with all necessary details and documents.</p>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="step-card">
-            <div class="step-number">3</div>
-            <h3>Secure Transactions</h3>
-            <p>Initiate property transfers, verify ownership history, and sign documents with digital signatures.</p>
-          </div>
+  <!-- Improved How It Works -->
+  <section id="how-it-works" class="container my-5">
+
+    <div class="section-title">
+      <h2>How It Works</h2>
+      <p>Follow three simple steps to manage your land records</p>
+    </div>
+
+    <div class="row">
+
+      <div class="col-md-4 mb-4">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h4>Create Your Account</h4>
+          <p>Sign up using your CNIC and basic personal details.</p>
         </div>
       </div>
+
+      <div class="col-md-4 mb-4">
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h4>Access Land Records</h4>
+          <p>Search, view, and verify property information instantly.</p>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-4">
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h4>Transfer or Verify Ownership</h4>
+          <p>Submit transfer requests or validate ownership with ease.</p>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- Testimonials -->
-  <section class="testimonials" id="testimonials">
-    <div class="container">
-      <div class="section-title">
-        <h2>What Our Users Say</h2>
-        <p>Trusted by thousands of property owners across the country</p>
-      </div>
-      <div class="row">
-        <div class="col-md-6 mb-4">
-          <div class="testimonial-card">
-            <div class="testimonial-text">
-              "The blockchain land records system saved me weeks of paperwork and visits to government offices. My property transfer was completed in just two days!"
-            </div>
-            <div class="testimonial-author">
-              <div class="author-avatar">AA</div>
-              <div>
-                <h5>Ahmed Ali</h5>
-                <p>Property Owner, Lahore</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 mb-4">
-          <div class="testimonial-card">
-            <div class="testimonial-text">
-              "As a real estate lawyer, I appreciate the transparency and security of this system. It has significantly reduced property disputes among my clients."
-            </div>
-            <div class="testimonial-author">
-              <div class="author-avatar">SR</div>
-              <div>
-                <h5>Sana Rehman</h5>
-                <p>Real Estate Lawyer, Islamabad</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-4 mb-4">
-          <h5><i class="fas fa-landmark me-2"></i>Blockchain Land Records</h5>
-          <p>Revolutionizing property management with secure, transparent blockchain technology for a better future.</p>
-          <div class="social-links mt-4">
-            <a href="#"><i class="fab fa-facebook-f"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-linkedin-in"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-          </div>
-        </div>
-        <div class="col-lg-2 col-md-6 mb-4">
-          <h5>Quick Links</h5>
-          <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#testimonials">Testimonials</a></li>
-          </ul>
-        </div>
-        <div class="col-lg-2 col-md-6 mb-4">
-          <h5>Services</h5>
-          <ul>
-            <li><a href="../auth/login.html">Property Management</a></li>
-            <li><a href="../auth/login.html">Transfer Properties</a></li>
-            <li><a href="../auth/login.html">Verify Ownership</a></li>
-            <li><a href="../auth/login.html">Digital Signing</a></li>
-          </ul>
-        </div>
-        <div class="col-lg-4 col-md-12 mb-4">
-          <h5>Contact Us</h5>
-          <ul>
-            <li><i class="fas fa-map-marker-alt me-2"></i> 123 Tech Park, Lahore, Pakistan</li>
-            <li><i class="fas fa-phone me-2"></i> +92 300 1234567</li>
-            <li><i class="fas fa-envelope me-2"></i> info@blockchainland.gov.pk</li>
-          </ul>
-        </div>
-      </div>
-      <div class="copyright">
-        <p>&copy; 2025 Blockchain Land Records. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- JS for Dark Mode -->
   <script>
-    // Navbar scroll effect
-    window.addEventListener('scroll', function() {
-      const navbar = document.querySelector('.navbar');
-      if (window.scrollY > 50) {
-        navbar.style.padding = '0.5rem 0';
-        navbar.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-      } else {
-        navbar.style.padding = '1rem 0';
-        navbar.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
-      }
-    });
-    
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          window.scrollTo({
-            top: target.offsetTop - 80,
-            behavior: 'smooth'
-          });
-        }
-      });
-    });
+    function toggleTheme() {
+      document.body.classList.toggle("dark-mode");
+    }
   </script>
+
 </body>
 </html>

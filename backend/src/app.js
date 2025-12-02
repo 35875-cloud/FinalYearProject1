@@ -1,12 +1,12 @@
-const express = require("express");
-const cors = require("cors");
+// const express = require("express");
+// const cors = require("cors");
 
-const app = express();
+// const app = express();
 
-app.use(cors());
-app.use(express.json());
+// app.use(cors());
+// app.use(express.json());
 
-// ROUTES
-app.use("/api/auth", require("./routes/auth"));
-///
-module.exports = app;
+// // ROUTES
+// app.use("/api/auth", require("./routes/auth"));
+// ///
+// module.exports = app;
