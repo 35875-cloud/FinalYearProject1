@@ -319,115 +319,273 @@
     <script>
     let tempUser = {};
 
-    const registerForm = document.getElementById("registerForm");
-    const submitButton = registerForm.querySelector("button[type=submit]");
-    const otpForm = document.getElementById("otpForm");
-    const successMessage = document.getElementById("successMessage");
-    const bkIdSpan = document.getElementById("bkId");
+const registerForm = document.getElementById("registerForm");
+const submitButton = registerForm.querySelector("button[type=submit]");
+const otpForm = document.getElementById("otpForm");
+const successMessage = document.getElementById("successMessage");
+const bkIdSpan = document.getElementById("bkId");
 
-    // CNIC auto-format: xxxxx-xxxxxxx-x
-    const cnicInput = document.getElementById("cnic");
-    cnicInput.addEventListener("input", function () {
-        let value = this.value.replace(/\D/g, ""); // remove non-digits
-        if (value.length > 5) value = value.slice(0,5) + "-" + value.slice(5);
-        if (value.length > 13) value = value.slice(0,13) + "-" + value.slice(13,14);
-        this.value = value;
+// Backend API URL - CHANGE THIS IF YOUR SERVER RUNS ON DIFFERENT PORT
+const API_URL = "http://localhost:5000/api/auth";
+
+// CNIC auto-format: xxxxx-xxxxxxx-x
+const cnicInput = document.getElementById("cnic");
+cnicInput.addEventListener("input", function () {
+    let value = this.value.replace(/\D/g, ""); // remove non-digits
+    if (value.length > 5) value = value.slice(0,5) + "-" + value.slice(5);
+    if (value.length > 13) value = value.slice(0,13) + "-" + value.slice(13,14);
+    this.value = value;
+});
+
+// Password toggle
+document.querySelectorAll(".toggle-password").forEach(btn => {
+    btn.addEventListener("click", function() {
+        const target = document.getElementById(this.dataset.target);
+        target.type = target.type === "password" ? "text" : "password";
+        this.querySelector("i").classList.toggle("fa-eye");
+        this.querySelector("i").classList.toggle("fa-eye-slash");
     });
+});
 
-    // Password toggle
-    document.querySelectorAll(".toggle-password").forEach(btn => {
-        btn.addEventListener("click", function() {
-            const target = document.getElementById(this.dataset.target);
-            target.type = target.type === "password" ? "text" : "password";
-            this.querySelector("i").classList.toggle("fa-eye");
-            this.querySelector("i").classList.toggle("fa-eye-slash");
+// Password strength indicator
+const passwordInput = document.getElementById("password");
+const strengthBar = document.querySelector(".password-strength");
+
+passwordInput.addEventListener("input", function() {
+    const password = this.value;
+    const strength = calculatePasswordStrength(password);
+    
+    strengthBar.className = "password-strength";
+    if (strength < 3) {
+        strengthBar.classList.add("password-weak");
+    } else if (strength < 5) {
+        strengthBar.classList.add("password-medium");
+    } else {
+        strengthBar.classList.add("password-strong");
+    }
+});
+
+function calculatePasswordStrength(password) {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.length >= 12) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    return strength;
+}
+
+// Password match indicator
+const confirmPasswordInput = document.getElementById("confirmPassword");
+const matchIndicator = document.getElementById("passwordMatch");
+
+confirmPasswordInput.addEventListener("input", function() {
+    const password = passwordInput.value;
+    const confirmPassword = this.value;
+    
+    if (confirmPassword === "") {
+        matchIndicator.textContent = "";
+        matchIndicator.style.color = "";
+    } else if (password === confirmPassword) {
+        matchIndicator.textContent = "✓ Passwords match";
+        matchIndicator.style.color = "#4caf50";
+    } else {
+        matchIndicator.textContent = "✗ Passwords do not match";
+        matchIndicator.style.color = "#f44336";
+    }
+});
+
+registerForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    // Disable submit to prevent double submission
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Account...';
+
+    // Get and clean form data
+    const role = document.getElementById("role").value;
+    let cnic = cnicInput.value.replace(/\D/g, "").trim(); // remove dashes & spaces
+    const name = document.getElementById("name").value.trim();
+    const mobile = document.getElementById("mobile").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+
+    // Basic validations
+    if (!role) {
+        alert("Please select a role.");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+    if (!/^\d{13}$/.test(cnic)) {
+        alert("Enter a valid 13-digit CNIC");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+    if (!/^03\d{9}$/.test(mobile)) {
+        alert("Enter a valid mobile number (03XXXXXXXXX)");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+    if (password.length < 8) {
+        alert("Password must be at least 8 characters long");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+    if (password !== confirmPassword) {
+        alert("Passwords do not match");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+
+    // Prepare data for backend
+    const data = { role, cnic, name, mobile, email, password };
+    tempUser = data;
+
+    try {
+        console.log("Sending registration request to:", `${API_URL}/register-citizen`);
+        
+        const res = await fetch(`${API_URL}/register-citizen`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
         });
-    });
 
-    registerForm.addEventListener("submit", async function (e) {
-        e.preventDefault();
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
 
-        // Disable submit to prevent double submission
-        submitButton.disabled = true;
+        const result = await res.json();
+        console.log("Registration Response:", result);
 
-        // Get and clean form data
-        const role = document.getElementById("role").value;
-        let cnic = cnicInput.value.replace(/\D/g, "").trim(); // remove dashes & spaces
-        const name = document.getElementById("name").value.trim();
-        const mobile = document.getElementById("mobile").value.trim();
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirmPassword").value;
+        if (result.success) {
+            // Update progress steps
+            document.querySelector('.progress-step:nth-child(1)').classList.add('step-completed');
+            document.querySelector('.progress-step:nth-child(1)').classList.remove('step-active');
+            document.querySelector('.progress-step:nth-child(2)').classList.add('step-active');
 
-        // Basic validations
-        if (!role) return alert("Please select a role.");
-        if (!/^\d{13}$/.test(cnic)) return alert("Enter a valid 13-digit CNIC");
-        if (password !== confirmPassword) return alert("Passwords do not match");
-
-        // Prepare data for backend
-        const data = { role, cnic, name, mobile, email, password };
-        tempUser = data;
-
-        try {
-            const res = await fetch("http://localhost:4000/api/auth/register-citizen", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-
-            const result = await res.json();
-            console.log("Frontend Response:", result);
-
-            if (result.success) {
-                registerForm.style.display = "none";
-                otpForm.style.display = "block";
-                document.getElementById("emailNumberDisplay").innerText = email;
-            } else {
-                alert(result.message);
-                submitButton.disabled = false; // re-enable submit if error
-            }
-
-        } catch (err) {
-            console.error(err);
-            alert("Server unreachable.");
+            registerForm.style.display = "none";
+            otpForm.style.display = "block";
+            document.getElementById("emailNumberDisplay").innerText = email;
+            
+            alert("OTP sent to your email. Please check your inbox.");
+        } else {
+            alert(result.message || "Registration failed");
             submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
         }
-    });
 
-    // VERIFY OTP
-    document.getElementById("verifyOtp").addEventListener("click", async function () {
-        const otp = document.getElementById("emailOtp").value.trim();
-        if (!otp) return alert("Enter OTP");
+    } catch (err) {
+        console.error("Registration Error:", err);
+        alert(`Server unreachable. Please check:\n1. Server is running (node server.js)\n2. Server URL is correct: ${API_URL}\n3. Check browser console for details`);
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+    }
+});
 
-        const data = { ...tempUser, otp }; // combine user data + OTP
+// VERIFY OTP
+document.getElementById("verifyOtp").addEventListener("click", async function () {
+    const otp = document.getElementById("emailOtp").value.trim();
+    if (!otp) {
+        alert("Please enter OTP");
+        return;
+    }
 
-        try {
-            const res = await fetch("http://127.0.0.1:4000/api/auth/verify-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
+    if (!/^\d{6}$/.test(otp)) {
+        alert("OTP must be 6 digits");
+        return;
+    }
 
-            const result = await res.json();
-            console.log(result);
+    // Disable button
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
 
-            if (result.success) {
-                otpForm.style.display = "none";
-                successMessage.style.display = "block";
-                bkIdSpan.innerText = result.userID;
-            } else {
-                alert(result.message);
-            }
+    const data = { ...tempUser, otp }; // combine user data + OTP
 
-        } catch (err) {
-            alert("Server unreachable.");
+    try {
+        console.log("Sending OTP verification to:", `${API_URL}/verify-otp`);
+        
+        const res = await fetch(`${API_URL}/verify-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
-    });
 
-    // Optional: disable submit again after OTP verification to prevent double clicks
-    otpForm.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", () => btn.disabled = true);
-    });
+        const result = await res.json();
+        console.log("OTP Verification Response:", result);
+
+        if (result.success) {
+            // Update progress
+            document.querySelector('.progress-step:nth-child(2)').classList.add('step-completed');
+            document.querySelector('.progress-step:nth-child(2)').classList.remove('step-active');
+            document.querySelector('.progress-step:nth-child(3)').classList.add('step-active');
+            document.querySelector('.progress-step:nth-child(3)').classList.add('step-completed');
+
+            otpForm.style.display = "none";
+            successMessage.style.display = "block";
+            bkIdSpan.innerText = result.userID;
+
+            // Redirect to login after 3 seconds
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 3000);
+        } else {
+            alert(result.message || "Invalid OTP");
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-check me-2"></i>Verify';
+        }
+
+    } catch (err) {
+        console.error("OTP Verification Error:", err);
+        alert("Server unreachable or verification failed");
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-check me-2"></i>Verify';
+    }
+});
+
+// RESEND OTP
+document.getElementById("resendOtp").addEventListener("click", async function () {
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    
+    try {
+        console.log("Resending OTP to:", `${API_URL}/register-citizen`);
+        
+        const res = await fetch(`${API_URL}/register-citizen`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(tempUser)
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const result = await res.json();
+        
+        if (result.success) {
+            alert("OTP resent successfully! Check your email.");
+        } else {
+            alert(result.message || "Failed to resend OTP");
+        }
+    } catch (err) {
+        console.error("Resend OTP Error:", err);
+        alert("Failed to resend OTP. Please try again.");
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-redo me-2"></i>Resend Code';
+    }
+});
 </script>
 
 </body>

@@ -9,8 +9,12 @@ const pool = new Pool({
 });
 
 pool.connect()
-    .then(() => console.log("✅ PostgreSQL Connected"))
-    .catch(err => console.error("❌ DB Error:", err));
+    .then(() => {
+        console.log("✅ PostgreSQL Connected to database: landdb");
+    })
+    .catch(err => {
+        console.error("❌ DB Connection Error:", err.message);
+        process.exit(1); // Exit if DB fails
+    });
 
 module.exports = pool;
-
