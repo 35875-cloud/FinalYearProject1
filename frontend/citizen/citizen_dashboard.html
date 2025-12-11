@@ -24,13 +24,11 @@ body {
   padding-top: 70px; 
 }
 
-/* Navbar */
 .navbar {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
   box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 
-/* Top Navbar Buttons */
 .top-action-btn {
   border-radius: 20px;
   font-size: 0.85rem;
@@ -45,25 +43,6 @@ body {
   box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
-/* Badges */
-.badge-pulse, .badge-upload {
-  font-size: 0.65rem;
-  padding: 0.25em 0.45em;
-  border-radius: 10px;
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  animation: pulse 2s infinite;
-}
-.badge-pulse { background: var(--danger); color: #fff; }
-.badge-upload { background: var(--warning); color: #000; }
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-/* Stat Cards */
 .stat-card {
   border-radius: 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -77,7 +56,6 @@ body {
   box-shadow: 0 12px 35px rgba(0,0,0,0.15);
 }
 
-/* Quick Action Buttons */
 .quick-btn {
   border-radius: 14px;
   padding: 0.75rem;
@@ -89,11 +67,48 @@ body {
   box-shadow: 0 8px 25px rgba(0,0,0,0.2);
 }
 
-/* Highlight Card */
 .highlight-card {
   border: 2px solid var(--primary);
   color: var(--primary);
   background: #e8f5e8;
+}
+
+.image-preview {
+  width: 100%;
+  height: 200px;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  position: relative;
+  overflow: hidden;
+}
+.image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.image-preview.has-image {
+  border-style: solid;
+  border-color: var(--primary);
+}
+.remove-image {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: none;
+}
+.image-preview.has-image .remove-image {
+  display: block;
 }
 </style>
 </head>
@@ -106,27 +121,16 @@ body {
       <i class="fas fa-landmark me-2"></i>Blockchain Land Records
     </a>
     <div class="d-flex align-items-center gap-2">
-
-      <!-- Incoming Transfers -->
       <a href="transfer_dashboard.html?type=incoming" 
          class="btn btn-outline-warning top-action-btn position-relative">
         <i class="fas fa-inbox fa-sm me-1"></i> Incoming Transfers
       </a>
-
-      <!-- Upload Payment Proof -->
-      <a href="record_p2p_payment.html" 
-         class="btn btn-outline-warning top-action-btn position-relative">
-        <i class="fas fa-upload fa-sm me-"></i> Upload Payment Proof
-      </a>
-
-      <!-- User + Logout -->
       <div class="d-flex align-items-center text-white border-start border-white ps-2">
         <span class="me-2"><i class="fas fa-user-circle fa-lg me-1"></i><strong>Ahmed Ali</strong></span>
         <a href="../auth/login.html" class="btn btn-outline-light btn-sm">
           <i class="fas fa-sign-out-alt"></i> Logout
         </a>
       </div>
-
     </div>
   </div>
 </nav>
@@ -189,11 +193,21 @@ body {
             <i class="fas fa-list fa-lg me-2"></i> My Properties
           </a>
         </div>
+        
+        <!-- SELLER BUTTON -->
         <div class="col-md-6">
-          <a href="initiate_transfer.html" class="btn btn-outline-primary quick-btn w-100">
-            <i class="fas fa-exchange-alt fa-lg me-2"></i> Initiate Transfer
-          </a>
+          <button class="btn btn-warning quick-btn w-100" data-bs-toggle="modal" data-bs-target="#sellerModal">
+            <i class="fas fa-hand-holding-usd fa-lg me-2"></i> Seller (Transfer Property)
+          </button>
         </div>
+        
+        <!-- BUYER BUTTON -->
+        <div class="col-md-6">
+          <button class="btn btn-info text-white quick-btn w-100" data-bs-toggle="modal" data-bs-target="#buyerModal">
+            <i class="fas fa-shopping-cart fa-lg me-2"></i> Buyer (Request Property)
+          </button>
+        </div>
+        
         <div class="col-md-6">
           <a href="validate_integrity.html" class="btn highlight-card quick-btn w-100">
             <i class="fas fa-shield-alt fa-lg me-2"></i> Validate Document Integrity
@@ -205,6 +219,307 @@ body {
 
 </div>
 
+<!-- SELLER MODAL -->
+<div class="modal fade" id="sellerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
+        <h5 class="modal-title text-white"><i class="fas fa-hand-holding-usd me-2"></i>Seller - Transfer Property</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="sellerForm">
+          
+          <!-- Current Owner Information -->
+          <h6 class="text-warning mb-3"><i class="fas fa-user-tie me-2"></i>Current Owner (Seller) Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">Current Owner Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerCurrentOwner" placeholder="Enter current owner name" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Current Owner CNIC <span class="text-danger">*</span></label>
+              <input type="text" class="form-control cnic-input" id="sellerOwnerCnic" maxlength="15" placeholder="xxxxx-xxxxxxx-x" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Father's Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerFatherName" placeholder="Enter father's name" required>
+            </div>
+          </div>
+
+          <!-- Buyer Information -->
+          <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Buyer Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Buyer Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerBuyerName" placeholder="Enter buyer's full name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Buyer CNIC <span class="text-danger">*</span></label>
+              <input type="text" class="form-control cnic-input" id="sellerBuyerCnic" maxlength="15" placeholder="xxxxx-xxxxxxx-x" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Buyer's Father Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerBuyerFather" placeholder="Enter father's name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Upload Buyer Photo <span class="text-danger">*</span></label>
+              <input type="file" class="form-control" id="sellerBuyerPhoto" accept="image/*" required>
+              <div class="image-preview mt-2" id="sellerBuyerPhotoPreview">
+                <i class="fas fa-user fa-3x text-muted"></i>
+                <button type="button" class="remove-image" onclick="removeImage('sellerBuyerPhoto')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Information -->
+          <h6 class="text-primary mb-3"><i class="fas fa-home me-2"></i>Property Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">Fard No <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerFardNo" placeholder="Enter Fard number" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Khasra No <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerKhasraNo" placeholder="Enter Khasra number" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Khatooni No <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerKhatooniNo" placeholder="Enter Khatooni number" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Area (in Marla) <span class="text-danger">*</span></label>
+              <input type="number" step="0.01" class="form-control" id="sellerArea" placeholder="e.g., 5.5" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property Type <span class="text-danger">*</span></label>
+              <select class="form-select" id="sellerPropertyType" required>
+                <option value="">-- Select Type --</option>
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="agricultural">Agricultural</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Upload Property Image <span class="text-danger">*</span></label>
+              <input type="file" class="form-control" id="sellerPropertyPhoto" accept="image/*" required>
+              <div class="image-preview mt-2" id="sellerPropertyPhotoPreview">
+                <i class="fas fa-home fa-3x text-muted"></i>
+                <button type="button" class="remove-image" onclick="removeImage('sellerPropertyPhoto')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Information -->
+          <h6 class="text-info mb-3"><i class="fas fa-map-marker-alt me-2"></i>Location Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">District <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerDistrict" placeholder="Enter district" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tehsil <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerTehsil" placeholder="Enter tehsil" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mauza <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="sellerMauza" placeholder="Enter mauza" required>
+            </div>
+          </div>
+
+          <!-- Transfer Duration -->
+          <h6 class="text-danger mb-3"><i class="fas fa-clock me-2"></i>Transfer Duration</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-12">
+              <label class="form-label">Time Duration (in days) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="sellerDuration" placeholder="e.g., 30" required>
+              <small class="form-text text-muted">Number of days to complete the transfer process</small>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-warning" onclick="submitSellerForm()">
+          <i class="fas fa-paper-plane me-2"></i>Submit Transfer Request
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BUYER MODAL (Simplified) -->
+<div class="modal fade" id="buyerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+        <h5 class="modal-title text-white"><i class="fas fa-shopping-cart me-2"></i>Buyer - Request Property</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Buyer Request:</strong> As a buyer, you can browse available properties and submit purchase requests. The seller will review your request and initiate the transfer process.
+        </div>
+        
+        <form id="buyerForm">
+          <div class="mb-4">
+            <label class="form-label">Property ID or Fard No <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="buyerPropertyId" placeholder="Enter property ID or Fard number you want to purchase" required>
+            <small class="form-text text-muted">Enter the property identification number you wish to buy</small>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Offer Amount (PKR) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="buyerOfferAmount" placeholder="Enter your offer amount" required>
+            <small class="form-text text-muted">Enter your purchase offer in Pakistani Rupees</small>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Additional Notes</label>
+            <textarea class="form-control" id="buyerNotes" rows="3" placeholder="Any additional information or requirements..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-info text-white" onclick="submitBuyerForm()">
+          <i class="fas fa-paper-plane me-2"></i>Submit Purchase Request
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// CNIC auto-format for all CNIC inputs
+document.querySelectorAll('.cnic-input').forEach(input => {
+  input.addEventListener('input', function() {
+    let value = this.value.replace(/\D/g, '');
+    if (value.length > 5) value = value.slice(0,5) + '-' + value.slice(5);
+    if (value.length > 13) value = value.slice(0,13) + '-' + value.slice(13,14);
+    this.value = value;
+  });
+});
+
+// Image preview functionality
+const imageInputs = ['sellerBuyerPhoto', 'sellerPropertyPhoto'];
+
+imageInputs.forEach(id => {
+  const input = document.getElementById(id);
+  if (input) {
+    input.addEventListener('change', function(e) {
+      previewImage(e.target, id + 'Preview');
+    });
+  }
+});
+
+function previewImage(input, previewId) {
+  const preview = document.getElementById(previewId);
+  const file = input.files[0];
+  
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.innerHTML = `
+        <img src="${e.target.result}" alt="Preview">
+        <button type="button" class="remove-image" onclick="removeImage('${input.id}')">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      preview.classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeImage(inputId) {
+  const input = document.getElementById(inputId);
+  const previewId = inputId + 'Preview';
+  const preview = document.getElementById(previewId);
+  
+  input.value = '';
+  preview.classList.remove('has-image');
+  
+  if (inputId.includes('Photo') && !inputId.includes('Property')) {
+    preview.innerHTML = '<i class="fas fa-user fa-3x text-muted"></i>';
+  } else {
+    preview.innerHTML = '<i class="fas fa-home fa-3x text-muted"></i>';
+  }
+}
+
+function submitSellerForm() {
+  const form = document.getElementById('sellerForm');
+  
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('currentOwner', document.getElementById('sellerCurrentOwner').value);
+  formData.append('currentOwnerCnic', document.getElementById('sellerOwnerCnic').value.replace(/\D/g, ''));
+  formData.append('sellerFatherName', document.getElementById('sellerFatherName').value);
+  formData.append('buyerName', document.getElementById('sellerBuyerName').value);
+  formData.append('buyerCnic', document.getElementById('sellerBuyerCnic').value.replace(/\D/g, ''));
+  formData.append('buyerFatherName', document.getElementById('sellerBuyerFather').value);
+  formData.append('fardNo', document.getElementById('sellerFardNo').value);
+  formData.append('khasraNo', document.getElementById('sellerKhasraNo').value);
+  formData.append('khatooniNo', document.getElementById('sellerKhatooniNo').value);
+  formData.append('area', document.getElementById('sellerArea').value);
+  formData.append('propertyType', document.getElementById('sellerPropertyType').value);
+  formData.append('district', document.getElementById('sellerDistrict').value);
+  formData.append('tehsil', document.getElementById('sellerTehsil').value);
+  formData.append('mauza', document.getElementById('sellerMauza').value);
+  formData.append('duration', document.getElementById('sellerDuration').value);
+  formData.append('buyerPhoto', document.getElementById('sellerBuyerPhoto').files[0]);
+  formData.append('propertyPhoto', document.getElementById('sellerPropertyPhoto').files[0]);
+
+  console.log('Seller Form Data:', Object.fromEntries(formData));
+  
+  alert('✅ Transfer request submitted successfully!\n\nThe buyer will be notified to complete the process.');
+  
+  const modal = bootstrap.Modal.getInstance(document.getElementById('sellerModal'));
+  modal.hide();
+  form.reset();
+  removeImage('sellerBuyerPhoto');
+  removeImage('sellerPropertyPhoto');
+}
+
+function submitBuyerForm() {
+  const form = document.getElementById('buyerForm');
+  
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+
+  const buyerData = {
+    propertyId: document.getElementById('buyerPropertyId').value,
+    offerAmount: document.getElementById('buyerOfferAmount').value,
+    notes: document.getElementById('buyerNotes').value
+  };
+
+  console.log('Buyer Request Data:', buyerData);
+  
+  alert('✅ Purchase request submitted successfully!\n\nThe property owner will be notified of your interest.');
+  
+  const modal = bootstrap.Modal.getInstance(document.getElementById('buyerModal'));
+  modal.hide();
+  form.reset();
+}
+</script>
+
 </body>
 </html>

@@ -29,13 +29,14 @@
         </div>
 
         <div class="card-body">
+
           <!-- Progress -->
           <div class="progress mb-4" style="height: 8px;">
-            <div class="progress-bar" style="width: 25%;"></div>
+            <div class="progress-bar" style="width: 20%;"></div>
           </div>
 
           <div class="text-center mb-4">
-            <strong>Step <span id="currentStep">1</span> of 4</strong>
+            <strong>Step <span id="currentStep">1</span> of 5</strong>
           </div>
 
           <!-- STEP 1 -->
@@ -69,7 +70,28 @@
               </div>
             </div>
 
-            <button class="btn btn-success float-end" onclick="goToStep(2)">Next</button>
+            <hr class="my-4">
+
+            <!-- NEW OWNER SECTION -->
+            <h5>Owner Information</h5>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label>Current Owner *</label>
+                <input type="text" class="form-control" id="currentOwner" placeholder="e.g. Ahmed Ali" required>
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label>Father Name *</label>
+                <input type="text" class="form-control" id="fatherName" placeholder="e.g. Muhammad Aslam" required>
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label>Previous Owner</label>
+                <input type="text" class="form-control" id="previousOwner" placeholder="e.g. Tariq Mahmood">
+              </div>
+            </div>
+
+            <button class="btn btn-success float-end mt-3" onclick="goToStep(2)">Next</button>
           </div>
 
           <!-- STEP 2 -->
@@ -81,7 +103,7 @@
               <div class="col-md-4"><input type="text" class="form-control" id="khatooni" placeholder="Khatooni *"></div>
             </div>
 
-            <!-- IMAGE UPLOAD (LAND PICTURE) -->
+            <!-- IMAGE UPLOAD -->
             <div class="mb-3">
               <label class="form-label">Upload Land Picture *</label>
               <input type="file" class="form-control" accept="image/*" id="landPicInput">
@@ -93,7 +115,7 @@
               <tbody>
                 <tr>
                   <td><input type="text" class="form-control" placeholder="112/1"></td>
-                  <td><input type="number" class="form-control area-input" placeholder="5" onchange="calcTotal()"></td>
+                  <td><input type="number" step="0.01" class="form-control area-input" placeholder="5.50" onchange="calcTotal()"></td>
                   <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calcTotal()">X</button></td>
                 </tr>
               </tbody>
@@ -107,7 +129,7 @@
             <button class="btn btn-success float-end" onclick="validateStep2()">Next</button>
           </div>
 
-          <!-- STEP 3 - DIGITAL SIGNATURE -->
+          <!-- STEP 3 -->
           <div class="step" id="step3">
             <h5>3. Owner Digital Signature</h5>
             <p>Please sign below to authorize the property registration.</p>
@@ -132,9 +154,56 @@
             <div class="alert alert-success text-center">
               <h4>Property Registered Successfully!</h4>
               <p>Property ID: <strong>PK-PB-LHR-2025-001234</strong></p>
-              <a href="property_details.html?id=PK-PB-LHR-2025-001234" class="btn btn-success">View Property</a>
+              <a href="#" class="btn btn-success" onclick="goToStep(5)">Proceed to Payment Proof</a>
             </div>
           </div>
+
+          <!-- STEP 5 (Embedded P2P Payment Page) -->
+          <div class="step" id="step5">
+
+            <h5 class="mb-3">Record Off-Chain Payment (UC021)</h5>
+
+            <div class="alert alert-info text-center">
+              <strong>Transfer ID:</strong> TX20251119005<br>
+              <strong>Amount:</strong> PKR 8,500,000
+            </div>
+
+            <form id="p2pForm">
+              <div class="mb-4">
+                <label class="form-label">Payment Method</label>
+                <select class="form-select">
+                  <option>Cash</option>
+                  <option>Bank Transfer</option>
+                  <option>Crypto</option>
+                </select>
+              </div>
+
+              <div class="p-4 text-center" style="background:#e8f5e9; border:2px dashed #2e7d32; border-radius:12px;">
+                <i class="fas fa-receipt fa-3x text-success mb-3"></i>
+                <p><strong>Upload Payment Proof</strong></p>
+                <input type="file" class="form-control" accept=".pdf,.jpg,.png" required>
+                <small class="text-muted">Bank slip, crypto tx, signed receipt</small>
+              </div>
+
+              <div class="text-center mt-4">
+                <button type="submit" class="btn btn-success btn-lg px-5">
+                  Submit & Notify Seller
+                </button>
+              </div>
+            </form>
+
+            <div id="successP2P" class="text-center mt-4" style="display:none;">
+              <i class="fas fa-check-circle text-success fa-4x"></i>
+              <h4>Proof Recorded on Blockchain!</h4>
+              <p>Hash: <code>def456...789ghi</code></p>
+              <a href="transfer_dashboard.html?id=TX20251119005" class="btn btn-success">
+                Back to Transfer
+              </a>
+            </div>
+
+            <button class="btn btn-secondary mt-4" onclick="goToStep(4)">Back</button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -148,7 +217,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   window.currentStep = 1;
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   function updateProgressUI() {
     const pct = (window.currentStep / totalSteps) * 100;
@@ -158,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateProgressUI();
 
   window.goToStep = function(step) {
-    if (step < 1 || step > totalSteps) return;
     document.getElementById('step' + window.currentStep).classList.remove('active');
     window.currentStep = step;
     document.getElementById('step' + window.currentStep).classList.add('active');
@@ -166,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (step === 3) initSignaturePad();
   };
 
+  /* ADD KHASRA */
   window.addKhasra = function() {
     const row = `<tr>
       <td><input type="text" class="form-control"></td>
@@ -209,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     goToStep(3);
   };
 
-  /* SIGNATURE */
+  /* SIGNATURE PAD */
   let signaturePad = null;
   const canvas = document.getElementById('signature-pad');
   const clearBtn = document.getElementById('clear-btn');
@@ -235,27 +304,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.initSignaturePad = function() {
-    if (!canvas) return;
     resizeSignatureCanvas(true);
   };
 
   window.addEventListener('resize', () => {
     if (document.getElementById('step3').classList.contains('active')) {
       resizeSignatureCanvas(true);
-    } else {
-      resizeSignatureCanvas(true);
     }
   });
 
   clearBtn.addEventListener('click', () => {
-    if (!signaturePad) initSignaturePad();
     signaturePad.clear();
     sigPreview.style.display = 'none';
     sigPreview.src = '';
   });
 
   saveBtn.addEventListener('click', () => {
-    if (!signaturePad) initSignaturePad();
     if (signaturePad.isEmpty()) {
       alert('Please sign first.');
       return;
@@ -275,6 +339,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     goToStep(4);
   };
+
+  /* STEP 5 — PAYMENT FORM */
+  document.getElementById('p2pForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('p2pForm').style.display = 'none';
+    document.getElementById('successP2P').style.display = 'block';
+  });
 
   initSignaturePad();
 });
