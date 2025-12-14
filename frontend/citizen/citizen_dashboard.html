@@ -201,6 +201,13 @@ body {
           </button>
         </div>
         
+        <!-- MY TRANSFERS (SELLER TRACKING) -->
+        <div class="col-md-6">
+          <button class="btn btn-outline-warning quick-btn w-100" data-bs-toggle="modal" data-bs-target="#myTransfersModal">
+            <i class="fas fa-paper-plane fa-lg me-2"></i> My Transfers (Seller)
+          </button>
+        </div>
+        
         <!-- BUYER BUTTON -->
         <div class="col-md-6">
           <button class="btn btn-info text-white quick-btn w-100" data-bs-toggle="modal" data-bs-target="#buyerModal">
@@ -356,45 +363,665 @@ body {
   </div>
 </div>
 
-<!-- BUYER MODAL (Simplified) -->
-<div class="modal fade" id="buyerModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+<!-- MY TRANSFERS MODAL (Seller Tracking) -->
+<div class="modal fade" id="myTransfersModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8, #138496);">
-        <h5 class="modal-title text-white"><i class="fas fa-shopping-cart me-2"></i>Buyer - Request Property</h5>
+      <div class="modal-header" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
+        <h5 class="modal-title text-white"><i class="fas fa-paper-plane me-2"></i>My Transfer Requests (Seller)</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-4">
         <div class="alert alert-info">
           <i class="fas fa-info-circle me-2"></i>
-          <strong>Buyer Request:</strong> As a buyer, you can browse available properties and submit purchase requests. The seller will review your request and initiate the transfer process.
+          <strong>Track Your Transfers:</strong> View all properties you've initiated transfer for. Click "View Details" to see complete information and download proof.
         </div>
+
+        <!-- Transfers List -->
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-warning">
+              <tr>
+                <th>Transfer ID</th>
+                <th>Property ID</th>
+                <th>Location</th>
+                <th>Buyer Name</th>
+                <th>Status</th>
+                <th>Submitted Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Transfer 1 - Awaiting Payment -->
+              <tr>
+                <td><strong>TR-2025-001</strong></td>
+                <td>FAR-45678<br><small class="text-muted">5.5 Marla</small></td>
+                <td>Lahore<br><small class="text-muted">Model Town</small></td>
+                <td>Hassan Raza<br><small class="text-muted">35202-9876543-2</small></td>
+                <td>
+                  <span class="badge bg-warning text-dark">
+                    <i class="fas fa-clock me-1"></i>Payment Pending
+                  </span>
+                  <br><small class="text-danger">28d 14h left</small>
+                </td>
+                <td>15 Dec 2025<br><small class="text-muted">10:30 AM</small></td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="showTransferDetails('TR-2025-001')">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Transfer 2 - Payment Verified -->
+              <tr>
+                <td><strong>TR-2025-002</strong></td>
+                <td>FAR-78901<br><small class="text-muted">10 Marla</small></td>
+                <td>Islamabad<br><small class="text-muted">F-7</small></td>
+                <td>Usman Ali<br><small class="text-muted">35202-6666666-6</small></td>
+                <td>
+                  <span class="badge bg-info text-white">
+                    <i class="fas fa-check-circle me-1"></i>Payment Verified
+                  </span>
+                  <br><small class="text-success">Awaiting Approval</small>
+                </td>
+                <td>12 Dec 2025<br><small class="text-muted">02:15 PM</small></td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="showTransferDetails('TR-2025-002')">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Transfer 3 - Completed -->
+              <tr class="table-success">
+                <td><strong>TR-2025-003</strong></td>
+                <td>FAR-11223<br><small class="text-muted">7 Marla</small></td>
+                <td>Rawalpindi<br><small class="text-muted">Bahria Town</small></td>
+                <td>Ali Raza<br><small class="text-muted">35202-7777777-7</small></td>
+                <td>
+                  <span class="badge bg-success">
+                    <i class="fas fa-trophy me-1"></i>Completed
+                  </span>
+                  <br><small class="text-muted">10 Dec 2025</small>
+                </td>
+                <td>05 Dec 2025<br><small class="text-muted">09:00 AM</small></td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="showTransferDetails('TR-2025-003')">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Transfer 4 - Awaiting Payment -->
+              <tr>
+                <td><strong>TR-2025-004</strong></td>
+                <td>FAR-33445<br><small class="text-muted">3 Marla</small></td>
+                <td>Karachi<br><small class="text-muted">DHA Phase 5</small></td>
+                <td>Bilal Ahmed<br><small class="text-muted">42101-1234567-8</small></td>
+                <td>
+                  <span class="badge bg-warning text-dark">
+                    <i class="fas fa-clock me-1"></i>Payment Pending
+                  </span>
+                  <br><small class="text-danger">15d 5h left</small>
+                </td>
+                <td>18 Dec 2025<br><small class="text-muted">03:45 PM</small></td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="showTransferDetails('TR-2025-004')">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Transfer 5 - Cancelled -->
+              <tr class="table-danger">
+                <td><strong>TR-2025-005</strong></td>
+                <td>FAR-55667<br><small class="text-muted">8 Marla</small></td>
+                <td>Lahore<br><small class="text-muted">Johar Town</small></td>
+                <td>Sana Khan<br><small class="text-muted">35202-8888888-8</small></td>
+                <td>
+                  <span class="badge bg-danger">
+                    <i class="fas fa-times-circle me-1"></i>Cancelled
+                  </span>
+                  <br><small class="text-muted">Expired</small>
+                </td>
+                <td>25 Nov 2025<br><small class="text-muted">11:20 AM</small></td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" onclick="showTransferDetails('TR-2025-005')">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row mt-4">
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h4 class="text-warning">2</h4>
+                <small class="text-muted">Payment Pending</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h4 class="text-info">1</h4>
+                <small class="text-muted">Payment Verified</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h4 class="text-success">1</h4>
+                <small class="text-muted">Completed</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h4 class="text-danger">1</h4>
+                <small class="text-muted">Cancelled</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State (hidden by default if transfers exist) -->
+        <div id="emptyTransfersState" style="display: none;" class="text-center py-5">
+          <i class="fas fa-paper-plane fa-4x text-muted mb-3"></i>
+          <h5 class="text-muted">No transfer requests yet</h5>
+          <p class="text-muted">You haven't initiated any property transfers.</p>
+          <button class="btn btn-warning" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#sellerModal">
+            <i class="fas fa-plus me-2"></i>Create Transfer Request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER DETAILS MODAL -->
+<div class="modal fade" id="transferDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Transfer Details: <span id="detailTransferId"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="transferDetailsContent">
+        <!-- Content will be loaded dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-45678</h6>
+                <small>Transfer ID: TR-2025-001 | Submitted: 15 Dec 2025, 10:30 AM</small>
+              </div>
+              <div class="col-md-4 text-end">
+                <span class="badge bg-danger">
+                  <i class="fas fa-clock me-1"></i>Awaiting Buyer Payment
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
+                <div class="row">
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khasra No:</small><br>
+                    <strong>KH-123</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khatooni No:</small><br>
+                    <strong>KT-567</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Area:</small><br>
+                    <strong>5.5 Marla</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Type:</small><br>
+                    <strong>Residential</strong>
+                  </div>
+                  <div class="col-12 mb-2">
+                    <small class="text-muted">Location:</small><br>
+                    <strong>Lahore, Model Town, Punjab</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Buyer Information</h6>
+                <p class="mb-1"><strong>Name:</strong> Hassan Raza</p>
+                <p class="mb-1"><strong>CNIC:</strong> 35202-9876543-2</p>
+                <p class="mb-1"><strong>Father:</strong> Raza Ahmed</p>
+                
+                <div class="alert alert-warning mt-3 mb-0">
+                  <i class="fas fa-hourglass-half me-2"></i>
+                  <strong>Time Remaining:</strong> 28 days 14 hours
+                  <p class="mb-0 mt-2 small">Buyer must complete payment before deadline</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-top mt-3 pt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <h6 class="mb-2"><i class="fas fa-check-circle me-2 text-success"></i>Submission Proof</h6>
+                  <p class="small mb-2">
+                    <i class="fas fa-calendar me-1"></i> Submitted: 15 Dec 2025, 10:30 AM<br>
+                    <i class="fas fa-fingerprint me-1"></i> Transaction Hash: 0x7a8b9c...def123<br>
+                    <i class="fas fa-shield-alt me-1"></i> Blockchain Verified
+                  </p>
+                </div>
+                <div class="col-md-6 text-end">
+                  <button class="btn btn-success btn-sm mb-2" onclick="downloadProof('TR-2025-001')">
+                    <i class="fas fa-download me-1"></i>Download Proof of Submission
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm mb-2" onclick="viewTransferDetails('TR-2025-001')">
+                    <i class="fas fa-eye me-1"></i>View Full Details
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="cancelTransfer('TR-2025-001')">
+                    <i class="fas fa-times me-1"></i>Cancel Transfer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transfer Request 2 - Payment Verified -->
+        <div class="card mb-3 border-info">
+          <div class="card-header bg-info text-white">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-78901</h6>
+                <small>Transfer ID: TR-2025-002 | Submitted: 12 Dec 2025, 02:15 PM</small>
+              </div>
+              <div class="col-md-4 text-end">
+                <span class="badge bg-light text-dark">
+                  <i class="fas fa-check-circle me-1"></i>Payment Verified
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
+                <div class="row">
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khasra No:</small><br>
+                    <strong>KH-456</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khatooni No:</small><br>
+                    <strong>KT-890</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Area:</small><br>
+                    <strong>10 Marla</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Type:</small><br>
+                    <strong>Commercial</strong>
+                  </div>
+                  <div class="col-12 mb-2">
+                    <small class="text-muted">Location:</small><br>
+                    <strong>Islamabad, F-7, ICT</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Buyer Information</h6>
+                <p class="mb-1"><strong>Name:</strong> Usman Ali</p>
+                <p class="mb-1"><strong>CNIC:</strong> 35202-6666666-6</p>
+                <p class="mb-1"><strong>Father:</strong> Ali Ahmed</p>
+                
+                <div class="alert alert-success mt-3 mb-0">
+                  <i class="fas fa-check-double me-2"></i>
+                  <strong>Payment Received & Verified</strong>
+                  <p class="mb-0 mt-2 small">
+                    <i class="fas fa-money-bill me-1"></i> Amount: PKR 25,000,000<br>
+                    <i class="fas fa-calendar me-1"></i> Paid: 08 Dec 2025
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-top mt-3 pt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <h6 class="mb-2"><i class="fas fa-clock me-2 text-info"></i>Transfer Status</h6>
+                  <p class="small mb-2">
+                    <i class="fas fa-check text-success me-1"></i> Request Submitted<br>
+                    <i class="fas fa-check text-success me-1"></i> Buyer Notified<br>
+                    <i class="fas fa-check text-success me-1"></i> Payment Verified<br>
+                    <i class="fas fa-hourglass-half text-warning me-1"></i> Awaiting Officer Approval
+                  </p>
+                </div>
+                <div class="col-md-6 text-end">
+                  <button class="btn btn-success btn-sm mb-2" onclick="downloadProof('TR-2025-002')">
+                    <i class="fas fa-download me-1"></i>Download Proof
+                  </button>
+                  <button class="btn btn-outline-info btn-sm mb-2" onclick="viewPaymentReceipt('TR-2025-002')">
+                    <i class="fas fa-receipt me-1"></i>View Payment Receipt
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm" onclick="trackProgress('TR-2025-002')">
+                    <i class="fas fa-chart-line me-1"></i>Track Progress
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transfer Request 3 - Completed -->
+        <div class="card mb-3 border-success">
+          <div class="card-header bg-success text-white">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-11223</h6>
+                <small>Transfer ID: TR-2025-003 | Completed: 10 Dec 2025</small>
+              </div>
+              <div class="col-md-4 text-end">
+                <span class="badge bg-light text-dark">
+                  <i class="fas fa-trophy me-1"></i>Transfer Completed
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
+                <div class="row">
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khasra No:</small><br>
+                    <strong>KH-789</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Khatooni No:</small><br>
+                    <strong>KT-345</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Area:</small><br>
+                    <strong>7 Marla</strong>
+                  </div>
+                  <div class="col-6 mb-2">
+                    <small class="text-muted">Type:</small><br>
+                    <strong>Residential</strong>
+                  </div>
+                  <div class="col-12 mb-2">
+                    <small class="text-muted">Location:</small><br>
+                    <strong>Rawalpindi, Bahria Town</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="text-success mb-3"><i class="fas fa-user-check me-2"></i>New Owner (Buyer)</h6>
+                <p class="mb-1"><strong>Name:</strong> Ali Raza</p>
+                <p class="mb-1"><strong>CNIC:</strong> 35202-7777777-7</p>
+                <p class="mb-1"><strong>Father:</strong> Raza Khan</p>
+                
+                <div class="alert alert-success mt-3 mb-0">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <strong>Ownership Transferred Successfully</strong>
+                  <p class="mb-0 mt-2 small">
+                    <i class="fas fa-calendar me-1"></i> Completed: 10 Dec 2025<br>
+                    <i class="fas fa-shield-alt me-1"></i> Blockchain Updated
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-top mt-3 pt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <h6 class="mb-2"><i class="fas fa-file-alt me-2 text-success"></i>Transfer Certificate</h6>
+                  <p class="small mb-2">
+                    <i class="fas fa-check text-success me-1"></i> All steps completed<br>
+                    <i class="fas fa-stamp text-success me-1"></i> Officer approved<br>
+                    <i class="fas fa-link text-success me-1"></i> Blockchain verified<br>
+                    <i class="fas fa-certificate text-success me-1"></i> Certificate issued
+                  </p>
+                </div>
+                <div class="col-md-6 text-end">
+                  <button class="btn btn-success mb-2" onclick="downloadTransferCertificate('TR-2025-003')">
+                    <i class="fas fa-certificate me-1"></i>Download Transfer Certificate
+                  </button>
+                  <button class="btn btn-outline-success btn-sm mb-2" onclick="downloadProof('TR-2025-003')">
+                    <i class="fas fa-download me-1"></i>Download Proof
+                  </button>
+                  <button class="btn btn-outline-primary btn-sm" onclick="viewCompletionReport('TR-2025-003')">
+                    <i class="fas fa-file-pdf me-1"></i>Completion Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyTransfersState" style="display: none;" class="text-center py-5">
+          <i class="fas fa-paper-plane fa-4x text-muted mb-3"></i>
+          <h5 class="text-muted">No transfer requests yet</h5>
+          <p class="text-muted">You haven't initiated any property transfers.</p>
+          <button class="btn btn-warning" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#sellerModal">
+            <i class="fas fa-plus me-2"></i>Create Transfer Request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BUYER MODAL (Notifications) -->
+<div class="modal fade" id="buyerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+        <h5 class="modal-title text-white"><i class="fas fa-bell me-2"></i>Buyer Notifications</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <h6 class="mb-3"><i class="fas fa-inbox me-2"></i>Pending Transfer Requests</h6>
         
-        <form id="buyerForm">
-          <div class="mb-4">
-            <label class="form-label">Property ID or Fard No <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="buyerPropertyId" placeholder="Enter property ID or Fard number you want to purchase" required>
-            <small class="form-text text-muted">Enter the property identification number you wish to buy</small>
+        <!-- Notification Card 1 - Awaiting Payment -->
+        <div class="card mb-3 border-warning">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-2">
+                  <span class="badge bg-warning text-dark">
+                    <i class="fas fa-clock me-1"></i>Payment Pending
+                  </span>
+                  Property Transfer Request
+                </h6>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <strong>Property ID:</strong> FAR-45678
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Seller:</strong> Ahmed Ali
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Location:</strong> Lahore, Model Town
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Area:</strong> 5.5 Marla
+                  </div>
+                </div>
+                <div class="alert alert-danger mb-0">
+                  <i class="fas fa-hourglass-half me-2"></i>
+                  <strong>Time Remaining:</strong> 28 days 14 hours
+                  <p class="mb-0 mt-2 small">Please complete payment before deadline to proceed with transfer</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center border-start">
+                <div class="mb-3">
+                  <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                  <p class="mt-2 mb-0"><strong>Action Required</strong></p>
+                </div>
+                <button class="btn btn-warning w-100 mb-2" onclick="uploadPaymentChallan('FAR-45678')">
+                  <i class="fas fa-upload me-2"></i>Upload Payment Challan
+                </button>
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="viewPropertyDetails('FAR-45678')">
+                  <i class="fas fa-eye me-2"></i>View Details
+                </button>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div class="mb-4">
-            <label class="form-label">Offer Amount (PKR) <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" id="buyerOfferAmount" placeholder="Enter your offer amount" required>
-            <small class="form-text text-muted">Enter your purchase offer in Pakistani Rupees</small>
+        <!-- Notification Card 2 - Payment Verified -->
+        <div class="card mb-3 border-success">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-2">
+                  <span class="badge bg-success">
+                    <i class="fas fa-check-circle me-1"></i>Payment Verified
+                  </span>
+                  Property Transfer Request
+                </h6>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <strong>Property ID:</strong> FAR-78901
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Seller:</strong> Fatima Khan
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Location:</strong> Islamabad, F-7
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Area:</strong> 10 Marla
+                  </div>
+                </div>
+                <div class="alert alert-success mb-0">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <strong>Status:</strong> Payment verified! Transfer pending officer approval.
+                  <p class="mb-0 mt-2 small">You will receive the Fard document once the officer approves the transfer.</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center border-start">
+                <div class="mb-3">
+                  <i class="fas fa-hourglass-half fa-3x text-info"></i>
+                  <p class="mt-2 mb-0"><strong>Awaiting Approval</strong></p>
+                </div>
+                <button class="btn btn-outline-info w-100 mb-2" onclick="trackTransferStatus('FAR-78901')">
+                  <i class="fas fa-search me-2"></i>Track Status
+                </button>
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="viewChallan('FAR-78901')">
+                  <i class="fas fa-receipt me-2"></i>View Challan
+                </button>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div class="mb-4">
-            <label class="form-label">Additional Notes</label>
-            <textarea class="form-control" id="buyerNotes" rows="3" placeholder="Any additional information or requirements..."></textarea>
+        <!-- Notification Card 3 - Transfer Completed -->
+        <div class="card mb-3 border-primary">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-2">
+                  <span class="badge bg-primary">
+                    <i class="fas fa-trophy me-1"></i>Transfer Completed
+                  </span>
+                  Property Transfer Request
+                </h6>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <strong>Property ID:</strong> FAR-11223
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Previous Owner:</strong> Zubair Ahmed
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Location:</strong> Rawalpindi, Bahria Town
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Area:</strong> 7 Marla
+                  </div>
+                </div>
+                <div class="alert alert-primary mb-0">
+                  <i class="fas fa-check-double me-2"></i>
+                  <strong>Congratulations!</strong> You are now the legal owner of this property.
+                  <p class="mb-0 mt-2 small">Transfer completed on: 10 Dec 2025</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center border-start">
+                <div class="mb-3">
+                  <i class="fas fa-file-download fa-3x text-success"></i>
+                  <p class="mt-2 mb-0"><strong>Ready to Download</strong></p>
+                </div>
+                <button class="btn btn-success w-100 mb-2" onclick="downloadFard('FAR-11223')">
+                  <i class="fas fa-download me-2"></i>Download Fard
+                </button>
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="viewTransferHistory('FAR-11223')">
+                  <i class="fas fa-history me-2"></i>View History
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" style="display: none;" class="text-center py-5">
+          <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+          <h5 class="text-muted">No pending notifications</h5>
+          <p class="text-muted">You don't have any property transfer requests at the moment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Payment Challan Modal -->
+<div class="modal fade" id="uploadChallanModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload Payment Challan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="challanForm">
+          <input type="hidden" id="challanPropertyId">
+          <div class="mb-3">
+            <label class="form-label">Transaction ID <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="transactionId" placeholder="Enter transaction ID" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Payment Amount (PKR) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="paymentAmount" placeholder="Enter amount" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Upload Challan Image/PDF <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" id="challanFile" accept="image/*,.pdf" required>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>Cancel
-        </button>
-        <button type="button" class="btn btn-info text-white" onclick="submitBuyerForm()">
-          <i class="fas fa-paper-plane me-2"></i>Submit Purchase Request
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" onclick="submitChallan()">
+          <i class="fas fa-check me-2"></i>Submit Payment
         </button>
       </div>
     </div>
@@ -488,7 +1115,13 @@ function submitSellerForm() {
 
   console.log('Seller Form Data:', Object.fromEntries(formData));
   
-  alert('✅ Transfer request submitted successfully!\n\nThe buyer will be notified to complete the process.');
+  alert('✅ Transfer request submitted successfully!\n\n' +
+        'Transfer ID: TR-2025-' + Math.floor(Math.random() * 1000) + '\n\n' +
+        'The buyer has been notified and will receive:\n' +
+        '• Property details\n' +
+        '• Payment instructions\n' +
+        '• Time limit for completion\n\n' +
+        'Status can be tracked in Officer Dashboard > Pending Transfers');
   
   const modal = bootstrap.Modal.getInstance(document.getElementById('sellerModal'));
   modal.hide();
@@ -497,27 +1130,157 @@ function submitSellerForm() {
   removeImage('sellerPropertyPhoto');
 }
 
-function submitBuyerForm() {
-  const form = document.getElementById('buyerForm');
-  
+// Buyer notification functions
+function uploadPaymentChallan(propertyId) {
+  document.getElementById('challanPropertyId').value = propertyId;
+  const modal = new bootstrap.Modal(document.getElementById('uploadChallanModal'));
+  modal.show();
+}
+
+function submitChallan() {
+  const form = document.getElementById('challanForm');
   if (!form.checkValidity()) {
     form.reportValidity();
     return;
   }
 
-  const buyerData = {
-    propertyId: document.getElementById('buyerPropertyId').value,
-    offerAmount: document.getElementById('buyerOfferAmount').value,
-    notes: document.getElementById('buyerNotes').value
-  };
+  const propertyId = document.getElementById('challanPropertyId').value;
+  const transactionId = document.getElementById('transactionId').value;
+  const amount = document.getElementById('paymentAmount').value;
+  const file = document.getElementById('challanFile').files[0];
 
-  console.log('Buyer Request Data:', buyerData);
-  
-  alert('✅ Purchase request submitted successfully!\n\nThe property owner will be notified of your interest.');
-  
-  const modal = bootstrap.Modal.getInstance(document.getElementById('buyerModal'));
+  console.log('Challan submitted:', { propertyId, transactionId, amount, file });
+
+  alert('✅ Payment challan uploaded successfully!\n\n' +
+        'Transaction ID: ' + transactionId + '\n' +
+        'Amount: PKR ' + amount + '\n\n' +
+        'Your payment is being verified by the Land Record Officer.\n' +
+        'You will be notified once approved.');
+
+  const modal = bootstrap.Modal.getInstance(document.getElementById('uploadChallanModal'));
   modal.hide();
   form.reset();
+}
+
+function viewPropertyDetails(propertyId) {
+  alert('Viewing details for property: ' + propertyId);
+  // TODO: Show full property details
+}
+
+function trackTransferStatus(propertyId) {
+  alert('Transfer Status for ' + propertyId + ':\n\n' +
+        '✅ Transfer request submitted\n' +
+        '✅ Payment received\n' +
+        '✅ Payment verified\n' +
+        '⏳ Awaiting officer approval\n\n' +
+        'Estimated completion: 2-3 business days');
+}
+
+function viewChallan(propertyId) {
+  alert('Opening payment challan for ' + propertyId);
+  // TODO: Display uploaded challan
+}
+
+function downloadFard(propertyId) {
+  alert('📄 Downloading Fard for property: ' + propertyId + '\n\n' +
+        'Your official land ownership document is being generated...');
+  // TODO: Generate and download PDF Fard
+}
+
+function viewTransferHistory(propertyId) {
+  alert('Transfer History for ' + propertyId + ':\n\n' +
+        '1. Original Owner: Zubair Ahmed (2020-2025)\n' +
+        '2. Current Owner: You (2025-Present)\n\n' +
+        'Transfer Date: 10 Dec 2025\n' +
+        'Transfer Amount: PKR 15,000,000');
+}
+
+// Seller Tracking Functions
+function downloadProof(transferId) {
+  alert('📄 Downloading Proof of Submission for ' + transferId + '\n\n' +
+        'Document includes:\n' +
+        '✅ Transfer request details\n' +
+        '✅ Timestamp of submission\n' +
+        '✅ Blockchain transaction hash\n' +
+        '✅ Digital signature\n' +
+        '✅ Property details\n' +
+        '✅ Buyer information\n\n' +
+        'This serves as legal proof that you initiated the transfer.');
+  // TODO: Generate and download PDF proof
+}
+
+function viewTransferDetails(transferId) {
+  alert('Opening detailed view for ' + transferId + '\n\n' +
+        'Showing:\n' +
+        '• Complete property information\n' +
+        '• Buyer details and contact\n' +
+        '• Timeline and milestones\n' +
+        '• Payment status\n' +
+        '• Officer approval status');
+  // TODO: Open detailed modal
+}
+
+function cancelTransfer(transferId) {
+  if (confirm('⚠️ Are you sure you want to cancel this transfer?\n\n' +
+              'Transfer ID: ' + transferId + '\n\n' +
+              'Note: If the buyer has already paid, you may need officer approval to cancel.')) {
+    alert('Transfer cancellation request submitted.\n\n' +
+          'The buyer and officer will be notified.\n' +
+          'If payment was received, refund process will be initiated.');
+    // TODO: Send cancellation to backend
+  }
+}
+
+function viewPaymentReceipt(transferId) {
+  alert('📄 Opening Payment Receipt for ' + transferId + '\n\n' +
+        'Receipt Details:\n' +
+        '• Transaction ID: TXN-2025-445566\n' +
+        '• Amount: PKR 25,000,000\n' +
+        '• Payment Date: 08 Dec 2025\n' +
+        '• Payment Method: Bank Challan\n' +
+        '• Status: Verified ✅');
+  // TODO: Display payment receipt
+}
+
+function trackProgress(transferId) {
+  alert('📊 Transfer Progress for ' + transferId + '\n\n' +
+        'Step 1: Request Submitted ✅\n' +
+        'Step 2: Buyer Notified ✅\n' +
+        'Step 3: Payment Received ✅\n' +
+        'Step 4: Payment Verified ✅\n' +
+        'Step 5: Officer Review ⏳ (In Progress)\n' +
+        'Step 6: Ownership Transfer ⏸️ (Pending)\n' +
+        'Step 7: Complete ⏸️ (Pending)\n\n' +
+        'Estimated Completion: 2-3 business days');
+  // TODO: Show progress tracker
+}
+
+function downloadTransferCertificate(transferId) {
+  alert('🏆 Downloading Transfer Certificate for ' + transferId + '\n\n' +
+        'Certificate includes:\n' +
+        '✅ Official seal and signatures\n' +
+        '✅ Transfer completion date\n' +
+        '✅ Previous and new owner details\n' +
+        '✅ Property identification\n' +
+        '✅ Blockchain verification\n' +
+        '✅ QR code for verification\n\n' +
+        'This is your official proof of completed transfer.');
+  // TODO: Generate and download certificate
+}
+
+function viewCompletionReport(transferId) {
+  alert('📋 Transfer Completion Report for ' + transferId + '\n\n' +
+        'Report Summary:\n' +
+        '• Transfer Status: Completed ✅\n' +
+        '• Completion Date: 10 Dec 2025\n' +
+        '• Total Duration: 3 days\n' +
+        '• Payment Amount: PKR 18,000,000\n' +
+        '• Previous Owner: You\n' +
+        '• New Owner: Ali Raza\n' +
+        '• Officer: ARA Lahore\n' +
+        '• Blockchain Hash: 0xabc...xyz\n\n' +
+        'All legal requirements met. Transfer is final and irreversible.');
+  // TODO: Generate detailed report
 }
 </script>
 
