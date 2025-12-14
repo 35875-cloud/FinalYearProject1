@@ -126,8 +126,7 @@ body {
         <i class="fas fa-inbox fa-sm me-1"></i> Incoming Transfers
       </a>
       <div class="d-flex align-items-center text-white border-start border-white ps-2">
-        <span class="me-2"><i class="fas fa-user-circle fa-lg me-1"></i><strong>Ahmed Ali</strong></span>
-        <a href="../auth/login.html" class="btn btn-outline-light btn-sm">
+<span class="me-2"><i class="fas fa-user-circle fa-lg me-1"></i><strong class="user-name">Loading...</strong></span>        <a href="../auth/login.html" class="btn btn-outline-light btn-sm">
           <i class="fas fa-sign-out-alt"></i> Logout
         </a>
       </div>
@@ -141,8 +140,8 @@ body {
   <!-- Welcome -->
   <div class="row mb-4">
     <div class="col-12">
-      <h2 class="text-success">Welcome back, Ahmed Ali!</h2>
-      <p class="text-muted fs-6">Blockchain ID: <code class="bg-light px-2 py-1 rounded">bl23333</code></p>
+      <h2 class="text-success">Welcome back, <span class="user-name">Loading...</span>!</h2>
+<p class="text-muted fs-6">Blockchain ID: <code class="bg-light px-2 py-1 rounded" title="Click to copy">Loading...</code></p>
     </div>
   </div>
 
@@ -1282,6 +1281,136 @@ function viewCompletionReport(transferId) {
         'All legal requirements met. Transfer is final and irreversible.');
   // TODO: Generate detailed report
 }
+const authToken = sessionStorage.getItem('authToken');
+const userId = sessionStorage.getItem('userId');
+const userRole = sessionStorage.getItem('userRole');
+
+if (!authToken || !userId) {
+    // User not logged in, redirect to login
+    alert('Please login first');
+    window.location.href = '../auth/login.html';
+}
+
+// Check if user has correct role
+if (userRole && userRole.toUpperCase() !== 'CITIZEN') {
+    alert('Access denied. This dashboard is for citizens only.');
+    window.location.href = '../auth/login.html';
+}
+
+// Load user information
+function loadUserInfo() {
+    const userName = sessionStorage.getItem('userName');
+    const userBlockchainId = sessionStorage.getItem('userBlockchainId');
+    
+    if (userName) {
+        // Update all instances of user name in the page
+        document.querySelectorAll('.user-name').forEach(el => {
+            el.textContent = userName;
+        });
+        
+        // Update welcome message
+        const welcomeMsg = document.querySelector('h2.text-success');
+        if (welcomeMsg) {
+            welcomeMsg.textContent = `Welcome back, ${userName}!`;
+        }
+        
+        // Update navbar name
+        const navbarName = document.querySelector('.navbar strong');
+        if (navbarName) {
+            navbarName.textContent = userName;
+        }
+    }
+    
+    if (userBlockchainId) {
+        // Update blockchain ID
+        const blockchainIdEl = document.querySelector('code.bg-light');
+        if (blockchainIdEl) {
+            // Show short version
+            const shortId = userBlockchainId.substring(0, 10) + '...' + userBlockchainId.substring(userBlockchainId.length - 8);
+            blockchainIdEl.textContent = shortId;
+            blockchainIdEl.title = userBlockchainId; // Full ID on hover
+        }
+    }
+}
+
+// Logout function
+function performLogout() {
+    const token = sessionStorage.getItem('authToken');
+    
+    if (token) {
+        // Optional: Call logout API
+        fetch('http://localhost:5000/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        }).catch(err => console.error('Logout error:', err));
+    }
+    
+    // Clear session storage
+    sessionStorage.clear();
+    
+    // Redirect to login
+    window.location.href = '../auth/login.html';
+}
+
+// Update logout button
+document.addEventListener('DOMContentLoaded', function() {
+    // Load user info when page loads
+    loadUserInfo();
+    
+    // Update logout link
+    const logoutBtn = document.querySelector('a[href="../auth/login.html"]');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                performLogout();
+            }
+        });
+    }
+});
+
+// Fetch user properties count (optional - for dynamic stats)
+async function loadUserStats() {
+    try {
+        const response = await fetch('http://localhost:5000/api/properties/user-stats', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const stats = await response.json();
+            
+            // Update stats cards if API returns data
+            if (stats.totalProperties !== undefined) {
+                document.querySelector('.stat-card:nth-child(1) h3').textContent = stats.totalProperties;
+            }
+            if (stats.activeTransfers !== undefined) {
+                document.querySelector('.stat-card:nth-child(2) h3').textContent = stats.activeTransfers;
+            }
+            if (stats.notifications !== undefined) {
+                document.querySelector('.stat-card:nth-child(3) h3').textContent = stats.notifications;
+            }
+        }
+    } catch (err) {
+        console.error('Error loading stats:', err);
+        // Keep default values if API fails
+    }
+}
+// Add click to copy blockchain ID
+document.querySelector('code.bg-light')?.addEventListener('click', function() {
+    const fullId = sessionStorage.getItem('userBlockchainId');
+    if (fullId) {
+        navigator.clipboard.writeText(fullId);
+        const originalText = this.textContent;
+        this.textContent = '✓ Copied!';
+        setTimeout(() => {
+            this.textContent = originalText;
+        }, 2000);
+    }
+});
 </script>
 
 </body>

@@ -273,83 +273,104 @@
         });
 
         // Login submission with role-based redirect
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            let valid = true;
-            
-            const emailVal = emailInput.value.trim();
-            if (emailVal === '') { 
-                emailError.textContent = 'Email is required.'; 
-                valid = false; 
-            }
-            else if (!emailRegex.test(emailVal)) { 
-                emailError.textContent = 'Enter a valid email address.'; 
-                valid = false; 
-            }
-            else emailError.textContent = '';
+        // Replace the login form submit handler in login.html with this:
 
-            const pVal = loginPassword.value;
-            if (pVal === '') { 
-                passwordError.textContent = 'Password is required.'; 
-                valid = false; 
-            }
-            else if (!passwordRegex.test(pVal)) { 
-                passwordError.textContent = 'Password must be 8+ chars with uppercase, lowercase, number, special char.'; 
-                valid = false; 
-            }
-            else passwordError.textContent = '';
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let valid = true;
+    
+    const emailVal = emailInput.value.trim();
+    if (emailVal === '') { 
+        emailError.textContent = 'Email is required.'; 
+        valid = false; 
+    }
+    else if (!emailRegex.test(emailVal)) { 
+        emailError.textContent = 'Enter a valid email address.'; 
+        valid = false; 
+    }
+    else emailError.textContent = '';
 
-            if (!valid) return;
+    const pVal = loginPassword.value;
+    if (pVal === '') { 
+        passwordError.textContent = 'Password is required.'; 
+        valid = false; 
+    }
+    else if (!passwordRegex.test(pVal)) { 
+        passwordError.textContent = 'Password must be 8+ chars with uppercase, lowercase, number, special char.'; 
+        valid = false; 
+    }
+    else passwordError.textContent = '';
 
-            const loginData = {
-                email: emailVal,
-                password: pVal
-            };
-            
-            const API_URL = "http://localhost:5000/api/auth";
-            
-            try {
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(loginData)
-                });
+    if (!valid) return;
 
-                const result = await response.json();
-
-                if (result.success) {
-                    // ✅ FIXED: Role-based redirect
-                    const role = result.role.toUpperCase();
-                    
-                    console.log("Login successful! Role:", role);
-                    
-                    // Redirect based on role
-                    if (role === 'CITIZEN') {
-                        window.location.href = '../citizen/citizen_dashboard.html';
-                    } 
-                    else if (role === 'LRO' || role === 'LAND RECORD OFFICER') {
-                        window.location.href = '../lro/officer_dashboard.html';
-                    }
-                    else if (role === 'ADMIN') {
-                        window.location.href = '../admin/admin_dashboard.html';
-                    }
-                    else if (role === 'NOTARY') {
-                        window.location.href = '../notary/notary_dashboard.html';
-                    }
-                    else {
-                        // Default fallback
-                        alert(`Login successful! Role: ${role}. Dashboard not configured yet.`);
-                        window.location.href = '../citizen/citizen_dashboard.html';
-                    }
-                } else {
-                    alert(result.message || 'Login failed. Please check your credentials.');
-                }
-
-            } catch (error) {
-                console.error('Login Error:', error);
-                alert('Server connection error. Ensure the backend server is running.');
-            }
+    const loginData = {
+        email: emailVal,
+        password: pVal
+    };
+    
+    const API_URL = "http://localhost:5000/api/auth";
+    
+    try {
+        const response = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loginData)
         });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // ✅ Store user data in sessionStorage
+            sessionStorage.setItem('authToken', result.token);
+            sessionStorage.setItem('userId', result.userId);
+            sessionStorage.setItem('userRole', result.role);
+            
+            // ✅ Fetch additional user details
+            const userDetailsResponse = await fetch(`${API_URL}/user-profile`, {
+                method: 'GET',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${result.token}`
+                }
+            });
+            
+            const userDetails = await userDetailsResponse.json();
+            
+            if (userDetails.success) {
+                sessionStorage.setItem('userName', userDetails.name);
+                sessionStorage.setItem('userBlockchainId', userDetails.blockchain_address);
+                sessionStorage.setItem('userEmail', userDetails.email);
+            }
+            
+            const role = result.role.toUpperCase();
+            console.log("Login successful! Role:", role);
+            
+            // Redirect based on role
+            if (role === 'CITIZEN') {
+                window.location.href = '../citizen/citizen_dashboard.html';
+            } 
+            else if (role === 'LRO' || role === 'LAND RECORD OFFICER') {
+                window.location.href = '../lro/officer_dashboard.html';
+            }
+            else if (role === 'ADMIN') {
+                window.location.href = '../admin/admin_dashboard.html';
+            }
+            else if (role === 'NOTARY') {
+                window.location.href = '../notary/notary_dashboard.html';
+            }
+            else {
+                alert(`Login successful! Role: ${role}. Dashboard not configured yet.`);
+                window.location.href = '../citizen/citizen_dashboard.html';
+            }
+        } else {
+            alert(result.message || 'Login failed. Please check your credentials.');
+        }
+
+    } catch (error) {
+        console.error('Login Error:', error);
+        alert('Server connection error. Ensure the backend server is running.');
+    }
+});
     </script>
 </body>
 </html>

@@ -464,7 +464,54 @@ router.post("/reset-password", async (req, res) => {
 });
 
 // =====================================================
-// 7️⃣ LOGOUT
+// 7️⃣ GET USER PROFILE
+// =====================================================
+router.get("/user-profile", async (req, res) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-jwt-secret");
+
+    // Get user details from database
+    const result = await pool.query(
+      `SELECT user_id, name, email, cnic, mobile, role, blockchain_address, 
+       created_at, last_login FROM users WHERE user_id = $1`,
+      [decoded.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const user = result.rows[0];
+
+    return res.json({
+      success: true,
+      userId: user.user_id,
+      name: user.name,
+      email: user.email,
+      cnic: user.cnic,
+      mobile: user.mobile,
+      role: user.role,
+      blockchain_address: user.blockchain_address,
+      created_at: user.created_at,
+      last_login: user.last_login
+    });
+  } catch (err) {
+    console.error("❌ Get profile error:", err);
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
+});
+
+// =====================================================
+// 8️⃣ LOGOUT
 // =====================================================
 router.post("/logout", async (req, res) => {
   try {
