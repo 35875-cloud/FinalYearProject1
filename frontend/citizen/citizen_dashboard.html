@@ -8,107 +8,736 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 :root {
-  --primary: #2e7d32;
-  --primary-dark: #1b5e20;
-  --secondary: #4caf50;
-  --warning: #ff9800;
-  --danger: #d32f2f;
-  --light-bg: #f0f7f0;
+  --primary: #667eea;
+  --primary-dark: #5a67d8;
+  --secondary: #764ba2;
+  --warning: #f093fb;
+  --danger: #f5576c;
+  --success: #11998e;
+  --info: #4facfe;
+  --light-bg: #f8f9ff;
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(to bottom, #f0f7f0, #e8f5e8);
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   margin: 0;
   min-height: 100vh;
-  padding-top: 70px; 
+  padding-top: 70px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.3) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: pulseBackground 20s ease-in-out infinite;
+}
+
+@keyframes pulseBackground {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.container {
+  position: relative;
+  z-index: 1;
 }
 
 .navbar {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
 }
 
-.top-action-btn {
-  border-radius: 20px;
-  font-size: 0.85rem;
-  padding: 0.35rem 0.9rem;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  transition: all 0.3s;
+.navbar-brand {
+  font-weight: 800;
+  font-size: 1.5rem !important;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
 }
-.top-action-btn:hover {
+
+.navbar-brand:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
+
+.navbar .d-flex.align-items-center {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 0.6rem 1.5rem !important;
+  border-radius: 50px;
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+  border: none !important;
+  transition: all 0.3s ease;
+}
+
+.navbar .d-flex.align-items-center:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+}
+
+.navbar .d-flex.align-items-center .me-2,
+.navbar .d-flex.align-items-center strong {
+  color: white !important;
+}
+
+.navbar .btn-outline-light {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  border-radius: 50px;
+  padding: 0.4rem 1.2rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.navbar .btn-outline-light:hover {
+  background: white;
+  color: #667eea;
+  border-color: white;
+  transform: scale(1.05);
+}
+
+.row.mb-4 {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 25px;
+  padding: 2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-bottom: 2rem !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.row.mb-4::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+h2.text-success {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+p.text-muted {
+  position: relative;
+  z-index: 1;
+}
+
+code.bg-light {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)) !important;
+  color: #667eea;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-weight: 700;
+  border: 2px solid #667eea;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+code.bg-light:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2)) !important;
+  transform: translateX(5px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+code.bg-light::after {
+  content: '\f0c5';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 0.9rem;
 }
 
 .stat-card {
-  border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-  transition: all 0.3s;
-  padding: 1.5rem;
+  border-radius: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 2rem 1.5rem;
   text-align: center;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
 }
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--card-gradient);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+
+.stat-card:hover::before {
+  transform: scaleX(1);
+}
+
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+  transform: translateY(-15px) scale(1.03);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card:nth-child(1) { --card-gradient: linear-gradient(135deg, #11998e, #38ef7d); }
+.stat-card:nth-child(2) { --card-gradient: linear-gradient(135deg, #f093fb, #f5576c); }
+.stat-card:nth-child(3) { --card-gradient: linear-gradient(135deg, #4facfe, #00f2fe); }
+.stat-card:nth-child(4) { --card-gradient: linear-gradient(135deg, #11998e, #38ef7d); }
+
+.stat-card .fas {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+  background: var(--card-gradient);
+  border-radius: 20px;
+  color: white;
+  display: inline-block;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .fas {
+  transform: rotateY(180deg) scale(1.1);
+}
+
+.stat-card h3 {
+  font-size: 3rem;
+  font-weight: 800;
+  background: var(--card-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 1rem 0 0.5rem 0;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.stat-card p {
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.row:has(.quick-btn) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 25px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+h4.mb-3 {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2rem !important;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.5rem;
+}
+
+h4.mb-3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  height: 4px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
 }
 
 .quick-btn {
-  border-radius: 14px;
-  padding: 0.75rem;
-  font-weight: 600;
-  transition: all 0.3s;
-}
-.quick-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  border-radius: 20px;
+  padding: 1.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 2px solid transparent;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
-.highlight-card {
-  border: 2px solid var(--primary);
-  color: var(--primary);
-  background: #e8f5e8;
+.quick-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
 }
+
+.quick-btn:hover::before {
+  left: 100%;
+}
+
+.quick-btn:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+.btn-outline-success.quick-btn {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  color: white;
+  border: none;
+}
+
+.btn-outline-success.quick-btn:hover {
+  background: linear-gradient(135deg, #0d7a6f, #2dd46a);
+}
+
+.btn-warning.quick-btn {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  border: none;
+}
+
+.btn-warning.quick-btn:hover {
+  background: linear-gradient(135deg, #e67ff0, #e94560);
+}
+
+.btn-outline-warning.quick-btn {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  color: #2d3436;
+  border: none;
+}
+
+.btn-outline-warning.quick-btn:hover {
+  background: linear-gradient(135deg, #fdcb6e, #fab1a0);
+}
+
+.btn-info.quick-btn {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  border: none;
+}
+
+.btn-info.quick-btn:hover {
+  background: linear-gradient(135deg, #3d95e5, #00d9e5);
+}
+
+.highlight-card.quick-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+}
+
+.highlight-card.quick-btn:hover {
+  background: linear-gradient(135deg, #5a67d8, #663d99);
+}
+
+.quick-btn .fas {
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.quick-btn:hover .fas {
+  transform: scale(1.2) rotate(10deg);
+}
+
+.modal-content {
+  border-radius: 25px;
+  border: none;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 2rem;
+  border: none;
+  position: relative;
+}
+
+.modal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  opacity: 0.9;
+}
+
+.modal-title {
+  font-weight: 800;
+  font-size: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.modal-body {
+  padding: 2.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+}
+
+.form-label {
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-control, .form-select {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+h6.text-warning, h6.text-success, h6.text-primary, h6.text-info, h6.text-danger {
+  font-weight: 800;
+  font-size: 1.2rem;
+  padding-left: 1rem;
+  border-left: 4px solid;
+  margin: 2rem 0 1.5rem 0;
+}
+
+h6.text-warning { border-left-color: #f093fb; }
+h6.text-success { border-left-color: #11998e; }
+h6.text-primary { border-left-color: #667eea; }
+h6.text-info { border-left-color: #4facfe; }
+h6.text-danger { border-left-color: #f5576c; }
 
 .image-preview {
   width: 100%;
   height: 200px;
-  border: 2px dashed #ddd;
-  border-radius: 8px;
+  border: 3px dashed #cbd5e1;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
+
+.image-preview:hover {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #f8fafc, #ede9fe);
+  transform: scale(1.02);
+}
+
 .image-preview img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  border-radius: 15px;
 }
+
 .image-preview.has-image {
   border-style: solid;
-  border-color: var(--primary);
+  border-color: #667eea;
+  background: white;
 }
+
 .remove-image {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: var(--danger);
+  background: linear-gradient(135deg, #f5576c, #d32f2f);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  width: 35px;
+  height: 35px;
   cursor: pointer;
   display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+  transition: all 0.3s ease;
+  font-size: 1rem;
 }
+
+.remove-image:hover {
+  transform: scale(1.15) rotate(90deg);
+}
+
 .image-preview.has-image .remove-image {
-  display: block;
+  display: flex;
+}
+
+.modal-footer .btn {
+  padding: 0.75rem 2rem;
+  border-radius: 50px;
+  font-weight: 700;
+  border: none;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-footer .btn-secondary {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.modal-footer .btn-secondary:hover {
+  background: #cbd5e1;
+  transform: translateY(-2px);
+}
+
+.modal-footer .btn-warning {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  box-shadow: 0 5px 15px rgba(240, 147, 251, 0.3);
+}
+
+.modal-footer .btn-warning:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(240, 147, 251, 0.4);
+}
+
+.modal-footer .btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.modal-footer .btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.modal-footer .btn-success {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  color: white;
+  box-shadow: 0 5px 15px rgba(17, 153, 142, 0.3);
+}
+
+.modal-footer .btn-success:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(17, 153, 142, 0.4);
+}
+
+.table {
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.table thead {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+}
+
+.table-hover tbody tr {
+  transition: all 0.3s ease;
+}
+
+.table-hover tbody tr:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  transform: scale(1.01);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.badge {
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.card {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.alert {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+}
+
+.alert-info {
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+  color: #0369a1;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, rgba(240, 147, 251, 0.1), rgba(245, 87, 108, 0.1));
+  color: #9f1239;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.1));
+  color: #065f46;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(211, 47, 47, 0.1));
+  color: #991b1b;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.row.g-4 > * {
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.row.g-4 > *:nth-child(1) { animation-delay: 0.1s; }
+.row.g-4 > *:nth-child(2) { animation-delay: 0.2s; }
+.row.g-4 > *:nth-child(3) { animation-delay: 0.3s; }
+.row.g-4 > *:nth-child(4) { animation-delay: 0.4s; }
+
+@media (max-width: 768px) {
+  h2.text-success {
+    font-size: 1.8rem;
+  }
+  
+  .stat-card h3 {
+    font-size: 2.5rem;
+  }
+  
+  h4.mb-3 {
+    font-size: 1.5rem;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+}
+
+/* Stats refresh indicator */
+.stats-refresh-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #667eea;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.stats-refresh-indicator.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stats-refresh-indicator i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -121,10 +750,6 @@ body {
       <i class="fas fa-landmark me-2"></i>Blockchain Land Records
     </a>
     <div class="d-flex align-items-center gap-2">
-      <a href="transfer_dashboard.html?type=incoming" 
-         class="btn btn-outline-warning top-action-btn position-relative">
-        <i class="fas fa-inbox fa-sm me-1"></i> Incoming Transfers
-      </a>
       <div class="d-flex align-items-center text-white border-start border-white ps-2">
 <span class="me-2"><i class="fas fa-user-circle fa-lg me-1"></i><strong class="user-name">Loading...</strong></span>        <a href="../auth/login.html" class="btn btn-outline-light btn-sm">
           <i class="fas fa-sign-out-alt"></i> Logout
@@ -147,6 +772,14 @@ body {
 
   <!-- Stats -->
   <div class="row g-4 mb-5">
+    <div class="col-12 mb-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <div></div>
+        <small class="text-white" id="lastUpdated" style="opacity: 0.8;">
+          <i class="fas fa-sync-alt me-1"></i>Loading statistics...
+        </small>
+      </div>
+    </div>
     <div class="col-lg-3 col-md-6">
       <div class="stat-card">
         <i class="fas fa-home text-success fa-3x mb-2"></i>
@@ -182,11 +815,6 @@ body {
     <div class="col-lg-8">
       <h4 class="mb-3">Quick Actions</h4>
       <div class="row g-3">
-        <div class="col-md-6">
-          <a href="register_property.html" class="btn btn-success quick-btn w-100">
-            <i class="fas fa-plus fa-lg me-2"></i> Register New Property
-          </a>
-        </div>
         <div class="col-md-6">
           <a href="my_properties.html" class="btn btn-outline-success quick-btn w-100">
             <i class="fas fa-list fa-lg me-2"></i> My Properties
@@ -557,273 +1185,6 @@ body {
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>">
-            <div class="row align-items-center">
-              <div class="col-md-8">
-                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-45678</h6>
-                <small>Transfer ID: TR-2025-001 | Submitted: 15 Dec 2025, 10:30 AM</small>
-              </div>
-              <div class="col-md-4 text-end">
-                <span class="badge bg-danger">
-                  <i class="fas fa-clock me-1"></i>Awaiting Buyer Payment
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
-                <div class="row">
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khasra No:</small><br>
-                    <strong>KH-123</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khatooni No:</small><br>
-                    <strong>KT-567</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Area:</small><br>
-                    <strong>5.5 Marla</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Type:</small><br>
-                    <strong>Residential</strong>
-                  </div>
-                  <div class="col-12 mb-2">
-                    <small class="text-muted">Location:</small><br>
-                    <strong>Lahore, Model Town, Punjab</strong>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Buyer Information</h6>
-                <p class="mb-1"><strong>Name:</strong> Hassan Raza</p>
-                <p class="mb-1"><strong>CNIC:</strong> 35202-9876543-2</p>
-                <p class="mb-1"><strong>Father:</strong> Raza Ahmed</p>
-                
-                <div class="alert alert-warning mt-3 mb-0">
-                  <i class="fas fa-hourglass-half me-2"></i>
-                  <strong>Time Remaining:</strong> 28 days 14 hours
-                  <p class="mb-0 mt-2 small">Buyer must complete payment before deadline</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-top mt-3 pt-3">
-              <div class="row">
-                <div class="col-md-6">
-                  <h6 class="mb-2"><i class="fas fa-check-circle me-2 text-success"></i>Submission Proof</h6>
-                  <p class="small mb-2">
-                    <i class="fas fa-calendar me-1"></i> Submitted: 15 Dec 2025, 10:30 AM<br>
-                    <i class="fas fa-fingerprint me-1"></i> Transaction Hash: 0x7a8b9c...def123<br>
-                    <i class="fas fa-shield-alt me-1"></i> Blockchain Verified
-                  </p>
-                </div>
-                <div class="col-md-6 text-end">
-                  <button class="btn btn-success btn-sm mb-2" onclick="downloadProof('TR-2025-001')">
-                    <i class="fas fa-download me-1"></i>Download Proof of Submission
-                  </button>
-                  <button class="btn btn-outline-primary btn-sm mb-2" onclick="viewTransferDetails('TR-2025-001')">
-                    <i class="fas fa-eye me-1"></i>View Full Details
-                  </button>
-                  <button class="btn btn-outline-danger btn-sm" onclick="cancelTransfer('TR-2025-001')">
-                    <i class="fas fa-times me-1"></i>Cancel Transfer
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Transfer Request 2 - Payment Verified -->
-        <div class="card mb-3 border-info">
-          <div class="card-header bg-info text-white">
-            <div class="row align-items-center">
-              <div class="col-md-8">
-                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-78901</h6>
-                <small>Transfer ID: TR-2025-002 | Submitted: 12 Dec 2025, 02:15 PM</small>
-              </div>
-              <div class="col-md-4 text-end">
-                <span class="badge bg-light text-dark">
-                  <i class="fas fa-check-circle me-1"></i>Payment Verified
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
-                <div class="row">
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khasra No:</small><br>
-                    <strong>KH-456</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khatooni No:</small><br>
-                    <strong>KT-890</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Area:</small><br>
-                    <strong>10 Marla</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Type:</small><br>
-                    <strong>Commercial</strong>
-                  </div>
-                  <div class="col-12 mb-2">
-                    <small class="text-muted">Location:</small><br>
-                    <strong>Islamabad, F-7, ICT</strong>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Buyer Information</h6>
-                <p class="mb-1"><strong>Name:</strong> Usman Ali</p>
-                <p class="mb-1"><strong>CNIC:</strong> 35202-6666666-6</p>
-                <p class="mb-1"><strong>Father:</strong> Ali Ahmed</p>
-                
-                <div class="alert alert-success mt-3 mb-0">
-                  <i class="fas fa-check-double me-2"></i>
-                  <strong>Payment Received & Verified</strong>
-                  <p class="mb-0 mt-2 small">
-                    <i class="fas fa-money-bill me-1"></i> Amount: PKR 25,000,000<br>
-                    <i class="fas fa-calendar me-1"></i> Paid: 08 Dec 2025
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-top mt-3 pt-3">
-              <div class="row">
-                <div class="col-md-6">
-                  <h6 class="mb-2"><i class="fas fa-clock me-2 text-info"></i>Transfer Status</h6>
-                  <p class="small mb-2">
-                    <i class="fas fa-check text-success me-1"></i> Request Submitted<br>
-                    <i class="fas fa-check text-success me-1"></i> Buyer Notified<br>
-                    <i class="fas fa-check text-success me-1"></i> Payment Verified<br>
-                    <i class="fas fa-hourglass-half text-warning me-1"></i> Awaiting Officer Approval
-                  </p>
-                </div>
-                <div class="col-md-6 text-end">
-                  <button class="btn btn-success btn-sm mb-2" onclick="downloadProof('TR-2025-002')">
-                    <i class="fas fa-download me-1"></i>Download Proof
-                  </button>
-                  <button class="btn btn-outline-info btn-sm mb-2" onclick="viewPaymentReceipt('TR-2025-002')">
-                    <i class="fas fa-receipt me-1"></i>View Payment Receipt
-                  </button>
-                  <button class="btn btn-outline-primary btn-sm" onclick="trackProgress('TR-2025-002')">
-                    <i class="fas fa-chart-line me-1"></i>Track Progress
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Transfer Request 3 - Completed -->
-        <div class="card mb-3 border-success">
-          <div class="card-header bg-success text-white">
-            <div class="row align-items-center">
-              <div class="col-md-8">
-                <h6 class="mb-0"><i class="fas fa-home me-2"></i>Property: FAR-11223</h6>
-                <small>Transfer ID: TR-2025-003 | Completed: 10 Dec 2025</small>
-              </div>
-              <div class="col-md-4 text-end">
-                <span class="badge bg-light text-dark">
-                  <i class="fas fa-trophy me-1"></i>Transfer Completed
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Property Details</h6>
-                <div class="row">
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khasra No:</small><br>
-                    <strong>KH-789</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Khatooni No:</small><br>
-                    <strong>KT-345</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Area:</small><br>
-                    <strong>7 Marla</strong>
-                  </div>
-                  <div class="col-6 mb-2">
-                    <small class="text-muted">Type:</small><br>
-                    <strong>Residential</strong>
-                  </div>
-                  <div class="col-12 mb-2">
-                    <small class="text-muted">Location:</small><br>
-                    <strong>Rawalpindi, Bahria Town</strong>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <h6 class="text-success mb-3"><i class="fas fa-user-check me-2"></i>New Owner (Buyer)</h6>
-                <p class="mb-1"><strong>Name:</strong> Ali Raza</p>
-                <p class="mb-1"><strong>CNIC:</strong> 35202-7777777-7</p>
-                <p class="mb-1"><strong>Father:</strong> Raza Khan</p>
-                
-                <div class="alert alert-success mt-3 mb-0">
-                  <i class="fas fa-check-circle me-2"></i>
-                  <strong>Ownership Transferred Successfully</strong>
-                  <p class="mb-0 mt-2 small">
-                    <i class="fas fa-calendar me-1"></i> Completed: 10 Dec 2025<br>
-                    <i class="fas fa-shield-alt me-1"></i> Blockchain Updated
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-top mt-3 pt-3">
-              <div class="row">
-                <div class="col-md-6">
-                  <h6 class="mb-2"><i class="fas fa-file-alt me-2 text-success"></i>Transfer Certificate</h6>
-                  <p class="small mb-2">
-                    <i class="fas fa-check text-success me-1"></i> All steps completed<br>
-                    <i class="fas fa-stamp text-success me-1"></i> Officer approved<br>
-                    <i class="fas fa-link text-success me-1"></i> Blockchain verified<br>
-                    <i class="fas fa-certificate text-success me-1"></i> Certificate issued
-                  </p>
-                </div>
-                <div class="col-md-6 text-end">
-                  <button class="btn btn-success mb-2" onclick="downloadTransferCertificate('TR-2025-003')">
-                    <i class="fas fa-certificate me-1"></i>Download Transfer Certificate
-                  </button>
-                  <button class="btn btn-outline-success btn-sm mb-2" onclick="downloadProof('TR-2025-003')">
-                    <i class="fas fa-download me-1"></i>Download Proof
-                  </button>
-                  <button class="btn btn-outline-primary btn-sm" onclick="viewCompletionReport('TR-2025-003')">
-                    <i class="fas fa-file-pdf me-1"></i>Completion Report
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div id="emptyTransfersState" style="display: none;" class="text-center py-5">
-          <i class="fas fa-paper-plane fa-4x text-muted mb-3"></i>
-          <h5 class="text-muted">No transfer requests yet</h5>
-          <p class="text-muted">You haven't initiated any property transfers.</p>
-          <button class="btn btn-warning" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#sellerModal">
-            <i class="fas fa-plus me-2"></i>Create Transfer Request
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -1358,6 +1719,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load user info when page loads
     loadUserInfo();
     
+    // Start auto-refresh for statistics
+    startStatsAutoRefresh();
+    
     // Update logout link
     const logoutBtn = document.querySelector('a[href="../auth/login.html"]');
     if (logoutBtn) {
@@ -1370,34 +1734,127 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Fetch user properties count (optional - for dynamic stats)
+// Fetch user properties count and live statistics
 async function loadUserStats() {
     try {
-        const response = await fetch('http://localhost:5000/api/properties/user-stats', {
+        console.log('📊 Loading user statistics...');
+        
+        // Show loading animation on stat cards
+        document.querySelectorAll('.stat-card h3').forEach(el => {
+            el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        });
+        
+        // Update last updated text
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        if (lastUpdatedEl) {
+            lastUpdatedEl.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i>Updating...';
+        }
+        
+        // Fetch properties count
+        const propertiesResponse = await fetch('http://localhost:5000/api/properties/my-properties', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
         });
         
-        if (response.ok) {
-            const stats = await response.json();
-            
-            // Update stats cards if API returns data
-            if (stats.totalProperties !== undefined) {
-                document.querySelector('.stat-card:nth-child(1) h3').textContent = stats.totalProperties;
-            }
-            if (stats.activeTransfers !== undefined) {
-                document.querySelector('.stat-card:nth-child(2) h3').textContent = stats.activeTransfers;
-            }
-            if (stats.notifications !== undefined) {
-                document.querySelector('.stat-card:nth-child(3) h3').textContent = stats.notifications;
-            }
+        let totalProperties = 0;
+        let activeTransfers = 0;
+        let notifications = 0;
+        let recordsSecure = 0;
+        
+        if (propertiesResponse.ok) {
+            const propertiesData = await propertiesResponse.json();
+            totalProperties = propertiesData.total || propertiesData.properties?.length || 0;
+            console.log('✅ Total Properties:', totalProperties);
         }
+        
+        // Fetch transfer requests count
+        try {
+            const transfersResponse = await fetch('http://localhost:5000/api/transfers/my-transfers', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            
+            if (transfersResponse.ok) {
+                const transfersData = await transfersResponse.json();
+                // Count active transfers (pending, in progress, payment pending)
+                if (transfersData.transfers) {
+                    activeTransfers = transfersData.transfers.filter(t => 
+                        t.status === 'PENDING' || 
+                        t.status === 'PAYMENT_PENDING' || 
+                        t.status === 'PAYMENT_UPLOADED' ||
+                        t.status === 'UNDER_REVIEW'
+                    ).length;
+                } else if (transfersData.total) {
+                    activeTransfers = transfersData.total;
+                }
+                console.log('✅ Active Transfers:', activeTransfers);
+            }
+        } catch (err) {
+            console.log('⚠️ Could not fetch transfers:', err.message);
+        }
+        
+        // Calculate notifications (active transfers + pending approvals)
+        notifications = activeTransfers;
+        
+        // Records secure = total properties with blockchain records
+        recordsSecure = totalProperties;
+        
+        // Update stat cards with actual data
+        const statCards = document.querySelectorAll('.stat-card h3');
+        if (statCards[0]) statCards[0].textContent = totalProperties;
+        if (statCards[1]) statCards[1].textContent = activeTransfers;
+        if (statCards[2]) statCards[2].textContent = notifications;
+        if (statCards[3]) statCards[3].textContent = recordsSecure;
+        
+        // Update last updated timestamp
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        if (lastUpdatedEl) {
+            lastUpdatedEl.innerHTML = `<i class="fas fa-check-circle me-1"></i>Last updated: ${timeString}`;
+        }
+        
+        console.log('✅ Statistics updated successfully');
+        
+        // Add animation effect
+        statCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    card.style.transform = 'scale(1)';
+                }, 200);
+            }, index * 100);
+        });
+        
     } catch (err) {
-        console.error('Error loading stats:', err);
-        // Keep default values if API fails
+        console.error('❌ Error loading stats:', err);
+        // Reset to default values if API fails
+        const statCards = document.querySelectorAll('.stat-card h3');
+        if (statCards[0]) statCards[0].textContent = '0';
+        if (statCards[1]) statCards[1].textContent = '0';
+        if (statCards[2]) statCards[2].textContent = '0';
+        if (statCards[3]) statCards[3].textContent = '0';
+        
+        // Show error in last updated
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        if (lastUpdatedEl) {
+            lastUpdatedEl.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>Failed to update';
+        }
     }
+}
+
+// Auto-refresh statistics every 30 seconds
+function startStatsAutoRefresh() {
+    loadUserStats(); // Load immediately
+    setInterval(loadUserStats, 30000); // Refresh every 30 seconds
+    console.log('✅ Auto-refresh enabled: Statistics will update every 30 seconds');
 }
 // Add click to copy blockchain ID
 document.querySelector('code.bg-light')?.addEventListener('click', function() {
