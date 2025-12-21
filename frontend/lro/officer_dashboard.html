@@ -8,233 +8,727 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     :root {
-      --p: #2e7d32;
-      --pd: #1b5e20;
-      --danger: #d32f2f;
+      --primary-green: #2e7d32;
+      --primary-dark: #1b5e20;
+      --accent-orange: #ff6f00;
+      --accent-red: #d32f2f;
+      --accent-blue: #1565c0;
+      --accent-purple: #6a1b9a;
+      --accent-teal: #00897b;
+      --accent-brown: #6d4c41;
+      --bg-light: #f5f7fa;
+      --bg-gradient-start: #667eea;
+      --bg-gradient-end: #764ba2;
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.15);
     }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      background: #f0f7f0;
-      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+      min-height: 100vh;
+      padding-top: 80px;
     }
+
+    /* Modern Navbar */
     .navbar {
-      background: linear-gradient(135deg, #000, var(--pd));
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      padding: 1rem 0;
     }
-    .queue-card {
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      transition: all 0.3s ease;
-    }
-    .queue-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    }
-    .icon-card {
-      height: 220px;
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-dark) !important;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
-      text-align: center;
-      padding: 20px;
+      gap: 0.5rem;
     }
+
+    .officer-badge {
+      background: linear-gradient(135deg, var(--accent-orange), #e65100);
+      color: white;
+      padding: 0.5rem 1.5rem;
+      border-radius: 25px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 111, 0, 0.3);
+    }
+
+    .officer-info {
+      text-align: right;
+    }
+
+    .officer-info .name {
+      font-weight: 700;
+      color: var(--primary-dark);
+      font-size: 1.1rem;
+    }
+
+    .officer-info .details {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    /* Container with backdrop */
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+      background: white;
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .welcome-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-subtitle {
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-orange), var(--accent-red));
+    }
+
+    .stat-card.blue::before {
+      background: linear-gradient(90deg, var(--accent-blue), #0277bd);
+    }
+
+    .stat-card.green::before {
+      background: linear-gradient(90deg, var(--primary-green), var(--primary-dark));
+    }
+
+    .stat-card.purple::before {
+      background: linear-gradient(90deg, var(--accent-purple), #4a0072);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .stat-card .stat-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card.red .stat-icon {
+      background: linear-gradient(135deg, #ffebee, #ffcdd2);
+      color: var(--accent-red);
+    }
+
+    .stat-card.blue .stat-icon {
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      color: var(--accent-blue);
+    }
+
+    .stat-card.orange .stat-icon {
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+      color: var(--accent-orange);
+    }
+
+    .stat-card.green .stat-icon {
+      background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      color: var(--primary-green);
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .stat-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .badge-urgent {
+      background: #ffebee;
+      color: var(--accent-red);
+    }
+
+    .badge-active {
+      background: #e3f2fd;
+      color: var(--accent-blue);
+    }
+
+    /* Action Cards Grid */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .action-card {
+      background: white;
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      color: inherit;
+      overflow: hidden;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .action-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .action-card-header {
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .action-card-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .action-card-content {
+      flex: 1;
+    }
+
+    .action-card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: #1a1a1a;
+    }
+
+    .action-card-subtitle {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .action-card-footer {
+      padding: 1rem 1.5rem;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .action-count {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .action-arrow {
+      color: #999;
+      transition: transform 0.3s;
+    }
+
+    .action-card:hover .action-arrow {
+      transform: translateX(5px);
+    }
+
+    /* Color variants for action cards */
+    .action-card.orange .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-orange), #e65100);
+    }
+
+    .action-card.red .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-red), #b71c1c);
+    }
+
+    .action-card.green .action-card-icon {
+      background: linear-gradient(135deg, var(--primary-green), var(--primary-dark));
+    }
+
+    .action-card.blue .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-blue), #003c8f);
+    }
+
+    .action-card.purple .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-purple), #4a0072);
+    }
+
+    .action-card.teal .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-teal), #00695c);
+    }
+
+    .action-card.brown .action-card-icon {
+      background: linear-gradient(135deg, var(--accent-brown), #3e2723);
+    }
+
+    .action-card.danger .action-card-icon {
+      background: linear-gradient(135deg, #c62828, #b71c1c);
+    }
+
+    /* Footer */
+    .dashboard-footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+    }
+
+    /* Modal Improvements */
+    .modal-content {
+      border-radius: 16px;
+      border: none;
+    }
+
+    .modal-header {
+      border-radius: 16px 16px 0 0;
+      padding: 1.5rem 2rem;
+    }
+
+    .modal-body {
+      padding: 2rem;
+    }
+
+    /* Form improvements */
+    .form-section-title {
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e9ecef;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+    }
+
+    /* Image Preview */
     .image-preview {
       width: 100%;
       height: 200px;
-      border: 2px dashed #ddd;
-      border-radius: 8px;
+      border: 2px dashed #dee2e6;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: #f8f9fa;
       position: relative;
       overflow: hidden;
+      transition: all 0.3s;
     }
+
+    .image-preview:hover {
+      border-color: var(--primary-green);
+      background: #f0f7f0;
+    }
+
     .image-preview img {
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
     }
+
     .image-preview.has-image {
       border-style: solid;
-      border-color: var(--p);
+      border-color: var(--primary-green);
     }
-    .upload-label {
-      cursor: pointer;
-      display: block;
-    }
+
     .remove-image {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: var(--danger);
+      background: var(--accent-red);
       color: white;
       border: none;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       cursor: pointer;
       display: none;
+      transition: all 0.3s;
     }
+
+    .remove-image:hover {
+      transform: scale(1.1);
+    }
+
     .image-preview.has-image .remove-image {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dashboard-container {
+        padding: 1rem;
+      }
+
+      .welcome-title {
+        font-size: 1.5rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+      }
+
+      .actions-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-card .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+      }
+
+      .stat-number {
+        font-size: 2rem;
+      }
+
+      .officer-badge {
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Loading Animation */
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .loading-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
 <body>
-
-<nav class="navbar navbar-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-bold fs-4" href="#">
-      <i class="fas fa-user-tie text-warning me-2"></i> LAND RECORD OFFICER
+<!-- Modern Navbar -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="#">
+      <i class="fas fa-shield-alt text-success"></i>
+      PLRA Land Records
     </a>
-    <div class="text-end text-white">
-      <div class="fw-bold">ARA – Lahore Cantt</div>
-      <small>Ali Raza | ID: OFF-2025-LHR-0481</small>
+    <div class="d-flex align-items-center gap-3">
+      <span class="officer-badge">
+        <i class="fas fa-user-tie me-2"></i>OFFICER
+      </span>
+      <div class="officer-info d-none d-md-block">
+        <div class="name">Ali Raza</div>
+        <div class="details">ARA Lahore Cantt • ID: OFF-2025-LHR-0481</div>
+      </div>
     </div>
   </div>
 </nav>
 
-<div class="container py-5">
+<div class="dashboard-container">
 
-  <!-- Top Stats -->
-  <div class="row g-4 mb-5">
-    <div class="col-md-3">
-      <div class="queue-card bg-white p-4 text-center">
-        <h3 class="text-danger fw-bold">18</h3>
-        <p class="mb-0">Pending Registrations</p>
-      </div>
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <div class="welcome-title">
+      <i class="fas fa-sun text-warning me-2"></i>Good Morning, Officer Ali
     </div>
-    <div class="col-md-3">
-      <div class="queue-card bg-white p-4 text-center">
-        <h3 class="text-primary fw-bold">24</h3>
-        <p class="mb-0">Pending Transfers</p>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="queue-card bg-white p-4 text-center">
-        <h3 class="text-warning fw-bold">5</h3>
-        <p class="mb-0">Frozen Properties</p>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="queue-card bg-white p-4 text-center">
-        <h3 class="text-success fw-bold">1,842</h3>
-        <p class="mb-0">Approved Today</p>
-      </div>
+    <div class="welcome-subtitle">
+      You have <strong>42 pending tasks</strong> requiring your attention today
     </div>
   </div>
 
-  <!-- Main Action Cards -->
-  <div class="row g-4">
-
-    <!-- ADD RECORD DETAILS - NEW BUTTON -->
-    <div class="col-lg-4 col-md-6">
-      <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#addRecordModal">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #ff6f00, #e65100);">
-          <i class="fas fa-plus-circle fa-4x mb-3 opacity-75"></i>
-          <h4>Add Record Details</h4>
-          <small>Register new land record</small>
-        </div>
-      </a>
+  <!-- Quick Stats -->
+  <div class="stats-grid">
+    <div class="stat-card red">
+      <div class="stat-icon">
+        <i class="fas fa-home"></i>
+      </div>
+      <div class="stat-number">18</div>
+      <div class="stat-label">Pending Registrations</div>
+      <span class="stat-badge badge-urgent">Requires Action</span>
     </div>
+
+    <div class="stat-card blue">
+      <div class="stat-icon">
+        <i class="fas fa-exchange-alt"></i>
+      </div>
+      <div class="stat-number">24</div>
+      <div class="stat-label">Pending Transfers</div>
+      <span class="stat-badge badge-active">In Review</span>
+    </div>
+
+    <div class="stat-card orange">
+      <div class="stat-icon">
+        <i class="fas fa-lock"></i>
+      </div>
+      <div class="stat-number">5</div>
+      <div class="stat-label">Frozen Properties</div>
+      <span class="stat-badge badge-urgent">Court Orders</span>
+    </div>
+
+    <div class="stat-card green">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-number">1,842</div>
+      <div class="stat-label">Approved Today</div>
+    </div>
+  </div>
+
+  <!-- Action Cards -->
+  <div class="actions-grid">
+    
+    <!-- Add Record -->
+    <a href="#" class="action-card orange" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-plus-circle"></i>
+        </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Add New Record</div>
+          <div class="action-card-subtitle">Register new land record</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-warning">Quick Action</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
     <!-- Pending Registrations -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_pending_registrations.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #d32f2f, #b71c1c);">
-          <i class="fas fa-home fa-4x mb-3 opacity-75"></i>
-          <h4>Pending Registrations</h4>
-          <small>18 waiting for approval</small>
+    <a href="officer_pending_registrations.html" class="action-card red">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-home"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Pending Registrations</div>
+          <div class="action-card-subtitle">New property registrations</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-danger">18 Waiting</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
     <!-- Pending Transfers -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_pending_transfers.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, var(--p), var(--pd));">
-          <i class="fas fa-exchange-alt fa-4x mb-3 opacity-75"></i>
-          <h4>Pending Transfers</h4>
-          <small>24 ready for execution</small>
+    <a href="officer_pending_transfers.html" class="action-card green">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-exchange-alt"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Pending Transfers</div>
+          <div class="action-card-subtitle">Ownership transfers</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-success">24 Ready</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
-    <!-- Freeze / Unfreeze -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_freeze_requests.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, var(--danger), #900);">
-          <i class="fas fa-gavel fa-4x mb-3 opacity-75"></i>
-          <h4>Freeze / Unfreeze</h4>
-          <small>Court orders & disputes</small>
+    <!-- Freeze/Unfreeze -->
+    <a href="officer_freeze_requests.html" class="action-card danger">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-gavel"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Freeze / Unfreeze</div>
+          <div class="action-card-subtitle">Court orders & disputes</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-danger">5 Cases</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
     <!-- Issue Digital Fard -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_fard_issuance.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #1565c0, #003c8f);">
-          <i class="fas fa-file-contract fa-4x mb-3 opacity-75"></i>
-          <h4>Issue Digital Fard</h4>
-          <small>Generate new Fard instantly</small>
+    <a href="officer_fard_issuance.html" class="action-card blue">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-file-contract"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Issue Digital Fard</div>
+          <div class="action-card-subtitle">Generate ownership documents</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-primary">Instant Issue</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
-    <!-- My Audit Log -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_audit_log.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #6d4c41, #3e2723);">
-          <i class="fas fa-history fa-4x mb-3 opacity-75"></i>
-          <h4>My Audit Log</h4>
-          <small>View all your actions</small>
+    <!-- Audit Log -->
+    <a href="officer_audit_log.html" class="action-card brown">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-history"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">My Audit Log</div>
+          <div class="action-card-subtitle">View all your actions</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count" style="color: var(--accent-brown);">Track Activity</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
-    <!-- Ownership Tracking - NEW -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_ownership_tracking.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #00897b, #00695c);">
-          <i class="fas fa-users fa-4x mb-3 opacity-75"></i>
-          <h4>Ownership Tracking</h4>
-          <small>Current & previous owners</small>
+    <!-- Ownership Tracking -->
+    <a href="officer_ownership_tracking.html" class="action-card teal">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-users"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Ownership Tracking</div>
+          <div class="action-card-subtitle">Current & previous owners</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count" style="color: var(--accent-teal);">Full History</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
     <!-- Search Citizen -->
-    <div class="col-lg-4 col-md-6">
-      <a href="officer_search_citizen.html" class="text-decoration-none">
-        <div class="card queue-card text-white icon-card" style="background: linear-gradient(135deg, #6a1b9a, #4a0072);">
-          <i class="fas fa-search fa-4x mb-3 opacity-75"></i>
-          <h4>Search Citizen</h4>
-          <small>By CNIC or Property ID</small>
+    <a href="officer_search_citizen.html" class="action-card purple">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-search"></i>
         </div>
-      </a>
-    </div>
+        <div class="action-card-content">
+          <div class="action-card-title">Search Citizen</div>
+          <div class="action-card-subtitle">By CNIC or Property ID</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count" style="color: var(--accent-purple);">Search Now</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
 
   </div>
-  
-  <div class="text-center mt-5 text-muted">
-    <small>Punjab Land Records Authority – Blockchain System v2.8 | 20 Nov 2025</small>
+
+  <!-- Footer -->
+  <div class="dashboard-footer">
+    <small>
+      <i class="fas fa-shield-alt me-2"></i>
+      Punjab Land Records Authority – Blockchain System v2.8 | December 15, 2025
+    </small>
   </div>
+
 </div>
 
 <!-- ADD RECORD MODAL -->
 <div class="modal fade" id="addRecordModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header" style="background: linear-gradient(135deg, var(--p), var(--pd));">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-green), var(--primary-dark));">
         <h5 class="modal-title text-white"><i class="fas fa-plus-circle me-2"></i>Add New Land Record</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4">
+      <div class="modal-body">
         <form id="addRecordForm">
           
           <!-- Personal Information -->
-          <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>Personal Information</h6>
+          <div class="form-section-title">
+            <i class="fas fa-user"></i>
+            Personal Information
+          </div>
           <div class="row g-3 mb-4">
             <div class="col-md-6">
               <label class="form-label">Full Name <span class="text-danger">*</span></label>
@@ -242,7 +736,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">CNIC <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="ownerCnic" maxlength="15" placeholder="xxxxx-xxxxxxx-x" required>
+              <input type="text" class="form-control cnic-input" id="ownerCnic" maxlength="13" placeholder="xxxxx-xxxxxxx-x" required>
             </div>
             <div class="col-md-6">
               <label class="form-label">Father's Name <span class="text-danger">*</span></label>
@@ -261,7 +755,10 @@
           </div>
 
           <!-- Property Information -->
-          <h6 class="text-success mb-3"><i class="fas fa-home me-2"></i>Property Information</h6>
+          <div class="form-section-title">
+            <i class="fas fa-home"></i>
+            Property Information
+          </div>
           <div class="row g-3 mb-4">
             <div class="col-md-4">
               <label class="form-label">Fard No <span class="text-danger">*</span></label>
@@ -286,7 +783,6 @@
                 <option value="residential">Residential</option>
                 <option value="commercial">Commercial</option>
                 <option value="agricultural">Agricultural</option>
-                <option value="industrial">Industrial</option>
               </select>
             </div>
             <div class="col-md-12">
@@ -302,35 +798,41 @@
           </div>
 
           <!-- Location Information -->
-          <h6 class="text-success mb-3"><i class="fas fa-map-marker-alt me-2"></i>Location Information</h6>
+          <div class="form-section-title">
+            <i class="fas fa-map-marker-alt"></i>
+            Location Information
+          </div>
           <div class="row g-3 mb-4">
             <div class="col-md-4">
+              <label class="form-label">Province <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="province" placeholder ="Punjab" required>
+            </div>
+            <div class="col-md-4">
               <label class="form-label">District <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="district" placeholder="Enter district" required>
+              <input type="text" class="form-control" id="district" placeholder="e.g., Lahore" required>
             </div>
             <div class="col-md-4">
               <label class="form-label">Tehsil <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="tehsil" placeholder="Enter tehsil" required>
+              <input type="text" class="form-control" id="tehsil" placeholder="e.g., Model Town" required>
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Mauza <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="mauza" placeholder="Enter mauza" required>
+            <div class="col-md-12">
+              <label class="form-label">Address <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="address" rows="3" placeholder="Enter complete address" required></textarea>
             </div>
           </div>
 
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>Cancel
-        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-success" onclick="submitRecord()">
-          <i class="fas fa-save me-2"></i>Save Record
+          <i class="fas fa-check me-2"></i>Submit Record
         </button>
       </div>
     </div>
   </div>
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -422,6 +924,588 @@ function submitRecord() {
   removeImage('ownerPhoto');
   removeImage('propertyPhoto');
 }
+// =====================================================
+// SYSTEM DIAGNOSTIC SCRIPT
+// Run this in browser console to check system health
+// =====================================================
+
+async function runDiagnostics() {
+  console.log("\n" + "=".repeat(60));
+  console.log("🔍 BLOCKCHAIN LAND RECORDS - SYSTEM DIAGNOSTICS");
+  console.log("=".repeat(60) + "\n");
+
+  const results = {
+    passed: [],
+    failed: [],
+    warnings: []
+  };
+
+  // Test 1: Check Session Storage
+  console.log("📋 Test 1: Checking Session Storage...");
+  const authToken = sessionStorage.getItem('authToken');
+  const userId = sessionStorage.getItem('userId');
+  const userRole = sessionStorage.getItem('userRole');
+
+  if (authToken && userId && userRole) {
+    console.log("✅ PASS: Session data found");
+    console.log("   - User ID:", userId);
+    console.log("   - Role:", userRole);
+    console.log("   - Token:", authToken.substring(0, 20) + "...");
+    results.passed.push("Session Storage");
+  } else {
+    console.log("❌ FAIL: Missing session data");
+    console.log("   - Auth Token:", authToken ? "Present" : "Missing");
+    console.log("   - User ID:", userId || "Missing");
+    console.log("   - User Role:", userRole || "Missing");
+    results.failed.push("Session Storage - Please login again");
+  }
+
+  // Test 2: Check Backend Server
+  console.log("\n📋 Test 2: Checking Backend Server...");
+  try {
+    const healthResponse = await fetch("http://localhost:5000/api/health");
+    if (healthResponse.ok) {
+      const healthData = await healthResponse.json();
+      console.log("✅ PASS: Backend server is running");
+      console.log("   - Status:", healthData.status);
+      console.log("   - Database:", healthData.database);
+      results.passed.push("Backend Server");
+    } else {
+      console.log("❌ FAIL: Backend server returned error:", healthResponse.status);
+      results.failed.push("Backend Server - Status: " + healthResponse.status);
+    }
+  } catch (err) {
+    console.log("❌ FAIL: Cannot connect to backend server");
+    console.log("   - Error:", err.message);
+    results.failed.push("Backend Server - Not responding. Is it running?");
+  }
+
+  // Test 3: Check Property Routes
+  console.log("\n📋 Test 3: Checking Property Routes...");
+  try {
+    const testResponse = await fetch("http://localhost:5000/api/properties/test", {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (testResponse.ok) {
+      const testData = await testResponse.json();
+      console.log("✅ PASS: Property routes are loaded");
+      console.log("   - Message:", testData.message);
+      console.log("   - Upload Dir:", testData.uploadDir);
+      results.passed.push("Property Routes");
+    } else {
+      console.log("❌ FAIL: Property routes returned error:", testResponse.status);
+      const errorText = await testResponse.text();
+      console.log("   - Response:", errorText);
+      results.failed.push("Property Routes - Status: " + testResponse.status);
+    }
+  } catch (err) {
+    console.log("❌ FAIL: Cannot access property routes");
+    console.log("   - Error:", err.message);
+    results.failed.push("Property Routes - Check if routes are loaded in server.js");
+  }
+
+  // Test 4: Check Authentication
+  console.log("\n📋 Test 4: Checking Authentication...");
+  try {
+    const profileResponse = await fetch("http://localhost:5000/api/auth/user-profile", {
+      headers: { 
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (profileResponse.ok) {
+      const profileData = await profileResponse.json();
+      console.log("✅ PASS: Authentication valid");
+      console.log("   - Name:", profileData.name);
+      console.log("   - Email:", profileData.email);
+      console.log("   - Role:", profileData.role);
+      
+      // Check if role is LRO
+      if (profileData.role === 'LRO' || profileData.role === 'LAND RECORD OFFICER') {
+        console.log("✅ User has correct role for adding properties");
+        results.passed.push("Authentication & Authorization");
+      } else {
+        console.log("⚠️ WARNING: User role is not LRO");
+        results.warnings.push("User role is " + profileData.role + " - should be LRO to add properties");
+      }
+    } else {
+      console.log("❌ FAIL: Authentication failed");
+      console.log("   - Status:", profileResponse.status);
+      results.failed.push("Authentication - Token may be expired");
+    }
+  } catch (err) {
+    console.log("❌ FAIL: Cannot verify authentication");
+    console.log("   - Error:", err.message);
+    results.failed.push("Authentication - " + err.message);
+  }
+
+  // Test 5: Check Form Elements
+  console.log("\n📋 Test 5: Checking Form Elements...");
+  const requiredElements = [
+    'addRecordForm',
+    'ownerName',
+    'ownerCnic',
+    'fatherName',
+    'fardNo',
+    'khasraNo',
+    'khatooniNo',
+    'areaMarla',
+    'propertyType',
+    'district',
+    'tehsil',
+    'ownerPhoto',
+    'propertyPhoto'
+  ];
+
+  let missingElements = [];
+  requiredElements.forEach(id => {
+    const element = document.getElementById(id);
+    if (!element) {
+      missingElements.push(id);
+    }
+  });
+
+  if (missingElements.length === 0) {
+    console.log("✅ PASS: All form elements found");
+    results.passed.push("Form Elements");
+  } else {
+    console.log("❌ FAIL: Missing form elements:");
+    missingElements.forEach(id => console.log("   -", id));
+    results.failed.push("Form Elements - Missing: " + missingElements.join(", "));
+  }
+
+  // Test 6: Check JavaScript Functions
+  console.log("\n📋 Test 6: Checking JavaScript Functions...");
+  const requiredFunctions = ['submitRecord', 'removeImage', 'previewImage'];
+  let missingFunctions = [];
+
+  requiredFunctions.forEach(func => {
+    if (typeof window[func] !== 'function') {
+      missingFunctions.push(func);
+    }
+  });
+
+  if (missingFunctions.length === 0) {
+    console.log("✅ PASS: All required functions found");
+    results.passed.push("JavaScript Functions");
+  } else {
+    console.log("❌ FAIL: Missing functions:");
+    missingFunctions.forEach(func => console.log("   -", func));
+    results.failed.push("JavaScript Functions - Script may not be loaded");
+  }
+
+  // Test 7: Check if modal exists
+  console.log("\n📋 Test 7: Checking Modal...");
+  const modal = document.getElementById('addRecordModal');
+  if (modal) {
+    console.log("✅ PASS: Add Record modal found");
+    results.passed.push("Modal Elements");
+  } else {
+    console.log("❌ FAIL: Add Record modal not found");
+    results.failed.push("Modal Elements - Modal may not be in HTML");
+  }
+
+  // Final Report
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 DIAGNOSTIC REPORT");
+  console.log("=".repeat(60));
+  
+  console.log("\n✅ PASSED TESTS (" + results.passed.length + "):");
+  results.passed.forEach(test => console.log("   ✓", test));
+  
+  if (results.warnings.length > 0) {
+    console.log("\n⚠️ WARNINGS (" + results.warnings.length + "):");
+    results.warnings.forEach(warning => console.log("   ⚠", warning));
+  }
+  
+  if (results.failed.length > 0) {
+    console.log("\n❌ FAILED TESTS (" + results.failed.length + "):");
+    results.failed.forEach(failure => console.log("   ✗", failure));
+  }
+  
+  console.log("\n" + "=".repeat(60));
+  
+  if (results.failed.length === 0) {
+    console.log("🎉 ALL SYSTEMS OPERATIONAL!");
+    console.log("You should be able to add properties successfully.");
+  } else {
+    console.log("⚠️ ISSUES DETECTED!");
+    console.log("Please fix the failed tests above before proceeding.");
+    console.log("\nQuick Fixes:");
+    if (results.failed.some(f => f.includes("Backend Server"))) {
+      console.log("• Start backend: cd backend && npm start");
+    }
+    if (results.failed.some(f => f.includes("Property Routes"))) {
+      console.log("• Add to server.js: app.use('/api/properties', require('./routes/properties'));");
+    }
+    if (results.failed.some(f => f.includes("Session Storage"))) {
+      console.log("• Login again at: ../auth/login.html");
+    }
+    if (results.failed.some(f => f.includes("Form Elements"))) {
+      console.log("• Check if officer_dashboard.html has the Add Record modal");
+    }
+    if (results.failed.some(f => f.includes("JavaScript Functions"))) {
+      console.log("• Add the property management script to officer_dashboard.html");
+    }
+  }
+  
+  console.log("=".repeat(60) + "\n");
+  
+  return {
+    totalTests: results.passed.length + results.failed.length + results.warnings.length,
+    passed: results.passed.length,
+    failed: results.failed.length,
+    warnings: results.warnings.length,
+    allPassed: results.failed.length === 0
+  };
+}
+
+// Run diagnostics immediately
+console.log("Running diagnostics...\n");
+runDiagnostics().then(summary => {
+  console.log("Diagnostic Summary:");
+  console.log("- Total Tests:", summary.totalTests);
+  console.log("- Passed:", summary.passed);
+  console.log("- Failed:", summary.failed);
+  console.log("- Warnings:", summary.warnings);
+  console.log("- Status:", summary.allPassed ? "✅ READY" : "❌ NEEDS ATTENTION");
+});
+// =====================================================
+// COMPLETE OFFICER DASHBOARD SCRIPT
+// Replace ENTIRE <script> section with this code
+// =====================================================
+
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem('authToken');
+const userId = sessionStorage.getItem('userId');
+const userRole = sessionStorage.getItem('userRole');
+
+console.log("=== OFFICER DASHBOARD LOADED ===");
+console.log("Auth Token:", authToken ? "✅ Present" : "❌ Missing");
+console.log("User ID:", userId || "❌ Missing");
+console.log("User Role:", userRole || "❌ Missing");
+
+// Authentication check
+if (!authToken || !userId) {
+    alert('⚠️ Please login first');
+    window.location.href = '../auth/login.html';
+}
+
+// Check if user has LRO role
+if (userRole && userRole.toUpperCase() !== 'LRO' && userRole.toUpperCase() !== 'LAND RECORD OFFICER') {
+    alert('⚠️ Access denied. This dashboard is for Land Record Officers only.');
+    window.location.href = '../auth/login.html';
+}
+
+// =====================================================
+// IMAGE PREVIEW FUNCTION
+// =====================================================
+function previewImage(input, previewId) {
+  const preview = document.getElementById(previewId);
+  const file = input.files[0];
+  
+  if (!file) return;
+  
+  // Check file size (5MB limit)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('❌ File size must be less than 5MB\n\nYour file: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB');
+    input.value = '';
+    return;
+  }
+
+  console.log("✅ Image preview:", file.name, "-", (file.size / 1024).toFixed(2), "KB");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    preview.innerHTML = `
+      <img src="${e.target.result}" alt="Preview">
+      <button type="button" class="remove-image" onclick="removeImage('${input.id}')">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    preview.classList.add('has-image');
+    console.log("✅ Image preview loaded successfully");
+  };
+  reader.onerror = function() {
+    console.error("❌ Error reading file");
+    alert("❌ Error reading file. Please try again.");
+  };
+  reader.readAsDataURL(file);
+}
+
+// =====================================================
+// REMOVE IMAGE FUNCTION
+// =====================================================
+function removeImage(inputId) {
+  console.log("🗑️ Removing image:", inputId);
+  const input = document.getElementById(inputId);
+  const previewId = inputId + 'Preview';
+  const preview = document.getElementById(previewId);
+  
+  input.value = '';
+  preview.classList.remove('has-image');
+  
+  if (inputId === 'ownerPhoto') {
+    preview.innerHTML = '<i class="fas fa-user fa-3x text-muted"></i><button type="button" class="remove-image" onclick="removeImage(\'ownerPhoto\')"><i class="fas fa-times"></i></button>';
+  } else {
+    preview.innerHTML = '<i class="fas fa-home fa-3x text-muted"></i><button type="button" class="remove-image" onclick="removeImage(\'propertyPhoto\')"><i class="fas fa-times"></i></button>';
+  }
+}
+
+// =====================================================
+// SUBMIT PROPERTY RECORD
+// =====================================================
+async function submitRecord() {
+  console.log("\n" + "=".repeat(60));
+  console.log("📝 SUBMITTING PROPERTY RECORD");
+  console.log("=".repeat(60));
+
+  const form = document.getElementById('addRecordForm');
+  
+  if (!form.checkValidity()) {
+    console.log("❌ Form validation failed");
+    form.reportValidity();
+    return;
+  }
+
+  console.log("✅ Form validation passed");
+
+  const submitBtn = document.querySelector('#addRecordModal .modal-footer .btn-success');
+  if (!submitBtn) {
+    console.error("❌ Submit button not found");
+    alert("❌ Error: Submit button not found");
+    return;
+  }
+
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding Record...';
+
+  try {
+    const formData = new FormData();
+    
+    const ownerName = document.getElementById('ownerName')?.value.trim();
+    const ownerCnic = document.getElementById('ownerCnic')?.value.replace(/\D/g, '');
+    const fatherName = document.getElementById('fatherName')?.value.trim();
+    const fardNo = document.getElementById('fardNo')?.value.trim();
+    const khasraNo = document.getElementById('khasraNo')?.value.trim();
+    const khatooniNo = document.getElementById('khatooniNo')?.value.trim();
+    const areaMarla = document.getElementById('areaMarla')?.value;
+    const propertyType = document.getElementById('propertyType')?.value;
+    const district = document.getElementById('district')?.value.trim();
+    const tehsil = document.getElementById('tehsil')?.value.trim();
+    const mauza = document.getElementById('mauza')?.value?.trim() || '';
+    const address = document.getElementById('address')?.value?.trim() || '';
+
+    console.log("📋 Form Data:");
+    console.log("- Owner Name:", ownerName);
+    console.log("- Owner CNIC:", ownerCnic);
+    console.log("- Father Name:", fatherName);
+
+    if (!ownerName || !ownerCnic || !fatherName || !fardNo || !khasraNo || 
+        !khatooniNo || !areaMarla || !propertyType || !district || !tehsil) {
+      console.error("❌ Missing required fields");
+      alert("❌ Please fill in all required fields");
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      return;
+    }
+
+    formData.append('ownerName', ownerName);
+    formData.append('ownerCnic', ownerCnic);
+    formData.append('fatherName', fatherName);
+    formData.append('fardNo', fardNo);
+    formData.append('khasraNo', khasraNo);
+    formData.append('khatooniNo', khatooniNo);
+    formData.append('areaMarla', areaMarla);
+    formData.append('propertyType', propertyType);
+    formData.append('district', district);
+    formData.append('tehsil', tehsil);
+    formData.append('mauza', mauza);
+    formData.append('address', address);
+    
+    const ownerPhoto = document.getElementById('ownerPhoto')?.files[0];
+    const propertyPhoto = document.getElementById('propertyPhoto')?.files[0];
+    
+    if (!ownerPhoto || !propertyPhoto) {
+      console.error("❌ Missing files");
+      alert('❌ Please upload both owner photo and property photo');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      return;
+    }
+
+    console.log("📎 Files:", ownerPhoto.name, propertyPhoto.name);
+
+    formData.append('ownerPhoto', ownerPhoto);
+    formData.append('propertyPhoto', propertyPhoto);
+
+    console.log("🚀 Sending to:", `${API_URL}/properties/add-property`);
+
+    const response = await fetch(`${API_URL}/properties/add-property`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: formData
+    });
+
+    console.log("📨 Response status:", response.status);
+
+    const responseText = await response.text();
+    console.log("📄 Response:", responseText.substring(0, 200));
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.error("❌ JSON parse error:", parseErr);
+      throw new Error("Server returned invalid JSON");
+    }
+
+    if (result.success) {
+      console.log("✅ SUCCESS!");
+      console.log("Property ID:", result.propertyId);
+      console.log("Blockchain Hash:", result.blockchainHash);
+
+      alert(`✅ Property Added Successfully!\n\nProperty ID: ${result.propertyId}\nBlockchain Hash: ${result.blockchainHash}\nStatus: ${result.status}`);
+      
+      const modal = bootstrap.Modal.getInstance(document.getElementById('addRecordModal'));
+      if (modal) modal.hide();
+      
+      form.reset();
+      removeImage('ownerPhoto');
+      removeImage('propertyPhoto');
+      
+      loadDashboardStats();
+    } else {
+      console.error("❌ Error:", result.message);
+      alert('❌ Error: ' + result.message);
+    }
+
+  } catch (error) {
+    console.error("❌ SUBMISSION ERROR:", error);
+    alert(`❌ Error: ${error.message}\n\nCheck console for details`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  }
+}
+
+// =====================================================
+// LOAD DASHBOARD STATISTICS
+// =====================================================
+async function loadDashboardStats() {
+  try {
+    const response = await fetch(`${API_URL}/properties/officer-stats`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const stats = await response.json();
+      if (stats.success) {
+        const cards = document.querySelectorAll('.stat-card .stat-number');
+        if (cards[0]) cards[0].textContent = stats.pendingRegistrations || 0;
+        if (cards[1]) cards[1].textContent = stats.pendingTransfers || 0;
+        if (cards[2]) cards[2].textContent = stats.frozenProperties || 0;
+        if (cards[3]) cards[3].textContent = stats.approvedToday || 0;
+      }
+    }
+  } catch (err) {
+    console.error('Stats error:', err);
+  }
+}
+
+// =====================================================
+// LOAD OFFICER INFORMATION
+// =====================================================
+async function loadOfficerInfo() {
+  try {
+    const response = await fetch(`${API_URL}/auth/user-profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        const nameEl = document.querySelector('.officer-info .name');
+        if (nameEl && data.name) nameEl.textContent = data.name;
+
+        const welcomeEl = document.querySelector('.welcome-title');
+        if (welcomeEl && data.name) {
+          const firstName = data.name.split(' ')[0];
+          const hour = new Date().getHours();
+          const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+          welcomeEl.innerHTML = `<i class="fas fa-sun text-warning me-2"></i>${greeting}, Officer ${firstName}`;
+        }
+
+        const detailsEl = document.querySelector('.officer-info .details');
+        if (detailsEl && data.userId) {
+          detailsEl.textContent = `${data.role} • ID: ${data.userId}`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Officer info error:', err);
+  }
+}
+
+// =====================================================
+// DOM CONTENT LOADED
+// =====================================================
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("🚀 Initializing dashboard...");
+  
+  // CNIC formatting
+  const cnicInput = document.getElementById('ownerCnic');
+  if (cnicInput) {
+    cnicInput.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, '');
+      if (value.length > 5) value = value.slice(0,5) + '-' + value.slice(5);
+      if (value.length > 13) value = value.slice(0,13) + '-' + value.slice(13,14);
+      this.value = value;
+    });
+  }
+
+  // Image preview handlers
+  const ownerPhotoInput = document.getElementById('ownerPhoto');
+  const propertyPhotoInput = document.getElementById('propertyPhoto');
+
+  if (ownerPhotoInput) {
+    ownerPhotoInput.addEventListener('change', function(e) {
+      previewImage(e.target, 'ownerPhotoPreview');
+    });
+  }
+
+  if (propertyPhotoInput) {
+    propertyPhotoInput.addEventListener('change', function(e) {
+      previewImage(e.target, 'propertyPhotoPreview');
+    });
+  }
+  
+  // Load data
+  loadOfficerInfo();
+  loadDashboardStats();
+  
+  console.log("✅ Dashboard ready!");
+});
+
+// Make functions globally available
+window.submitRecord = submitRecord;
+window.removeImage = removeImage;
+window.previewImage = previewImage;
+
+console.log("✅ Script loaded successfully");
 </script>
 
 </body>
