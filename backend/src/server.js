@@ -1,13 +1,23 @@
 // =====================================================
-// SERVER.JS - Main Backend Server
-// Location: backend/server.js
+// SERVER.JS - Main Backend Server (ESM Version)
+// Location: backend/src/server.js
 // =====================================================
+import 'dotenv/config';  // add at the very top of server.js
+import dotenv from "dotenv";
+dotenv.config({ path: "../.env" }); // Load .env from backend folder
 
-require("dotenv").config({ path: "../.env" }); // Load .env from same directory
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+
+// Import routes using ESM syntax
+import authRoutes from "./routes/auth.js";
+import propertyRoutes from "./routes/property.js";
+
+// Import DB pool (ESM-compatible)
+import pool from "./config/db.js";
+
 const app = express();
 
 // =====================================================
@@ -19,7 +29,7 @@ app.use(helmet());
 
 // CORS Configuration
 app.use(cors({
-    origin: "*", // Allow all origins for development (change for production)
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -49,7 +59,6 @@ app.get("/", (req, res) => {
 // Test Database Connection
 app.get("/api/health", async (req, res) => {
     try {
-        const pool = require("./config/db");
         const result = await pool.query("SELECT NOW()");
         res.json({
             status: "OK",
@@ -68,18 +77,12 @@ app.get("/api/health", async (req, res) => {
 // =====================================================
 // API ROUTES
 // =====================================================
-app.use("/api/auth", require("./routes/auth"));
-
-// Add more routes as needed
-// app.use("/api/properties", require("./src/routes/properties"));
-// app.use("/api/transfers", require("./src/routes/transfers"));
-// app.use("/api/users", require("./src/routes/users"));
+app.use("/api/auth", authRoutes);
+app.use("/api/properties", propertyRoutes);
 
 // =====================================================
 // ERROR HANDLING
 // =====================================================
-
-// 404 Handler - Route Not Found
 app.use((req, res) => {
     res.status(404).json({ 
         error: "Route not found",
@@ -88,7 +91,6 @@ app.use((req, res) => {
     });
 });
 
-// Global Error Handler
 app.use((err, req, res, next) => {
     console.error("❌ Server Error:", err);
     res.status(err.status || 500).json({
@@ -126,4 +128,5 @@ process.on("uncaughtException", (err) => {
     process.exit(1);
 });
 
-module.exports = app;
+// Export app for testing
+export default app;
