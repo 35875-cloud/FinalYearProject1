@@ -50,3 +50,4 @@ ORDER BY ordinal_position;
 -- Add unique constraint to email field
 -- Define role hierarchy for admin vs manufacturer
 -- Constraint to prevent admin deletion
+-- Added check to prevent duplicate role assignments
