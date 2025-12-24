@@ -1,18 +1,17 @@
-// =====================================================
-// WORKING auth.js with Password Reset
-// Location: backend/src/routes/auth.js
-// =====================================================
+import express from "express";
+import pool from "../config/db.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
+import CryptoJS from "crypto-js";
+import elliptic from "elliptic";
+const { ec: EC } = elliptic;
 
-const express = require("express");
+
 const router = express.Router();
-const pool = require("../config/db"); // CORRECT PATH: src/routes -> src -> backend -> config
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-const { v4: uuidv4 } = require("uuid");
-const CryptoJS = require("crypto-js");
-const EC = require("elliptic").ec;
 const ec = new EC("secp256k1");
+
 
 // =====================================================
 // UTILITY FUNCTIONS
@@ -533,4 +532,4 @@ router.post("/logout", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
