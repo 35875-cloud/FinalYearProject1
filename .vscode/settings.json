@@ -1,3 +1,5 @@
 {
-    "livePreview.defaultPreviewPath": "/frontend/auth/register.html"
+    "livePreview.defaultPreviewPath": "/frontend/auth/register.html",
+    "solidity.packageDefaultDependenciesDirectory": "node_modules",
+    "solidity.packageDefaultDependenciesContractsDirectory": "node_modules/@openzeppelin/contracts"
 }

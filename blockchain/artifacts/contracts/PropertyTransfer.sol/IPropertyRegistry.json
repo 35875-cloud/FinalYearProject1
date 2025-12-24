@@ -1,0 +1,55 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IPropertyRegistry",
+  "sourceName": "contracts/PropertyTransfer.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_propertyId",
+          "type": "string"
+        }
+      ],
+      "name": "getProperty",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "propertyId",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "ownerId",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "ownerName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "ownerCnic",
+          "type": "string"
+        },
+        {
+          "internalType": "bool",
+          "name": "isApproved",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "isFrozen",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
