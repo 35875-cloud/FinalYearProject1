@@ -525,11 +525,7 @@ router.post("/logout", async (req, res) => {
       [token]
     );
 
-    return res.json({ success: true, message: "Logged out successfully" });
-  } catch (err) {
-    console.error("❌ Logout error:", err);
-    return res.status(500).json({ success: false, message: "Server error: " + err.message });
-  }
+   
 });
 
 export default router;
