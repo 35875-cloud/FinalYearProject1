@@ -10,3 +10,4 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 CREATE INDEX IF NOT EXISTS idx_login_email ON login_attempts(email);
 CREATE INDEX IF NOT EXISTS idx_login_time ON login_attempts(attempt_time);
 
+ 
