@@ -3,131 +3,343 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - Blockchain Land Records</title>
+  <title>Pending Approvals - Admin Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    :root { --p: #2e7d32; --pd: #1b5e20; --d: #d32f2f; --w: #ff9800; }
-    body { background: #f0f7f0; font-family: 'Segoe UI', sans-serif; }
-    .navbar { background: linear-gradient(135deg, #000, #1b5e20); }
-    .card-menu { border-radius: 18px; height: 100%; transition: all 0.4s; box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
-    .card-menu:hover { transform: translateY(-12px); box-shadow: 0 20px 40px rgba(0,0,0,0.25); }
-    .stat { background: white; border-radius: 15px; padding: 1.8rem; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+    :root { --p: #2e7d32; --pd: #1b5e20; }
+    body { background: #f5f7fa; font-family: 'Segoe UI', sans-serif; }
+    .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .badge-role { font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 20px; }
+    .user-card { transition: all 0.3s; }
+    .user-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark">
   <div class="container-fluid">
-    <a class="navbar-brand fw-bold fs-4" href="#">
-      <i class="fas fa-crown text-warning me-2"></i>ADMIN PANEL – Blockchain Land Records
+    <a class="navbar-brand fw-bold fs-4" href="admin_dashboard.html">
+      <i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard
     </a>
-    <span class="text-white"><i class="fas fa-user-shield"></i> Super Admin</span>
+    <span class="text-white">
+      <i class="fas fa-user-shield me-2"></i>
+      <span id="adminName">Admin</span>
+    </span>
   </div>
 </nav>
 
 <div class="container py-5">
-
-  <!-- Critical Alert -->
-  <div class="alert alert-danger mb-4 border-start border-danger border-5">
-    <strong>2 Malicious Nodes Detected</strong> → Auto-quarantined 
-    <a href="admin_manage_poa_nodes.html" class="float-end fw-bold">Investigate →</a>
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="fw-bold">
+        <i class="fas fa-clock text-warning me-2"></i>
+        Pending Approvals
+      </h2>
+      <p class="text-muted">Review and approve new user registrations</p>
+    </div>
   </div>
 
-  <!-- Stats Row -->
-  <div class="row g-4 mb-5">
-    <div class="col-md-3"><div class="stat"><h3 class="text-primary">48,291</h3><p>Total Properties</p></div></div>
-    <div class="col-md-3"><div class="stat"><h3 class="text-success">892</h3><p>Transfers Today</p></div></div>
-    <div class="col-md-3"><div class="stat"><h3 class="text-warning">12</h3><p>Pending Actions</p></div></div>
-    <div class="col-md-3"><div class="stat"><h3 class="text-danger">2</h3><p>Frozen Properties</p></div></div>
+  <!-- Stats -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <h3 class="text-warning mb-0" id="totalPending">0</h3>
+        <small class="text-muted">Pending</small>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <h3 class="text-success mb-0" id="totalApproved">0</h3>
+        <small class="text-muted">Approved Today</small>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <h3 class="text-danger mb-0" id="totalRejected">0</h3>
+        <small class="text-muted">Rejected Today</small>
+      </div>
+    </div>
   </div>
 
-  <!-- ALL 10 ADMIN PAGES — NOW VISIBLE HERE -->
-  <h3 class="text-success mb-4">Administration Tools</h3>
-  <div class="row g-4">
-
-    <div class="col-md-4">
-      <a href="admin_import_legacy.html" class="text-decoration-none">
-        <div class="card card-menu text-white text-center p-4" style="background: linear-gradient(135deg, var(--p), var(--pd));">
-          <i class="fas fa-upload fa-4x mb-3"></i>
-          <h5>Import Legacy Records<br><small>(UC017)</small></h5>
-        </div>
-      </a>
+  <!-- Pending Users List -->
+  <div class="card">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">
+        <i class="fas fa-users me-2"></i>
+        Users Awaiting Approval
+      </h5>
     </div>
-
-    <div class="col-md-4">
-      <a href="admin_manage_poa_nodes.html" class="text-decoration-none">
-        <div class="card card-menu bg-warning text-dark text-center p-4">
-          <i class="fas fa-server fa-4x mb-3"></i>
-          <h5>Manage PoA Nodes<br><small>(UC018, UC020)</small></h5>
-        </div>
-      </a>
+    <div class="card-body" id="pendingUsersList">
+      <div class="text-center py-5">
+        <i class="fas fa-spinner fa-spin fa-3x text-muted"></i>
+        <p class="mt-3 text-muted">Loading pending approvals...</p>
+      </div>
     </div>
-
-    <div class="col-md-4">
-      <a href="admin_node_status.html" class="text-decoration-none">
-        <div class="card card-menu bg-info text-white text-center p-4">
-          <i class="fas fa-heartbeat fa-4x mb-3"></i>
-          <h5>Real-time Node Status<br><small>(UC019)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_user_management.html" class="text-decoration-none">
-        <div class="card card-menu bg-danger text-white text-center p-4">
-          <i class="fas fa-users-cog fa-4x mb-3"></i>
-          <h5>User & Role Management<br><small>(UC024–UC026)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_reports.html" class="text-decoration-none">
-        <div class="card card-menu bg-primary text-white text-center p-4">
-          <i class="fas fa-chart-bar fa-4x mb-3"></i>
-          <h5>Reports & Analytics<br><small>(UC022)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_audit_dashboard.html" class="text-decoration-none">
-        <div class="card card-menu bg-dark text-white text-center p-4">
-          <i class="fas fa-eye fa-4x mb-3"></i>
-          <h5>Live Audit & Alerts<br><small>(UC023)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_ledger_integrity.html" class="text-decoration-none">
-        <div class="card card-menu bg-secondary text-white text-center p-4">
-          <i class="fas fa-cubes fa-4x mb-3"></i>
-          <h5>Blockchain Integrity<br><small>(UC027)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_freeze_property.html" class="text-decoration-none">
-        <div class="card card-menu text-white text-center p-4" style="background: linear-gradient(135deg, #d32f2f, #b71c1c);">
-          <i class="fas fa-ban fa-4x mb-3"></i>
-          <h5>Emergency Freeze Property<br><small>(UC014 – Admin Override)</small></h5>
-        </div>
-      </a>
-    </div>
-
-    <div class="col-md-4">
-      <a href="admin_system_stats.html" class="text-decoration-none">
-        <div class="card card-menu bg-success text-white text-center p-4">
-          <i class="fas fa-tachometer-alt fa-4x mb-3"></i>
-          <h5>System KPIs & Health<br><small>(UC028)</small></h5>
-        </div>
-      </a>
-    </div>
-
   </div>
 </div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Approve User</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to approve this user?</p>
+        <div class="mb-3">
+          <label class="form-label">Approval Notes (Optional)</label>
+          <textarea class="form-control" id="approvalNotes" rows="3"></textarea>
+        </div>
+        <input type="hidden" id="approveUserId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="confirmApprove()">
+          <i class="fas fa-check me-2"></i>Approve
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Reject User</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Please provide a reason for rejection:</p>
+        <div class="mb-3">
+          <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control" id="rejectionReason" rows="3" required></textarea>
+        </div>
+        <input type="hidden" id="rejectUserId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="confirmReject()">
+          <i class="fas fa-times me-2"></i>Reject
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API_URL = "http://localhost:5000/api/auth";
+const authToken = sessionStorage.getItem('authToken');
+const userRole = sessionStorage.getItem('userRole');
+
+// Check authentication and role
+if (!authToken || userRole !== 'ADMIN') {
+  alert('Access denied. Admin only.');
+  window.location.href = '../auth/login.html';
+}
+
+// Load admin name
+const adminName = sessionStorage.getItem('userName');
+if (adminName) {
+  document.getElementById('adminName').textContent = adminName;
+}
+
+// Load pending approvals on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadPendingApprovals();
+});
+
+async function loadPendingApprovals() {
+  try {
+    const response = await fetch(`${API_URL}/pending-approvals`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      document.getElementById('totalPending').textContent = result.totalPending;
+      displayPendingUsers(result.users);
+    } else {
+      throw new Error(result.message);
+    }
+
+  } catch (err) {
+    console.error('Error loading approvals:', err);
+    document.getElementById('pendingUsersList').innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        Error loading pending approvals: ${err.message}
+      </div>
+    `;
+  }
+}
+
+function displayPendingUsers(users) {
+  const container = document.getElementById('pendingUsersList');
+
+  if (users.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-5">
+        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+        <h5>No Pending Approvals</h5>
+        <p class="text-muted">All registrations have been reviewed</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = users.map(user => `
+    <div class="user-card mb-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h5 class="mb-2">
+                <i class="fas fa-user-circle text-primary me-2"></i>
+                ${user.name}
+                ${getRoleBadge(user.role)}
+              </h5>
+              <p class="mb-1">
+                <i class="fas fa-envelope text-muted me-2"></i>
+                ${user.email}
+              </p>
+              <p class="mb-1">
+                <i class="fas fa-id-card text-muted me-2"></i>
+                CNIC: ${formatCNIC(user.cnic)}
+              </p>
+              <p class="mb-1">
+                <i class="fas fa-phone text-muted me-2"></i>
+                ${user.mobile || 'N/A'}
+              </p>
+              <small class="text-muted">
+                <i class="fas fa-clock me-1"></i>
+                Registered: ${formatDate(user.created_at)}
+              </small>
+            </div>
+            <div class="col-md-4 text-end">
+              <button class="btn btn-success mb-2 w-100" onclick="approveUser('${user.user_id}')">
+                <i class="fas fa-check me-2"></i>Approve
+              </button>
+              <button class="btn btn-danger w-100" onclick="rejectUser('${user.user_id}')">
+                <i class="fas fa-times me-2"></i>Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getRoleBadge(role) {
+  const badges = {
+    'LRO': 'bg-primary',
+    'LAND RECORD OFFICER': 'bg-primary',
+    'NOTARY': 'bg-info',
+    'ADMIN': 'bg-danger',
+    'CITIZEN': 'bg-secondary'
+  };
+  
+  const colorClass = badges[role.toUpperCase()] || 'bg-secondary';
+  return `<span class="badge ${colorClass} badge-role">${role}</span>`;
+}
+
+function formatCNIC(cnic) {
+  if (cnic.length === 13) {
+    return `${cnic.substring(0,5)}-${cnic.substring(5,12)}-${cnic.substring(12)}`;
+  }
+  return cnic;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function approveUser(userId) {
+  document.getElementById('approveUserId').value = userId;
+  new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+
+function rejectUser(userId) {
+  document.getElementById('rejectUserId').value = userId;
+  document.getElementById('rejectionReason').value = '';
+  new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+async function confirmApprove() {
+  const userId = document.getElementById('approveUserId').value;
+  const notes = document.getElementById('approvalNotes').value;
+
+  try {
+    const response = await fetch(`${API_URL}/approve-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, notes })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('✅ User approved successfully!');
+      bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+      loadPendingApprovals();
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+  } catch (err) {
+    console.error('Approve error:', err);
+    alert('❌ Error approving user');
+  }
+}
+
+async function confirmReject() {
+  const userId = document.getElementById('rejectUserId').value;
+  const reason = document.getElementById('rejectionReason').value.trim();
+
+  if (!reason) {
+    alert('Please provide a rejection reason');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/reject-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId, reason })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('✅ User rejected successfully');
+      bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+      loadPendingApprovals();
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+  } catch (err) {
+    console.error('Reject error:', err);
+    alert('❌ Error rejecting user');
+  }
+}
+</script>
+
 </body>
 </html>
