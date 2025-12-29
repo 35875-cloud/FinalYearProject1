@@ -8,10 +8,8 @@ import CryptoJS from "crypto-js";
 import elliptic from "elliptic";
 const { ec: EC } = elliptic;
 
-
 const router = express.Router();
 const ec = new EC("secp256k1");
-
 
 // =====================================================
 // UTILITY FUNCTIONS
@@ -119,6 +117,32 @@ async function handleFailedLogin(email, ipAddress) {
 }
 
 // =====================================================
+// AUTHENTICATION MIDDLEWARE
+// =====================================================
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      message: "Access denied. No token provided." 
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-jwt-secret");
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ 
+      success: false, 
+      message: "Invalid or expired token" 
+    });
+  }
+}
+
+// =====================================================
 // 1️⃣ REGISTER - SEND OTP
 // =====================================================
 router.post("/register-citizen", async (req, res) => {
@@ -210,11 +234,18 @@ router.post("/verify-otp", async (req, res) => {
     name = name.trim();
     mobile = mobile.trim();
 
+    // Set approval status based on role
+    const roleUpper = role.toUpperCase();
+    const needsApproval = ['LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN'].includes(roleUpper);
+    const approvalStatus = needsApproval ? 'PENDING' : 'APPROVED';
+    const isActive = needsApproval ? false : true;
+
     await pool.query(
       `INSERT INTO users (id, user_id, role, name, cnic, email, mobile, password_hash, 
-       public_key, encrypted_private_key, blockchain_address) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, userID, role.toUpperCase(), name, cnic, email, mobile, hash, publicKey, encryptedPrivateKey, blockchainAddress]
+       public_key, encrypted_private_key, blockchain_address, approval_status, is_active) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, userID, role.toUpperCase(), name, cnic, email, mobile, hash, publicKey, 
+       encryptedPrivateKey, blockchainAddress, approvalStatus, isActive]
     );
 
     await pool.query(
@@ -225,13 +256,26 @@ router.post("/verify-otp", async (req, res) => {
 
     await pool.query("DELETE FROM otp_verification WHERE email=$1", [email]);
 
-    await sendEmail(email, "Welcome!", `Welcome ${name}!\nUser ID: ${userID}\nBlockchain: ${blockchainAddress}`);
+    if (needsApproval) {
+      await sendEmail(
+        email, 
+        "Registration Pending Approval", 
+        `Dear ${name},\n\nThank you for registering as ${role}.\n\nYour account is pending admin approval. You will receive an email notification once your account is approved.\n\nUser ID: ${userID}\nBlockchain Address: ${blockchainAddress}\n\nBest regards,\nBlockchain Land Records Team`
+      );
+    } else {
+      await sendEmail(
+        email, 
+        "Welcome!", 
+        `Welcome ${name}!\nUser ID: ${userID}\nBlockchain: ${blockchainAddress}\n\nYou can now login to your account.`
+      );
+    }
 
     return res.json({
       success: true,
       message: "User registered successfully",
       userID,
       blockchainAddress,
+      needsApproval
     });
   } catch (err) {
     console.error("❌ verify-otp error:", err);
@@ -240,7 +284,7 @@ router.post("/verify-otp", async (req, res) => {
 });
 
 // =====================================================
-// 3️⃣ LOGIN
+// 3️⃣ LOGIN WITH APPROVAL CHECK
 // =====================================================
 router.post("/login", async (req, res) => {
   try {
@@ -261,7 +305,8 @@ router.post("/login", async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT user_id, role, password_hash, is_active FROM users WHERE email = $1",
+      `SELECT user_id, role, password_hash, is_active, approval_status, approved_at 
+       FROM users WHERE email = $1`,
       [email.toLowerCase()]
     );
 
@@ -271,6 +316,27 @@ router.post("/login", async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    // ✅ CHECK APPROVAL STATUS FOR LRO/NOTARY/ADMIN
+    if (['LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN'].includes(user.role.toUpperCase())) {
+      if (user.approval_status === 'PENDING') {
+        await recordLoginAttempt(email, ipAddress, false, "Account pending approval");
+        return res.json({
+          success: false,
+          message: "Your account is pending admin approval. Please wait for approval confirmation.",
+          reason: "PENDING_APPROVAL"
+        });
+      }
+      
+      if (user.approval_status === 'REJECTED') {
+        await recordLoginAttempt(email, ipAddress, false, "Account rejected");
+        return res.json({
+          success: false,
+          message: "Your account registration was not approved. Please contact support.",
+          reason: "ACCOUNT_REJECTED"
+        });
+      }
+    }
 
     if (!user.is_active) {
       await recordLoginAttempt(email, ipAddress, false, "Account inactive");
@@ -366,7 +432,7 @@ router.post("/request-password-reset", async (req, res) => {
 });
 
 // =====================================================
-// 5️⃣ VERIFY RESET OTP (NEW - Frontend needs this!)
+// 5️⃣ VERIFY RESET OTP
 // =====================================================
 router.post("/verify-reset-otp", async (req, res) => {
   try {
@@ -465,24 +531,12 @@ router.post("/reset-password", async (req, res) => {
 // =====================================================
 // 7️⃣ GET USER PROFILE
 // =====================================================
-router.get("/user-profile", async (req, res) => {
+router.get("/user-profile", authenticateToken, async (req, res) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: "No token provided" });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-jwt-secret");
-
-    // Get user details from database
     const result = await pool.query(
       `SELECT user_id, name, email, cnic, mobile, role, blockchain_address, 
        created_at, last_login FROM users WHERE user_id = $1`,
-      [decoded.userId]
+      [req.user.userId]
     );
 
     if (result.rows.length === 0) {
@@ -529,6 +583,195 @@ router.post("/logout", async (req, res) => {
   } catch (err) {
     console.error("❌ Logout error:", err);
     return res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
+});
+
+// =====================================================
+// ADMIN ROUTES - APPROVAL MANAGEMENT
+// =====================================================
+
+// 9️⃣ GET PENDING APPROVALS (ADMIN ONLY)
+router.get("/pending-approvals", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Admin only." 
+      });
+    }
+
+    const pendingUsers = await pool.query(
+      `SELECT 
+        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
+        u.created_at, u.approval_status,
+        ar.request_id, ar.decision_notes
+       FROM users u
+       LEFT JOIN approval_requests ar ON u.user_id = ar.user_id
+       WHERE u.approval_status = 'PENDING'
+       ORDER BY u.created_at DESC`
+    );
+
+    return res.json({
+      success: true,
+      totalPending: pendingUsers.rows.length,
+      users: pendingUsers.rows
+    });
+
+  } catch (err) {
+    console.error("❌ Get pending approvals error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
+  }
+});
+
+// 🔟 APPROVE USER (ADMIN ONLY)
+router.post("/approve-user", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Admin only." 
+      });
+    }
+
+    const { userId, notes } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID required" 
+      });
+    }
+
+    await pool.query(
+      `UPDATE users 
+       SET approval_status = 'APPROVED',
+           approved_by = $1,
+           approved_at = NOW(),
+           is_active = TRUE
+       WHERE user_id = $2`,
+      [req.user.userId, userId]
+    );
+
+    await pool.query(
+      `UPDATE approval_requests 
+       SET status = 'APPROVED',
+           reviewed_by = $1,
+           reviewed_at = NOW(),
+           decision_notes = $2
+       WHERE user_id = $3 AND status = 'PENDING'`,
+      [req.user.userId, notes || 'Approved by admin', userId]
+    );
+
+    const userResult = await pool.query(
+      "SELECT name, email, role FROM users WHERE user_id = $1",
+      [userId]
+    );
+
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      
+      await sendEmail(
+        user.email,
+        "Account Approved - Blockchain Land Records",
+        `Dear ${user.name},\n\nYour ${user.role} account has been approved!\n\nYou can now login at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}\n\nBest regards,\nBlockchain Land Records Team`
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details) 
+       VALUES ($1, 'USER_APPROVED', $2, $3)`,
+      [req.user.userId, userId, JSON.stringify({ notes })]
+    );
+
+    return res.json({
+      success: true,
+      message: "User approved successfully"
+    });
+
+  } catch (err) {
+    console.error("❌ Approve user error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
+  }
+});
+
+// 1️⃣1️⃣ REJECT USER (ADMIN ONLY)
+router.post("/reject-user", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Admin only." 
+      });
+    }
+
+    const { userId, reason } = req.body;
+
+    if (!userId || !reason) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID and rejection reason required" 
+      });
+    }
+
+    await pool.query(
+      `UPDATE users 
+       SET approval_status = 'REJECTED',
+           approved_by = $1,
+           approved_at = NOW(),
+           rejection_reason = $2,
+           is_active = FALSE
+       WHERE user_id = $3`,
+      [req.user.userId, reason, userId]
+    );
+
+    await pool.query(
+      `UPDATE approval_requests 
+       SET status = 'REJECTED',
+           reviewed_by = $1,
+           reviewed_at = NOW(),
+           decision_notes = $2
+       WHERE user_id = $3 AND status = 'PENDING'`,
+      [req.user.userId, reason, userId]
+    );
+
+    const userResult = await pool.query(
+      "SELECT name, email, role FROM users WHERE user_id = $1",
+      [userId]
+    );
+
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      
+      await sendEmail(
+        user.email,
+        "Account Registration Update - Blockchain Land Records",
+        `Dear ${user.name},\n\nWe regret to inform you that your ${user.role} account registration was not approved.\n\nReason: ${reason}\n\nIf you believe this is an error, please contact support.\n\nBest regards,\nBlockchain Land Records Team`
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details) 
+       VALUES ($1, 'USER_REJECTED', $2, $3)`,
+      [req.user.userId, userId, JSON.stringify({ reason })]
+    );
+
+    return res.json({
+      success: true,
+      message: "User registration rejected"
+    });
+
+  } catch (err) {
+    console.error("❌ Reject user error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
   }
 });
 
