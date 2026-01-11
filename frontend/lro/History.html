@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Ownership History - Officer Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --success: #11998e;
+    --warning: #f093fb;
+    --info: #4facfe;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding-top: 80px;
+  }
+  
+  .navbar {
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  }
+  
+  .container-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  .page-header {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  }
+  
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+  
+  .search-section {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  }
+  
+  .search-box {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    padding-right: 150px;
+    border: 2px solid #e0e0e0;
+    border-radius: 50px;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+  }
+  
+  .search-btn {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  
+  .search-btn:hover {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  .property-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 6px solid var(--primary);
+  }
+  
+  .property-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .property-id {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--secondary);
+  }
+  
+  .property-status {
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  
+  .property-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border-radius: 15px;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detail-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  
+  .detail-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  
+  .current-owner-section {
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.1));
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-left: 5px solid var(--success);
+  }
+  
+  .section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--secondary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .owner-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .timeline-section {
+    position: relative;
+    padding-left: 3rem;
+  }
+  
+  .timeline-item {
+    position: relative;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--info);
+    transition: all 0.3s;
+  }
+  
+  .timeline-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  }
+  
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -3rem;
+    top: 2rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--info);
+    border: 4px solid white;
+    box-shadow: 0 0 0 3px var(--info);
+  }
+  
+  .timeline-item::after {
+    content: '';
+    position: absolute;
+    left: -2.4rem;
+    top: 3rem;
+    bottom: -1.5rem;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--info), transparent);
+  }
+  
+  .timeline-item:last-child::after {
+    display: none;
+  }
+  
+  .timeline-item.original-owner::before {
+    background: var(--success);
+    box-shadow: 0 0 0 3px var(--success);
+  }
+  
+  .timeline-item.original-owner {
+    border-left-color: var(--success);
+  }
+  
+  .timeline-date {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .timeline-event {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--secondary);
+    margin-bottom: 1rem;
+  }
+  
+  .timeline-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .transfer-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+  }
+  
+  .badge-sale {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white;
+  }
+  
+  .badge-current {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: white;
+  }
+  
+  .badge-original {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    color: white;
+  }
+  
+  .empty-state, .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  }
+  
+  .stats-summary {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+  
+  .stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border-radius: 10px;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+  
+  .stat-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold" href="officer_dashboard.html" style="color: var(--secondary);">
+      <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="badge bg-primary">
+        <i class="fas fa-user-shield me-1"></i>
+        <span id="userRole">Officer</span>
+      </span>
+    </div>
+  </div>
+</nav>
+
+<div class="container-main">
+  
+  <div class="page-header">
+    <h1 class="page-title">
+      <i class="fas fa-history me-2"></i>Property Ownership History
+    </h1>
+    <p class="text-muted mb-0">Track complete ownership chain and transfer history of properties</p>
+  </div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <h5 class="text-center mb-3" style="color: var(--secondary); font-weight: 700;">
+      <i class="fas fa-search me-2"></i>Search Property
+    </h5>
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" 
+             placeholder="Enter Property ID (e.g., PROP-1234567890-5678)">
+      <button class="search-btn" onclick="searchProperty()">
+        <i class="fas fa-search me-2"></i>Search
+      </button>
+    </div>
+    <div class="text-center mt-3">
+      <small class="text-muted">
+        <i class="fas fa-info-circle me-1"></i>
+        Enter a property ID to view its complete ownership history
+      </small>
+    </div>
+  </div>
+
+  <!-- Results Container -->
+  <div id="resultsContainer">
+    <div class="empty-state">
+      <i class="fas fa-search fa-4x text-muted mb-3"></i>
+      <h4>Search for a Property</h4>
+      <p class="text-muted">Enter a property ID above to view its ownership history and transfer records</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// =====================================================
+// UPDATED HISTORY.HTML JAVASCRIPT
+// Replace the <script> section in History.html with this
+// =====================================================
+
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem('authToken');
+const userName = sessionStorage.getItem('userName');
+const userRole = sessionStorage.getItem('userRole');
+
+// Check authentication
+if (!authToken) {
+  alert('Please login first');
+  window.location.href = 'login.html';
+}
+
+// Display user info
+if (userName && userRole) {
+  document.getElementById('userName').textContent = userName;
+  document.getElementById('userRole').textContent = userRole;
+}
+
+// Search property
+async function searchProperty() {
+  const propertyId = document.getElementById('searchInput').value.trim();
+  
+  if (!propertyId) {
+    alert('Please enter a Property ID, Fard No, Khasra No, or Khatooni No');
+    return;
+  }
+
+  const container = document.getElementById('resultsContainer');
+  
+  // Show loading
+  container.innerHTML = `
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--primary);"></i>
+      <p class="mt-3">Loading property history...</p>
+    </div>
+  `;
+
+  try {
+    console.log('🔍 Searching property:', propertyId);
+
+    // Try direct property ID fetch first
+    let response = await fetch(`${API_URL}/ownership-history/${propertyId}`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let result = await response.json();
+
+    // If not found by property_id, try search
+    if (!result.success && response.status === 404) {
+      console.log('Property not found by ID, trying search...');
+      
+      response = await fetch(`${API_URL}/ownership-history/search/${propertyId}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      result = await response.json();
+      
+      if (result.success && result.properties && result.properties.length > 0) {
+        // If search found results, show first property
+        const foundProperty = result.properties[0];
+        
+        // Now fetch full history for this property
+        response = await fetch(`${API_URL}/ownership-history/${foundProperty.property_id}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        result = await response.json();
+      }
+    }
+
+    if (!result.success) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+          <h4>Property Not Found</h4>
+          <p class="text-muted">${result.message || 'No property found with ID: ' + propertyId}</p>
+          <button class="btn btn-primary mt-3" onclick="location.reload()">
+            <i class="fas fa-redo me-2"></i>Search Again
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    console.log('✅ Property history fetched:', result);
+    renderPropertyHistory(result.property, result.all_transfer_requests || []);
+
+  } catch (err) {
+    console.error('❌ Error searching property:', err);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Error loading property history</strong><br>
+        <small>${err.message}</small><br>
+        <button class="btn btn-sm btn-primary mt-2" onclick="searchProperty()">
+          <i class="fas fa-redo me-1"></i>Retry
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Render property history with transfers
+function renderPropertyHistory(property, transfers) {
+  const container = document.getElementById('resultsContainer');
+  
+  // Calculate stats
+  const totalTransfers = transfers.length;
+  const completedTransfers = transfers.filter(t => t.status === 'COMPLETED').length;
+  const totalValue = transfers
+    .filter(t => t.status === 'COMPLETED')
+    .reduce((sum, t) => sum + (parseFloat(t.transfer_amount) || 0), 0);
+  
+  const firstTransfer = transfers.length > 0 ? transfers[transfers.length - 1] : null;
+  const yearsOfHistory = firstTransfer ? 
+    Math.floor((new Date() - new Date(firstTransfer.created_at)) / (1000 * 60 * 60 * 24 * 365)) : 0;
+
+  // Get completed transfers for timeline (sorted by completion date, oldest first)
+  const completedHistory = transfers
+    .filter(t => t.status === 'COMPLETED')
+    .sort((a, b) => new Date(a.completed_at || a.created_at) - new Date(b.completed_at || b.created_at));
+
+  container.innerHTML = `
+    <!-- Property Card -->
+    <div class="property-card">
+      <div class="property-header">
+        <div>
+          <div class="property-id">${property.property_id}</div>
+          <p class="text-muted mb-0">Complete Ownership History</p>
+        </div>
+        <span class="property-status" style="background: linear-gradient(135deg, var(--success), #38ef7d); color: white;">
+          <i class="fas fa-check-circle me-1"></i>${property.status}
+        </span>
+      </div>
+
+      <!-- Property Details -->
+      <div class="property-details-grid">
+        <div class="detail-item">
+          <div class="detail-label">District</div>
+          <div class="detail-value">${property.district}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Tehsil</div>
+          <div class="detail-value">${property.tehsil}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Area</div>
+          <div class="detail-value">${property.area_marla} Marla</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Property Type</div>
+          <div class="detail-value">${capitalizeFirst(property.property_type)}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Fard No</div>
+          <div class="detail-value">${property.fard_no}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Khasra No</div>
+          <div class="detail-value">${property.khasra_no}</div>
+        </div>
+      </div>
+
+      <!-- Current Owner -->
+      <div class="current-owner-section">
+        <div class="section-title">
+          <i class="fas fa-user-check"></i>
+          Current Owner
+        </div>
+        <div class="owner-info">
+          <div class="detail-item">
+            <div class="detail-label">Owner Name</div>
+            <div class="detail-value">${property.current_owner_name}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Owner CNIC</div>
+            <div class="detail-value">${formatCNIC(property.current_owner_cnic)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Father Name</div>
+            <div class="detail-value">${property.father_name || 'N/A'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Registered On</div>
+            <div class="detail-value">${formatDate(property.created_at)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer Stats -->
+      ${completedTransfers > 0 ? `
+      <div class="stats-summary">
+        <h6 class="mb-3" style="color: var(--secondary); font-weight: 700;">
+          <i class="fas fa-chart-line me-2"></i>Transfer Statistics
+        </h6>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">${totalTransfers}</div>
+            <div class="stat-label">Total Transfers</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${completedTransfers}</div>
+            <div class="stat-label">Completed</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${yearsOfHistory}</div>
+            <div class="stat-label">Years History</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">PKR ${totalValue.toLocaleString()}</div>
+            <div class="stat-label">Total Value</div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Ownership Timeline -->
+      <div class="section-title mt-4 mb-3">
+        <i class="fas fa-stream"></i>
+        Ownership Timeline
+      </div>
+
+      ${transfers.length > 0 ? `
+        <div class="timeline-section">
+          ${completedHistory.length > 0 ? completedHistory.map((transfer, index) => `
+            <div class="timeline-item ${index === 0 ? 'original-owner' : ''}">
+              <div class="timeline-date">
+                <i class="fas fa-calendar-alt me-2"></i>
+                ${formatDate(transfer.completed_at || transfer.created_at)}
+              </div>
+              <div class="timeline-event">
+                ${index === 0 ? 
+                  '<i class="fas fa-flag-checkered me-2"></i>First Transfer Completed' : 
+                  '<i class="fas fa-exchange-alt me-2"></i>Ownership Transfer'}
+                <span class="transfer-badge ${index === 0 ? 'badge-original' : 'badge-sale'}">
+                  SALE
+                </span>
+              </div>
+              <div class="timeline-details">
+                <div class="detail-item">
+                  <div class="detail-label">Previous Owner (Seller)</div>
+                  <div class="detail-value">${transfer.seller_name || 'N/A'}</div>
+                  <small class="text-muted">${transfer.seller_cnic ? formatCNIC(transfer.seller_cnic) : ''}</small>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">New Owner (Buyer)</div>
+                  <div class="detail-value">${transfer.buyer_name || 'N/A'}</div>
+                  <small class="text-muted">${transfer.buyer_cnic ? formatCNIC(transfer.buyer_cnic) : ''}</small>
+                </div>
+                ${transfer.transfer_amount ? `
+                <div class="detail-item">
+                  <div class="detail-label">Transfer Amount</div>
+                  <div class="detail-value">PKR ${parseFloat(transfer.transfer_amount).toLocaleString()}</div>
+                </div>
+                ` : ''}
+                <div class="detail-item">
+                  <div class="detail-label">Transfer Status</div>
+                  <div class="detail-value">
+                    <span class="badge bg-success">COMPLETED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('') : ''}
+          
+          ${completedHistory.length === 0 ? `
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>No Completed Transfers</strong><br>
+              This property has not been transferred yet. The current owner is the original registrant.
+            </div>
+          ` : ''}
+        </div>
+      ` : `
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>No Transfer History</strong><br>
+          This property has not been transferred yet. The current owner is the original registrant.
+        </div>
+      `}
+
+      ${transfers.filter(t => t.status !== 'COMPLETED').length > 0 ? `
+        <div class="section-title mt-4 mb-3">
+          <i class="fas fa-clock"></i>
+          Pending Transfers
+        </div>
+        <div class="timeline-section">
+          ${transfers.filter(t => t.status !== 'COMPLETED').map(transfer => `
+            <div class="timeline-item" style="border-left-color: #ffc107;">
+              <div class="timeline-date">
+                <i class="fas fa-calendar-alt me-2"></i>
+                ${formatDate(transfer.created_at)}
+              </div>
+              <div class="timeline-event">
+                <i class="fas fa-hourglass-half me-2"></i>Pending Transfer
+                <span class="transfer-badge" style="background: #ffc107; color: #000;">
+                  ${transfer.status}
+                </span>
+              </div>
+              <div class="timeline-details">
+                <div class="detail-item">
+                  <div class="detail-label">Seller</div>
+                  <div class="detail-value">${transfer.seller_name || 'N/A'}</div>
+                  <small class="text-muted">${transfer.seller_cnic ? formatCNIC(transfer.seller_cnic) : ''}</small>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Buyer</div>
+                  <div class="detail-value">${transfer.buyer_name || 'N/A'}</div>
+                  <small class="text-muted">${transfer.buyer_cnic ? formatCNIC(transfer.buyer_cnic) : ''}</small>
+                </div>
+                ${transfer.transfer_amount ? `
+                <div class="detail-item">
+                  <div class="detail-label">Transfer Amount</div>
+                  <div class="detail-value">PKR ${parseFloat(transfer.transfer_amount).toLocaleString()}</div>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+    </div>
+  `;
+}
+
+// Utility functions
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-PK', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+// Enter key support
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    searchProperty();
+  }
+});
+</script>
+
+</body>
+</html>

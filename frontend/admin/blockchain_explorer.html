@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blockchain Explorer - Land Records</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #667eea;
+      --primary-dark: #764ba2;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --blockchain-bg: #0f0f23;
+      --block-bg: #1a1a2e;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .navbar-custom {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .navbar-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .blockchain-icon {
+      font-size: 2rem;
+      animation: rotate 10s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .stats-card {
+      background: linear-gradient(135deg, var(--block-bg), #16213e);
+      border-radius: 20px;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      transition: all 0.3s;
+    }
+
+    .stats-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+      border-color: var(--primary);
+    }
+
+    .stats-number {
+      font-size: 3rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    .stats-label {
+      color: #8b9dc3;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      font-weight: 500;
+    }
+
+    .stats-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    .block-card {
+      background: linear-gradient(135deg, var(--block-bg), #16213e);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .block-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+      transform: rotate(45deg);
+      transition: all 0.5s;
+    }
+
+    .block-card:hover::before {
+      left: 100%;
+    }
+
+    .block-card:hover {
+      transform: translateX(10px);
+      border-left-color: var(--success);
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+    }
+
+    .block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .block-index {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hash-container {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1rem 0;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .hash-label {
+      font-size: 0.85rem;
+      color: #8b9dc3;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hash-value {
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: #00ff88;
+      word-break: break-all;
+      padding: 0.5rem;
+      background: rgba(0, 255, 136, 0.05);
+      border-radius: 5px;
+    }
+
+    .property-data {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .data-item {
+      padding: 0.75rem;
+      background: rgba(102, 126, 234, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .data-label {
+      font-size: 0.75rem;
+      color: #8b9dc3;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .data-value {
+      font-weight: 700;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .nonce-badge {
+      background: linear-gradient(135deg, var(--warning), #ff6b6b);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .verified-badge {
+      background: linear-gradient(135deg, var(--success), #38ef7d);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.9; }
+    }
+
+    .mining-modal {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    .mining-animation {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .mining-icon {
+      font-size: 5rem;
+      color: var(--warning);
+      animation: mining 1s infinite;
+    }
+
+    @keyframes mining {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-10px) rotate(-5deg); }
+      75% { transform: translateY(-10px) rotate(5deg); }
+    }
+
+    .mining-progress {
+      margin-top: 2rem;
+    }
+
+    .btn-blockchain {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-blockchain:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+      color: white;
+    }
+
+    .btn-trace {
+      background: linear-gradient(135deg, var(--warning), #ff6b6b);
+      color: white;
+      border: none;
+      padding: 0.5rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-trace:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
+      color: white;
+    }
+
+    .chain-line {
+      width: 2px;
+      height: 40px;
+      background: linear-gradient(180deg, var(--primary), transparent);
+      margin: 0 auto;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 5rem 2rem;
+    }
+
+    .empty-icon {
+      font-size: 5rem;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      opacity: 0.5;
+    }
+
+    .search-container {
+      background: linear-gradient(135deg, var(--block-bg), #16213e);
+      border-radius: 15px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .search-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      color: white;
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+    }
+
+    .search-input:focus {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: var(--primary);
+      color: white;
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .search-input::placeholder {
+      color: #8b9dc3;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loading-content {
+      text-align: center;
+    }
+
+    .loading-spinner {
+      font-size: 4rem;
+      color: var(--primary);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .timeline-connector {
+      display: flex;
+      justify-content: center;
+      margin: -0.5rem 0;
+    }
+
+    .tab-content {
+      margin-top: 2rem;
+    }
+
+    .nav-pills .nav-link {
+      background: rgba(0, 0, 0, 0.3);
+      color: #8b9dc3;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      margin-right: 0.5rem;
+      transition: all 0.3s;
+    }
+
+    .nav-pills .nav-link:hover {
+      background: rgba(102, 126, 234, 0.2);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .nav-pills .nav-link.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="fas fa-cube blockchain-icon"></i>
+      Blockchain Explorer
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="admin_dashboard.html">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <button class="btn btn-blockchain ms-3" data-bs-toggle="modal" data-bs-target="#mineBlockModal">
+            <i class="fas fa-hammer"></i>
+            Mine New Block
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Container -->
+<div class="container-fluid py-4">
+  
+  <!-- Statistics Section -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="stats-card">
+        <i class="fas fa-cubes stats-icon"></i>
+        <h2 class="stats-number" id="totalBlocks">0</h2>
+        <p class="stats-label">Total Blocks</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stats-card">
+        <i class="fas fa-home stats-icon"></i>
+        <h2 class="stats-number" id="uniqueProperties">0</h2>
+        <p class="stats-label">Properties on Chain</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stats-card">
+        <i class="fas fa-shield-alt stats-icon"></i>
+        <h2 class="stats-number" id="chainStatus">—</h2>
+        <p class="stats-label">Chain Integrity</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stats-card">
+        <i class="fas fa-layer-group stats-icon"></i>
+        <h2 class="stats-number" id="latestBlock">0</h2>
+        <p class="stats-label">Latest Block</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-pills mb-4" id="blockchainTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="explorer-tab" data-bs-toggle="pill" data-bs-target="#explorer" type="button">
+        <i class="fas fa-cubes me-2"></i>Blockchain Explorer
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="trace-tab" data-bs-toggle="pill" data-bs-target="#trace" type="button">
+        <i class="fas fa-search me-2"></i>Trace Property
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="blockchainTabContent">
+    
+    <!-- EXPLORER TAB -->
+    <div class="tab-pane fade show active" id="explorer" role="tabpanel">
+      <div id="blockchainContainer">
+        <!-- Blocks will be loaded here -->
+      </div>
+    </div>
+
+    <!-- TRACE TAB -->
+    <div class="tab-pane fade" id="trace" role="tabpanel">
+      <div class="search-container">
+        <h4 class="mb-3">
+          <i class="fas fa-search me-2"></i>
+          Trace Property History
+        </h4>
+        <p class="text-muted mb-4">Enter a Property ID to view its complete blockchain history</p>
+        <div class="input-group">
+          <input type="text" class="form-control search-input" id="tracePropertyId" 
+                 placeholder="Enter Property ID (e.g., PROP-001)">
+          <button class="btn btn-trace" onclick="traceProperty()">
+            <i class="fas fa-search"></i>
+            Trace
+          </button>
+        </div>
+      </div>
+      <div id="traceResultsContainer">
+        <!-- Trace results will appear here -->
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Mine Block Modal -->
+<div class="modal fade" id="mineBlockModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background: var(--block-bg); color: white; border: 1px solid rgba(102, 126, 234, 0.3);">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(102, 126, 234, 0.3);">
+        <h5 class="modal-title">
+          <i class="fas fa-hammer me-2"></i>
+          Mine New Block
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Select Property to Add to Blockchain</label>
+          <select class="form-select search-input" id="minePropertySelect">
+            <option value="">-- Select Property --</option>
+          </select>
+        </div>
+        <div id="selectedPropertyPreview" style="display: none;" class="property-data mt-3">
+          <!-- Property preview will appear here -->
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid rgba(102, 126, 234, 0.3);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-blockchain" onclick="startMining()">
+          <i class="fas fa-hammer me-2"></i>
+          Start Mining
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mining Progress Modal -->
+<div class="modal fade" id="miningProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--block-bg); color: white; border: 1px solid rgba(102, 126, 234, 0.3);">
+      <div class="modal-body mining-animation">
+        <i class="fas fa-hammer mining-icon"></i>
+        <h3 class="mt-4">Mining Block...</h3>
+        <p class="text-muted">Applying Proof of Work Consensus</p>
+        <div class="progress mining-progress" style="height: 25px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" 
+               style="width: 100%; background: linear-gradient(135deg, var(--warning), #ff6b6b);">
+            Finding Nonce...
+          </div>
+        </div>
+        <p class="mt-3 text-muted small">This may take a few seconds depending on difficulty</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+  <div class="loading-content">
+    <i class="fas fa-spinner loading-spinner"></i>
+    <h4 class="mt-4">Loading Blockchain...</h4>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// =====================================================
+// CONFIGURATION
+// =====================================================
+const API_URL = 'http://localhost:5000/api';
+const authToken = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+
+// =====================================================
+// INITIALIZE ON PAGE LOAD
+// =====================================================
+document.addEventListener('DOMContentLoaded', function() {
+  loadBlockchainStats();
+  loadBlockchain();
+  
+  // Only load mining properties if authenticated
+  if (authToken) {
+    loadPropertiesForMining();
+  } else {
+    // Hide mining button if not authenticated
+    const miningButtons = document.querySelectorAll('[data-bs-target="#mineBlockModal"]');
+    miningButtons.forEach(btn => btn.style.display = 'none');
+  }
+});
+
+// Helper function to get API headers
+function getHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
+// =====================================================
+// LOAD BLOCKCHAIN STATISTICS
+// =====================================================
+async function loadBlockchainStats() {
+  try {
+    const response = await fetch(`${API_URL}/blockchain/stats`, {
+      headers: getHeaders()
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const stats = result.statistics;
+      
+      document.getElementById('totalBlocks').textContent = stats.total_blocks;
+      document.getElementById('uniqueProperties').textContent = stats.unique_properties;
+      document.getElementById('latestBlock').textContent = stats.latest_block_index !== null ? stats.latest_block_index : '—';
+      
+      // Chain status
+      const statusElement = document.getElementById('chainStatus');
+      if (stats.blockchain_valid) {
+        statusElement.innerHTML = '<i class="fas fa-check-circle"></i>';
+        statusElement.style.color = 'var(--success)';
+      } else {
+        statusElement.innerHTML = '<i class="fas fa-times-circle"></i>';
+        statusElement.style.color = 'var(--danger)';
+      }
+
+      console.log('✅ Statistics loaded:', stats);
+    }
+  } catch (err) {
+    console.error('❌ Error loading stats:', err);
+  }
+}
+
+// =====================================================
+// LOAD FULL BLOCKCHAIN
+// =====================================================
+async function loadBlockchain() {
+  const container = document.getElementById('blockchainContainer');
+  container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x text-primary"></i><p class="mt-3">Loading blockchain...</p></div>';
+
+  try {
+    const response = await fetch(`${API_URL}/blockchain/explorer`, {
+      headers: getHeaders()
+    });
+
+    const result = await response.json();
+
+    if (result.success && result.chain.length > 0) {
+      container.innerHTML = '';
+      
+      result.chain.forEach((block, index) => {
+        const blockHtml = createBlockCard(block);
+        container.innerHTML += blockHtml;
+        
+        // Add chain connector except for last block
+        if (index < result.chain.length - 1) {
+          container.innerHTML += '<div class="timeline-connector"><div class="chain-line"></div></div>';
+        }
+      });
+
+      console.log('✅ Blockchain loaded:', result.total_blocks, 'blocks');
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-cube empty-icon"></i>
+          <h3>No Blocks Yet</h3>
+          <p class="text-muted">Start mining blocks to build the blockchain</p>
+          <button class="btn btn-blockchain mt-3" data-bs-toggle="modal" data-bs-target="#mineBlockModal">
+            <i class="fas fa-hammer me-2"></i>
+            Mine First Block
+          </button>
+        </div>
+      `;
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading blockchain:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle empty-icon text-danger"></i>
+        <h3>Error Loading Blockchain</h3>
+        <p class="text-muted">${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+// =====================================================
+// CREATE BLOCK CARD HTML
+// =====================================================
+function createBlockCard(block) {
+  const txData = typeof block.transaction_data === 'string' ? 
+    JSON.parse(block.transaction_data) : block.transaction_data;
+
+  return `
+    <div class="block-card">
+      <div class="block-header">
+        <div class="block-index">
+          <i class="fas fa-cube"></i>
+          Block #${block.block_index}
+        </div>
+        <div>
+          <span class="verified-badge">
+            <i class="fas fa-check-circle"></i>
+            Verified
+          </span>
+          <span class="nonce-badge ms-2">
+            <i class="fas fa-hashtag"></i>
+            Nonce: ${block.nonce.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      <!-- Hash Information -->
+      <div class="hash-container">
+        <div class="hash-label">
+          <i class="fas fa-fingerprint"></i>
+          Block Hash
+        </div>
+        <div class="hash-value">${block.blockchain_hash}</div>
+      </div>
+
+      <div class="hash-container">
+        <div class="hash-label">
+          <i class="fas fa-link"></i>
+          Previous Hash
+        </div>
+        <div class="hash-value">${block.previous_hash}</div>
+      </div>
+
+      <!-- Property Data -->
+      <div class="property-data">
+        <h6 class="mb-3">
+          <i class="fas fa-home me-2"></i>
+          Property Transaction Data
+        </h6>
+        <div class="data-grid">
+          <div class="data-item">
+            <div class="data-label">Property ID</div>
+            <div class="data-value">${txData.property_id || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Owner Name</div>
+            <div class="data-value">${txData.owner_name || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Owner CNIC</div>
+            <div class="data-value">${formatCNIC(txData.owner_cnic) || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Father's Name</div>
+            <div class="data-value">${txData.father_name || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Fard No</div>
+            <div class="data-value">${txData.fard_no || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Khasra No</div>
+            <div class="data-value">${txData.khasra_no || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Area</div>
+            <div class="data-value">${txData.area_marla || 'N/A'} Marla</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">District</div>
+            <div class="data-value">${txData.district || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Tehsil</div>
+            <div class="data-value">${txData.tehsil || 'N/A'}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Mauza</div>
+            <div class="data-value">${txData.mauza || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block Metadata -->
+      <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap">
+        <small class="text-muted">
+          <i class="fas fa-user me-1"></i>
+          Mined by: ${block.miner_name || block.mined_by}
+        </small>
+        <small class="text-muted">
+          <i class="fas fa-clock me-1"></i>
+          ${formatDate(block.mined_at)}
+        </small>
+        <button class="btn btn-trace btn-sm" onclick="tracePropertyById('${txData.property_id}')">
+          <i class="fas fa-search"></i>
+          Trace History
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// =====================================================
+// LOAD PROPERTIES FOR MINING
+// =====================================================
+async function loadPropertiesForMining() {
+  try {
+    const response = await fetch(`${API_URL}/properties/admin/all-properties`, {
+      headers: getHeaders()
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const select = document.getElementById('minePropertySelect');
+      const approvedProperties = result.properties.filter(p => p.status === 'APPROVED');
+      
+      approvedProperties.forEach(prop => {
+        const option = document.createElement('option');
+        option.value = prop.property_id;
+        option.textContent = `${prop.property_id} - ${prop.owner_name} (${prop.district})`;
+        select.appendChild(option);
+      });
+
+      // Show preview when selected
+      select.addEventListener('change', async function() {
+        const propertyId = this.value;
+        if (propertyId) {
+          await showPropertyPreview(propertyId);
+        } else {
+          document.getElementById('selectedPropertyPreview').style.display = 'none';
+        }
+      });
+    }
+  } catch (err) {
+    console.error('❌ Error loading properties:', err);
+  }
+}
+
+// =====================================================
+// SHOW PROPERTY PREVIEW
+// =====================================================
+async function showPropertyPreview(propertyId) {
+  try {
+    const response = await fetch(`${API_URL}/properties/details/${propertyId}`, {
+      headers: getHeaders()
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const prop = result.property;
+      const preview = document.getElementById('selectedPropertyPreview');
+      
+      preview.innerHTML = `
+        <h6 class="mb-3">
+          <i class="fas fa-home me-2"></i>
+          Property Details
+        </h6>
+        <div class="data-grid">
+          <div class="data-item">
+            <div class="data-label">Property ID</div>
+            <div class="data-value">${prop.property_id}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Owner</div>
+            <div class="data-value">${prop.owner_name}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">CNIC</div>
+            <div class="data-value">${formatCNIC(prop.owner_cnic)}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Area</div>
+            <div class="data-value">${prop.area_marla} Marla</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">District</div>
+            <div class="data-value">${prop.district}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Tehsil</div>
+            <div class="data-value">${prop.tehsil}</div>
+          </div>
+        </div>
+      `;
+      preview.style.display = 'block';
+    }
+  } catch (err) {
+    console.error('❌ Error loading property preview:', err);
+  }
+}
+
+// =====================================================
+// START MINING PROCESS
+// =====================================================
+async function startMining() {
+  const propertyId = document.getElementById('minePropertySelect').value;
+  
+  if (!propertyId) {
+    alert('Please select a property');
+    return;
+  }
+
+  // Close property selection modal
+  bootstrap.Modal.getInstance(document.getElementById('mineBlockModal')).hide();
+  
+  // Show mining progress modal
+  const miningModal = new bootstrap.Modal(document.getElementById('miningProgressModal'));
+  miningModal.show();
+
+  try {
+    const response = await fetch(`${API_URL}/blockchain/mine`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ propertyId })
+    });
+
+    const result = await response.json();
+
+    // Close mining modal
+    miningModal.hide();
+
+    if (result.success) {
+      showAlert('success', `✅ Block #${result.block.block_index} mined successfully in ${result.block.mining_time}!`);
+      
+      // Reload blockchain
+      await loadBlockchainStats();
+      await loadBlockchain();
+      
+      // Reset selection
+      document.getElementById('minePropertySelect').value = '';
+      document.getElementById('selectedPropertyPreview').style.display = 'none';
+    } else {
+      showAlert('danger', '❌ Mining failed: ' + result.message);
+    }
+
+  } catch (err) {
+    miningModal.hide();
+    console.error('❌ Mining error:', err);
+    showAlert('danger', '❌ Mining error: ' + err.message);
+  }
+}
+
+// =====================================================
+// TRACE PROPERTY
+// =====================================================
+async function traceProperty() {
+  const propertyId = document.getElementById('tracePropertyId').value.trim();
+  
+  if (!propertyId) {
+    alert('Please enter a Property ID');
+    return;
+  }
+
+  await tracePropertyById(propertyId);
+}
+
+async function tracePropertyById(propertyId) {
+  const container = document.getElementById('traceResultsContainer');
+  container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x text-primary"></i><p class="mt-3">Tracing property history...</p></div>';
+
+  // Switch to trace tab
+  document.getElementById('trace-tab').click();
+
+  try {
+    const response = await fetch(`${API_URL}/blockchain/trace/${propertyId}`, {
+      headers: getHeaders()
+    });
+
+    const result = await response.json();
+
+    if (result.success && result.blocks.length > 0) {
+      container.innerHTML = `
+        <div class="search-container mb-4">
+          <h4>
+            <i class="fas fa-check-circle text-success me-2"></i>
+            Found ${result.total_blocks} Block(s) for Property: ${propertyId}
+          </h4>
+        </div>
+      `;
+      
+      result.blocks.forEach((block, index) => {
+        container.innerHTML += createBlockCard(block);
+        
+        if (index < result.blocks.length - 1) {
+          container.innerHTML += '<div class="timeline-connector"><div class="chain-line"></div></div>';
+        }
+      });
+
+      // Set property ID in search box
+      document.getElementById('tracePropertyId').value = propertyId;
+      
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-search empty-icon"></i>
+          <h3>No Blockchain Records Found</h3>
+          <p class="text-muted">Property ID: ${propertyId}</p>
+          <p class="text-muted">This property has not been added to the blockchain yet</p>
+        </div>
+      `;
+    }
+
+  } catch (err) {
+    console.error('❌ Error tracing property:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle empty-icon text-danger"></i>
+        <h3>Error Tracing Property</h3>
+        <p class="text-muted">${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-PK', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function showAlert(type, message) {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+  alertDiv.style.zIndex = '9999';
+  alertDiv.style.width = 'auto';
+  alertDiv.style.maxWidth = '500px';
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => alertDiv.remove(), 5000);
+}
+</script>
+
+</body>
+</html>

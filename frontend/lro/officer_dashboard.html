@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Officer Dashboard – PLRA Punjab</title>
+  <title>Officer Dashboard â€“ PLRA Punjab</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -53,6 +53,32 @@
       gap: 0.5rem;
     }
 
+    /* Live Indicator */
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #ef5350, #e53935);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+
     .officer-badge {
       background: linear-gradient(135deg, var(--accent-orange), #e65100);
       color: white;
@@ -92,6 +118,11 @@
       padding: 2rem;
       margin-bottom: 2rem;
       box-shadow: var(--card-shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
     .welcome-title {
@@ -104,6 +135,14 @@
     .welcome-subtitle {
       color: #666;
       font-size: 1.1rem;
+    }
+
+    .last-updated {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #666;
+      font-size: 0.9rem;
     }
 
     /* Stats Cards */
@@ -212,6 +251,96 @@
     .badge-active {
       background: #e3f2fd;
       color: var(--accent-blue);
+    }
+
+    /* Activity Section */
+    .activity-section {
+      background: white;
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      transition: all 0.3s;
+    }
+
+    .activity-item:hover {
+      background: #f8f9fa;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: white;
+      font-size: 1.1rem;
+    }
+
+    .activity-icon.success {
+      background: linear-gradient(135deg, #4caf50, #2e7d32);
+    }
+
+    .activity-icon.pending {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+    }
+
+    .activity-icon.warning {
+      background: linear-gradient(135deg, #f44336, #c62828);
+    }
+
+    .activity-icon.info {
+      background: linear-gradient(135deg, #2196f3, #1565c0);
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-details {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .activity-time {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 0.25rem;
     }
 
     /* Action Cards Grid */
@@ -476,20 +605,6 @@
         font-size: 0.8rem;
       }
     }
-
-    /* Loading Animation */
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.5;
-      }
-    }
-
-    .loading-pulse {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
   </style>
 </head>
 <body>
@@ -501,12 +616,16 @@
       PLRA Land Records
     </a>
     <div class="d-flex align-items-center gap-3">
+      <!-- <div class="live-indicator">
+        <span class="live-dot"></span>
+        LIVE
+      </div> -->
       <span class="officer-badge">
         <i class="fas fa-user-tie me-2"></i>OFFICER
       </span>
       <div class="officer-info d-none d-md-block">
-        <div class="name">Ali Raza</div>
-        <div class="details">ARA Lahore Cantt • ID: OFF-2025-LHR-0481</div>
+        <div class="name" id="officerName">Loading...</div>
+        <div class="details" id="officerDetails">Loading...</div>
       </div>
     </div>
   </div>
@@ -516,11 +635,17 @@
 
   <!-- Welcome Section -->
   <div class="welcome-section">
-    <div class="welcome-title">
-      <i class="fas fa-sun text-warning me-2"></i>Good Morning, Officer Ali
+    <div>
+      <div class="welcome-title" id="welcomeTitle">
+        <i class="fas fa-sun text-warning me-2"></i>Good Morning, Officer
+      </div>
+      <div class="welcome-subtitle">
+        Real-time monitoring and management dashboard
+      </div>
     </div>
-    <div class="welcome-subtitle">
-      You have <strong>42 pending tasks</strong> requiring your attention today
+    <div class="last-updated">
+      <i class="fas fa-sync-alt"></i>
+      <span>Updated: <strong id="lastUpdate">Just now</strong></span>
     </div>
   </div>
 
@@ -530,38 +655,39 @@
       <div class="stat-icon">
         <i class="fas fa-home"></i>
       </div>
-      <div class="stat-number">18</div>
+      <div class="stat-number" id="pendingReg">0</div>
       <div class="stat-label">Pending Registrations</div>
-      <span class="stat-badge badge-urgent">Requires Action</span>
+      <span class="stat-badge badge-urgent" id="regBadge">Requires Action</span>
     </div>
 
     <div class="stat-card blue">
       <div class="stat-icon">
         <i class="fas fa-exchange-alt"></i>
       </div>
-      <div class="stat-number">24</div>
+      <div class="stat-number" id="pendingTransfer">0</div>
       <div class="stat-label">Pending Transfers</div>
-      <span class="stat-badge badge-active">In Review</span>
+      <span class="stat-badge badge-active" id="transferBadge">In Review</span>
     </div>
 
     <div class="stat-card orange">
       <div class="stat-icon">
         <i class="fas fa-lock"></i>
       </div>
-      <div class="stat-number">5</div>
+      <div class="stat-number" id="frozenProp">0</div>
       <div class="stat-label">Frozen Properties</div>
-      <span class="stat-badge badge-urgent">Court Orders</span>
+      <span class="stat-badge badge-urgent" id="frozenBadge">Court Orders</span>
     </div>
 
     <div class="stat-card green">
       <div class="stat-icon">
         <i class="fas fa-check-circle"></i>
       </div>
-      <div class="stat-number">1,842</div>
+      <div class="stat-number" id="approvedToday">0</div>
       <div class="stat-label">Approved Today</div>
     </div>
   </div>
 
+  
   <!-- Action Cards -->
   <div class="actions-grid">
     
@@ -582,124 +708,136 @@
       </div>
     </a>
 
-    <!-- Pending Registrations -->
-    <a href="officer_pending_registrations.html" class="action-card red">
+    <!-- Pending Registrations &  -->
+    <a href="officer_pending_registration.html" class="action-card red">
       <div class="action-card-header">
         <div class="action-card-icon">
-          <i class="fas fa-home"></i>
+          <i class="fas fa-tasks"></i>
         </div>
         <div class="action-card-content">
-          <div class="action-card-title">Pending Registrations</div>
-          <div class="action-card-subtitle">New property registrations</div>
+          <div class="action-card-title">Pending Actions</div>
+          <div class="action-card-subtitle">Registrations & Transfers</div>
         </div>
       </div>
       <div class="action-card-footer">
-        <span class="action-count text-danger">18 Waiting</span>
+        <span class="action-count text-danger" id="actionPendingCount">Loading...</span>
         <i class="fas fa-arrow-right action-arrow"></i>
       </div>
     </a>
 
+    </a>
+
+<a href="market_dashboard.html" class="action-card red">
+      <div class="action-card-header">
+        <div class="action-card-icon">
+          <i class="fas fa-tasks"></i>
+        </div>
+        <div class="action-card-content">
+          <div class="action-card-title"> View market trends</div>
+          <div class="action-card-subtitle">property rates, and transaction analytics</div>
+        </div>
+      </div>
+      <div class="action-card-footer">
+        <span class="action-count text-danger" id="actionPendingCount">Loading...</span>
+        <i class="fas fa-arrow-right action-arrow"></i>
+      </div>
+    </a>
+
+    </a>
+
+  <!-- <div class="col-md-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">
+        <i class="fas fa-chart-line text-primary me-2"></i>
+        Real Estate Market
+      </h5>
+      <p class="card-text">
+        View market trends, property rates, and transaction analytics
+      </p>
+      <a href="market_dashboard.html" class="btn btn-primary">
+        View Market Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+</div> -->
+
+
+
+
+
+
     <!-- Pending Transfers -->
-    <a href="officer_pending_transfers.html" class="action-card green">
+    <a href="Officer_pending_transfers.html" class="action-card red">
       <div class="action-card-header">
         <div class="action-card-icon">
           <i class="fas fa-exchange-alt"></i>
         </div>
         <div class="action-card-content">
           <div class="action-card-title">Pending Transfers</div>
-          <div class="action-card-subtitle">Ownership transfers</div>
+          <div class="action-card-subtitle">Review transfer requests</div>
         </div>
       </div>
       <div class="action-card-footer">
-        <span class="action-count text-success">24 Ready</span>
+        <span class="action-count text-danger" id="actionPendingCount">Loading...</span>
         <i class="fas fa-arrow-right action-arrow"></i>
       </div>
     </a>
 
-    <!-- Freeze/Unfreeze -->
-    <a href="officer_freeze_requests.html" class="action-card danger">
+    <!-- Rejected Registrations -->
+    <!-- <a href="officer_rejected_registrations.html" class="action-card red">
       <div class="action-card-header">
         <div class="action-card-icon">
-          <i class="fas fa-gavel"></i>
+          <i class="fas fa-times-circle"></i>
         </div>
         <div class="action-card-content">
-          <div class="action-card-title">Freeze / Unfreeze</div>
-          <div class="action-card-subtitle">Court orders & disputes</div>
+          <div class="action-card-title">Rejected Registrations</div>
+          <div class="action-card-subtitle">View rejected records</div>
         </div>
       </div>
       <div class="action-card-footer">
-        <span class="action-count text-danger">5 Cases</span>
+        <span class="action-count text-danger">View History</span>
         <i class="fas fa-arrow-right action-arrow"></i>
       </div>
-    </a>
+    </a> -->
 
-    <!-- Issue Digital Fard -->
-    <a href="officer_fard_issuance.html" class="action-card blue">
+    
+
+    <!-- Rejected Transfers -->
+    <a href="officer_rejected_transfers.html" class="action-card red">
       <div class="action-card-header">
         <div class="action-card-icon">
-          <i class="fas fa-file-contract"></i>
+          <i class="fas fa-ban"></i>
         </div>
         <div class="action-card-content">
-          <div class="action-card-title">Issue Digital Fard</div>
-          <div class="action-card-subtitle">Generate ownership documents</div>
+          <div class="action-card-title">Rejected Transfers</div>
+          <div class="action-card-subtitle">View rejected transfers</div>
         </div>
       </div>
       <div class="action-card-footer">
-        <span class="action-count text-primary">Instant Issue</span>
+        <span class="action-count text-danger">View History</span>
         <i class="fas fa-arrow-right action-arrow"></i>
       </div>
     </a>
-
-    <!-- Audit Log -->
-    <a href="officer_audit_log.html" class="action-card brown">
+<!---Property History-->
+ <a href="history.html" class="action-card purple">
       <div class="action-card-header">
         <div class="action-card-icon">
           <i class="fas fa-history"></i>
         </div>
         <div class="action-card-content">
-          <div class="action-card-title">My Audit Log</div>
-          <div class="action-card-subtitle">View all your actions</div>
+          <div class="action-card-title">Property History</div>
+          <div class="action-card-subtitle">View ownership chain</div>
         </div>
       </div>
       <div class="action-card-footer">
-        <span class="action-count" style="color: var(--accent-brown);">Track Activity</span>
+        <span class="action-count text-info">Track Transfers</span>
         <i class="fas fa-arrow-right action-arrow"></i>
       </div>
     </a>
+   
 
-    <!-- Ownership Tracking -->
-    <a href="officer_ownership_tracking.html" class="action-card teal">
-      <div class="action-card-header">
-        <div class="action-card-icon">
-          <i class="fas fa-users"></i>
-        </div>
-        <div class="action-card-content">
-          <div class="action-card-title">Ownership Tracking</div>
-          <div class="action-card-subtitle">Current & previous owners</div>
-        </div>
-      </div>
-      <div class="action-card-footer">
-        <span class="action-count" style="color: var(--accent-teal);">Full History</span>
-        <i class="fas fa-arrow-right action-arrow"></i>
-      </div>
-    </a>
-
-    <!-- Search Citizen -->
-    <a href="officer_search_citizen.html" class="action-card purple">
-      <div class="action-card-header">
-        <div class="action-card-icon">
-          <i class="fas fa-search"></i>
-        </div>
-        <div class="action-card-content">
-          <div class="action-card-title">Search Citizen</div>
-          <div class="action-card-subtitle">By CNIC or Property ID</div>
-        </div>
-      </div>
-      <div class="action-card-footer">
-        <span class="action-count" style="color: var(--accent-purple);">Search Now</span>
-        <i class="fas fa-arrow-right action-arrow"></i>
-      </div>
-    </a>
 
   </div>
 
@@ -707,7 +845,7 @@
   <div class="dashboard-footer">
     <small>
       <i class="fas fa-shield-alt me-2"></i>
-      Punjab Land Records Authority – Blockchain System v2.8 | December 15, 2025
+      Punjab Land Records Authority â€“ Blockchain System v2.8 | December 29, 2025
     </small>
   </div>
 
@@ -736,7 +874,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">CNIC <span class="text-danger">*</span></label>
-              <input type="text" class="form-control cnic-input" id="ownerCnic" maxlength="13" placeholder="xxxxx-xxxxxxx-x" required>
+              <input type="text" class="form-control cnic-input" id="ownerCnic" maxlength="15" placeholder="xxxxx-xxxxxxx-x" required>
             </div>
             <div class="col-md-6">
               <label class="form-label">Father's Name <span class="text-danger">*</span></label>
@@ -753,6 +891,7 @@
               </div>
             </div>
           </div>
+
 
           <!-- Property Information -->
           <div class="form-section-title">
@@ -804,10 +943,6 @@
           </div>
           <div class="row g-3 mb-4">
             <div class="col-md-4">
-              <label class="form-label">Province <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="province" placeholder ="Punjab" required>
-            </div>
-            <div class="col-md-4">
               <label class="form-label">District <span class="text-danger">*</span></label>
               <input type="text" class="form-control" id="district" placeholder="e.g., Lahore" required>
             </div>
@@ -815,9 +950,13 @@
               <label class="form-label">Tehsil <span class="text-danger">*</span></label>
               <input type="text" class="form-control" id="tehsil" placeholder="e.g., Model Town" required>
             </div>
+            <div class="col-md-4">
+              <label class="form-label">Mauza</label>
+              <input type="text" class="form-control" id="mauza" placeholder="Optional">
+            </div>
             <div class="col-md-12">
-              <label class="form-label">Address <span class="text-danger">*</span></label>
-              <textarea class="form-control" id="address" rows="3" placeholder="Enter complete address" required></textarea>
+              <label class="form-label">Address</label>
+              <textarea class="form-control" id="address" rows="3" placeholder="Enter complete address"></textarea>
             </div>
           </div>
 
@@ -836,43 +975,213 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// CNIC auto-format
-document.getElementById('ownerCnic').addEventListener('input', function() {
-  let value = this.value.replace(/\D/g, '');
-  if (value.length > 5) value = value.slice(0,5) + '-' + value.slice(5);
-  if (value.length > 13) value = value.slice(0,13) + '-' + value.slice(13,14);
-  this.value = value;
-});
+// =====================================================
+// CONFIGURATION
+// =====================================================
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem('authToken');
+const userId = sessionStorage.getItem('userId');
+const userRole = sessionStorage.getItem('userRole');
 
-// Image preview functionality
-document.getElementById('ownerPhoto').addEventListener('change', function(e) {
-  previewImage(e.target, 'ownerPhotoPreview');
-});
+console.log("=== OFFICER DASHBOARD LOADED ===");
+console.log("Auth Token:", authToken ? "âœ… Present" : "âŒ Missing");
+console.log("User ID:", userId || "âŒ Missing");
+console.log("User Role:", userRole || "âŒ Missing");
 
-document.getElementById('propertyPhoto').addEventListener('change', function(e) {
-  previewImage(e.target, 'propertyPhotoPreview');
-});
+// Authentication check
+if (!authToken || !userId) {
+    alert('âš ï¸ Please login first');
+    window.location.href = '../auth/login.html';
+}
 
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+
+// Update last refresh time
+function updateLastRefresh() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdate').textContent = timeStr;
+}
+
+// =====================================================
+// LOAD OFFICER INFORMATION
+// =====================================================
+async function loadOfficerInfo() {
+  try {
+    const response = await fetch(`${API_URL}/auth/user-profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        document.getElementById('officerName').textContent = data.name || 'Officer';
+        document.getElementById('officerDetails').textContent = 
+          `${data.role} â€¢ ID: ${data.userId}`;
+        
+        const firstName = (data.name || '').split(' ')[0];
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+        document.getElementById('welcomeTitle').innerHTML = 
+          `<i class="fas fa-sun text-warning me-2"></i>${greeting}, Officer ${firstName}`;
+      }
+    }
+  } catch (err) {
+    console.error('âŒ Officer info error:', err);
+  }
+}
+
+// =====================================================
+// LOAD DASHBOARD STATISTICS
+// =====================================================
+async function loadDashboardStats() {
+  try {
+    const response = await fetch(`${API_URL}/properties/officer-stats`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const stats = await response.json();
+      if (stats.success) {
+        // Update stat cards
+        document.getElementById('pendingReg').textContent = stats.pendingRegistrations || 0;
+        document.getElementById('pendingTransfer').textContent = stats.pendingTransfers || 0;
+        document.getElementById('frozenProp').textContent = stats.frozenProperties || 0;
+        document.getElementById('approvedToday').textContent = stats.approvedToday || 0;
+        
+        // Update action card count (combined)
+        const totalPending = (stats.pendingRegistrations || 0) + (stats.pendingTransfers || 0);
+        document.getElementById('actionPendingCount').textContent = `${totalPending} Waiting`;
+        document.getElementById('actionFrozenCount').textContent = `${stats.frozenProperties || 0} Cases`;
+      }
+    }
+    updateLastRefresh();
+  } catch (err) {
+    console.error('âŒ Stats error:', err);
+  }
+}
+
+// =====================================================
+// LOAD RECENT ACTIVITIES
+// =====================================================
+async function loadRecentActivities() {
+  const activityList = document.getElementById('activityList');
+  
+  try {
+    // TODO: Replace with actual API call to get audit logs
+    // const response = await fetch(`${API_URL}/audit/recent`, {
+    //   headers: { 'Authorization': `Bearer ${authToken}` }
+    // });
+    // const data = await response.json();
+    
+    // Sample activities for demonstration
+    const activities = [
+      {
+        type: 'success',
+        icon: 'fa-check-circle',
+        title: 'Property Registration Approved',
+        details: 'PROP-2024-12345 approved for Muhammad Ali',
+        time: '5 minutes ago'
+      },
+      {
+        type: 'pending',
+        icon: 'fa-clock',
+        title: 'New Registration Request',
+        details: 'PROP-2024-12346 submitted by Fatima Khan',
+        time: '12 minutes ago'
+      },
+      {
+        type: 'info',
+        icon: 'fa-exchange-alt',
+        title: 'Transfer Request Initiated',
+        details: 'PROP-2024-11234 transfer from Ali to Ahmed',
+        time: '28 minutes ago'
+      },
+      {
+        type: 'warning',
+        icon: 'fa-exclamation-triangle',
+        title: 'Property Freeze Request',
+        details: 'Court order received for PROP-2024-10987',
+        time: '1 hour ago'
+      },
+      {
+        type: 'success',
+        icon: 'fa-file-contract',
+        title: 'Digital Fard Issued',
+        details: 'Fard generated for PROP-2024-11111',
+        time: '2 hours ago'
+      }
+    ];
+
+    activityList.innerHTML = activities.map(activity => `
+      <div class="activity-item">
+        <div class="activity-icon ${activity.type}">
+          <i class="fas ${activity.icon}"></i>
+        </div>
+        <div class="activity-content">
+          <div class="activity-title">${activity.title}</div>
+          <div class="activity-details">${activity.details}</div>
+          <div class="activity-time">
+            <i class="fas fa-clock"></i> ${activity.time}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('âŒ Error loading activities:', err);
+    activityList.innerHTML = '<p class="text-center text-danger">Error loading activities</p>';
+  }
+}
+
+// =====================================================
+// IMAGE PREVIEW FUNCTION
+// =====================================================
 function previewImage(input, previewId) {
   const preview = document.getElementById(previewId);
   const file = input.files[0];
   
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      preview.innerHTML = `
-        <img src="${e.target.result}" alt="Preview">
-        <button type="button" class="remove-image" onclick="removeImage('${input.id}')">
-          <i class="fas fa-times"></i>
-        </button>
-      `;
-      preview.classList.add('has-image');
-    };
-    reader.readAsDataURL(file);
+  if (!file) return;
+  
+  // Check file size (5MB limit)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('âŒ File size must be less than 5MB\n\nYour file: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB');
+    input.value = '';
+    return;
   }
+
+  console.log("âœ… Image preview:", file.name, "-", (file.size / 1024).toFixed(2), "KB");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    preview.innerHTML = `
+      <img src="${e.target.result}" alt="Preview">
+      <button type="button" class="remove-image" onclick="removeImage('${input.id}')">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    preview.classList.add('has-image');
+  };
+  reader.onerror = function() {
+    console.error("âŒ Error reading file");
+    alert("âŒ Error reading file. Please try again.");
+  };
+  reader.readAsDataURL(file);
 }
 
+// =====================================================
+// REMOVE IMAGE FUNCTION
+// =====================================================
 function removeImage(inputId) {
+  console.log("ðŸ—‘ï¸ Removing image:", inputId);
   const input = document.getElementById(inputId);
   const previewId = inputId + 'Preview';
   const preview = document.getElementById(previewId);
@@ -887,398 +1196,25 @@ function removeImage(inputId) {
   }
 }
 
-function submitRecord() {
-  const form = document.getElementById('addRecordForm');
-  
-  if (!form.checkValidity()) {
-    form.reportValidity();
-    return;
-  }
-
-  // Collect form data
-  const formData = new FormData();
-  formData.append('ownerName', document.getElementById('ownerName').value);
-  formData.append('ownerCnic', document.getElementById('ownerCnic').value.replace(/\D/g, ''));
-  formData.append('fatherName', document.getElementById('fatherName').value);
-  formData.append('fardNo', document.getElementById('fardNo').value);
-  formData.append('khasraNo', document.getElementById('khasraNo').value);
-  formData.append('khatooniNo', document.getElementById('khatooniNo').value);
-  formData.append('areaMarla', document.getElementById('areaMarla').value);
-  formData.append('propertyType', document.getElementById('propertyType').value);
-  formData.append('district', document.getElementById('district').value);
-  formData.append('tehsil', document.getElementById('tehsil').value);
-  formData.append('mauza', document.getElementById('mauza').value);
-  formData.append('ownerPhoto', document.getElementById('ownerPhoto').files[0]);
-  formData.append('propertyPhoto', document.getElementById('propertyPhoto').files[0]);
-
-  // For now, just show success message
-  // TODO: Send to backend API
-  console.log('Form Data:', Object.fromEntries(formData));
-  
-  alert('✅ Land record added successfully!\n\nRecord will be added to blockchain after verification.');
-  
-  // Close modal and reset form
-  const modal = bootstrap.Modal.getInstance(document.getElementById('addRecordModal'));
-  modal.hide();
-  form.reset();
-  removeImage('ownerPhoto');
-  removeImage('propertyPhoto');
-}
-// =====================================================
-// SYSTEM DIAGNOSTIC SCRIPT
-// Run this in browser console to check system health
-// =====================================================
-
-async function runDiagnostics() {
-  console.log("\n" + "=".repeat(60));
-  console.log("🔍 BLOCKCHAIN LAND RECORDS - SYSTEM DIAGNOSTICS");
-  console.log("=".repeat(60) + "\n");
-
-  const results = {
-    passed: [],
-    failed: [],
-    warnings: []
-  };
-
-  // Test 1: Check Session Storage
-  console.log("📋 Test 1: Checking Session Storage...");
-  const authToken = sessionStorage.getItem('authToken');
-  const userId = sessionStorage.getItem('userId');
-  const userRole = sessionStorage.getItem('userRole');
-
-  if (authToken && userId && userRole) {
-    console.log("✅ PASS: Session data found");
-    console.log("   - User ID:", userId);
-    console.log("   - Role:", userRole);
-    console.log("   - Token:", authToken.substring(0, 20) + "...");
-    results.passed.push("Session Storage");
-  } else {
-    console.log("❌ FAIL: Missing session data");
-    console.log("   - Auth Token:", authToken ? "Present" : "Missing");
-    console.log("   - User ID:", userId || "Missing");
-    console.log("   - User Role:", userRole || "Missing");
-    results.failed.push("Session Storage - Please login again");
-  }
-
-  // Test 2: Check Backend Server
-  console.log("\n📋 Test 2: Checking Backend Server...");
-  try {
-    const healthResponse = await fetch("http://localhost:5000/api/health");
-    if (healthResponse.ok) {
-      const healthData = await healthResponse.json();
-      console.log("✅ PASS: Backend server is running");
-      console.log("   - Status:", healthData.status);
-      console.log("   - Database:", healthData.database);
-      results.passed.push("Backend Server");
-    } else {
-      console.log("❌ FAIL: Backend server returned error:", healthResponse.status);
-      results.failed.push("Backend Server - Status: " + healthResponse.status);
-    }
-  } catch (err) {
-    console.log("❌ FAIL: Cannot connect to backend server");
-    console.log("   - Error:", err.message);
-    results.failed.push("Backend Server - Not responding. Is it running?");
-  }
-
-  // Test 3: Check Property Routes
-  console.log("\n📋 Test 3: Checking Property Routes...");
-  try {
-    const testResponse = await fetch("http://localhost:5000/api/properties/test", {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    
-    if (testResponse.ok) {
-      const testData = await testResponse.json();
-      console.log("✅ PASS: Property routes are loaded");
-      console.log("   - Message:", testData.message);
-      console.log("   - Upload Dir:", testData.uploadDir);
-      results.passed.push("Property Routes");
-    } else {
-      console.log("❌ FAIL: Property routes returned error:", testResponse.status);
-      const errorText = await testResponse.text();
-      console.log("   - Response:", errorText);
-      results.failed.push("Property Routes - Status: " + testResponse.status);
-    }
-  } catch (err) {
-    console.log("❌ FAIL: Cannot access property routes");
-    console.log("   - Error:", err.message);
-    results.failed.push("Property Routes - Check if routes are loaded in server.js");
-  }
-
-  // Test 4: Check Authentication
-  console.log("\n📋 Test 4: Checking Authentication...");
-  try {
-    const profileResponse = await fetch("http://localhost:5000/api/auth/user-profile", {
-      headers: { 
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (profileResponse.ok) {
-      const profileData = await profileResponse.json();
-      console.log("✅ PASS: Authentication valid");
-      console.log("   - Name:", profileData.name);
-      console.log("   - Email:", profileData.email);
-      console.log("   - Role:", profileData.role);
-      
-      // Check if role is LRO
-      if (profileData.role === 'LRO' || profileData.role === 'LAND RECORD OFFICER') {
-        console.log("✅ User has correct role for adding properties");
-        results.passed.push("Authentication & Authorization");
-      } else {
-        console.log("⚠️ WARNING: User role is not LRO");
-        results.warnings.push("User role is " + profileData.role + " - should be LRO to add properties");
-      }
-    } else {
-      console.log("❌ FAIL: Authentication failed");
-      console.log("   - Status:", profileResponse.status);
-      results.failed.push("Authentication - Token may be expired");
-    }
-  } catch (err) {
-    console.log("❌ FAIL: Cannot verify authentication");
-    console.log("   - Error:", err.message);
-    results.failed.push("Authentication - " + err.message);
-  }
-
-  // Test 5: Check Form Elements
-  console.log("\n📋 Test 5: Checking Form Elements...");
-  const requiredElements = [
-    'addRecordForm',
-    'ownerName',
-    'ownerCnic',
-    'fatherName',
-    'fardNo',
-    'khasraNo',
-    'khatooniNo',
-    'areaMarla',
-    'propertyType',
-    'district',
-    'tehsil',
-    'ownerPhoto',
-    'propertyPhoto'
-  ];
-
-  let missingElements = [];
-  requiredElements.forEach(id => {
-    const element = document.getElementById(id);
-    if (!element) {
-      missingElements.push(id);
-    }
-  });
-
-  if (missingElements.length === 0) {
-    console.log("✅ PASS: All form elements found");
-    results.passed.push("Form Elements");
-  } else {
-    console.log("❌ FAIL: Missing form elements:");
-    missingElements.forEach(id => console.log("   -", id));
-    results.failed.push("Form Elements - Missing: " + missingElements.join(", "));
-  }
-
-  // Test 6: Check JavaScript Functions
-  console.log("\n📋 Test 6: Checking JavaScript Functions...");
-  const requiredFunctions = ['submitRecord', 'removeImage', 'previewImage'];
-  let missingFunctions = [];
-
-  requiredFunctions.forEach(func => {
-    if (typeof window[func] !== 'function') {
-      missingFunctions.push(func);
-    }
-  });
-
-  if (missingFunctions.length === 0) {
-    console.log("✅ PASS: All required functions found");
-    results.passed.push("JavaScript Functions");
-  } else {
-    console.log("❌ FAIL: Missing functions:");
-    missingFunctions.forEach(func => console.log("   -", func));
-    results.failed.push("JavaScript Functions - Script may not be loaded");
-  }
-
-  // Test 7: Check if modal exists
-  console.log("\n📋 Test 7: Checking Modal...");
-  const modal = document.getElementById('addRecordModal');
-  if (modal) {
-    console.log("✅ PASS: Add Record modal found");
-    results.passed.push("Modal Elements");
-  } else {
-    console.log("❌ FAIL: Add Record modal not found");
-    results.failed.push("Modal Elements - Modal may not be in HTML");
-  }
-
-  // Final Report
-  console.log("\n" + "=".repeat(60));
-  console.log("📊 DIAGNOSTIC REPORT");
-  console.log("=".repeat(60));
-  
-  console.log("\n✅ PASSED TESTS (" + results.passed.length + "):");
-  results.passed.forEach(test => console.log("   ✓", test));
-  
-  if (results.warnings.length > 0) {
-    console.log("\n⚠️ WARNINGS (" + results.warnings.length + "):");
-    results.warnings.forEach(warning => console.log("   ⚠", warning));
-  }
-  
-  if (results.failed.length > 0) {
-    console.log("\n❌ FAILED TESTS (" + results.failed.length + "):");
-    results.failed.forEach(failure => console.log("   ✗", failure));
-  }
-  
-  console.log("\n" + "=".repeat(60));
-  
-  if (results.failed.length === 0) {
-    console.log("🎉 ALL SYSTEMS OPERATIONAL!");
-    console.log("You should be able to add properties successfully.");
-  } else {
-    console.log("⚠️ ISSUES DETECTED!");
-    console.log("Please fix the failed tests above before proceeding.");
-    console.log("\nQuick Fixes:");
-    if (results.failed.some(f => f.includes("Backend Server"))) {
-      console.log("• Start backend: cd backend && npm start");
-    }
-    if (results.failed.some(f => f.includes("Property Routes"))) {
-      console.log("• Add to server.js: app.use('/api/properties', require('./routes/properties'));");
-    }
-    if (results.failed.some(f => f.includes("Session Storage"))) {
-      console.log("• Login again at: ../auth/login.html");
-    }
-    if (results.failed.some(f => f.includes("Form Elements"))) {
-      console.log("• Check if officer_dashboard.html has the Add Record modal");
-    }
-    if (results.failed.some(f => f.includes("JavaScript Functions"))) {
-      console.log("• Add the property management script to officer_dashboard.html");
-    }
-  }
-  
-  console.log("=".repeat(60) + "\n");
-  
-  return {
-    totalTests: results.passed.length + results.failed.length + results.warnings.length,
-    passed: results.passed.length,
-    failed: results.failed.length,
-    warnings: results.warnings.length,
-    allPassed: results.failed.length === 0
-  };
-}
-
-// Run diagnostics immediately
-console.log("Running diagnostics...\n");
-runDiagnostics().then(summary => {
-  console.log("Diagnostic Summary:");
-  console.log("- Total Tests:", summary.totalTests);
-  console.log("- Passed:", summary.passed);
-  console.log("- Failed:", summary.failed);
-  console.log("- Warnings:", summary.warnings);
-  console.log("- Status:", summary.allPassed ? "✅ READY" : "❌ NEEDS ATTENTION");
-});
-// =====================================================
-// COMPLETE OFFICER DASHBOARD SCRIPT
-// Replace ENTIRE <script> section with this code
-// =====================================================
-
-const API_URL = "http://localhost:5000/api";
-const authToken = sessionStorage.getItem('authToken');
-const userId = sessionStorage.getItem('userId');
-const userRole = sessionStorage.getItem('userRole');
-
-console.log("=== OFFICER DASHBOARD LOADED ===");
-console.log("Auth Token:", authToken ? "✅ Present" : "❌ Missing");
-console.log("User ID:", userId || "❌ Missing");
-console.log("User Role:", userRole || "❌ Missing");
-
-// Authentication check
-if (!authToken || !userId) {
-    alert('⚠️ Please login first');
-    window.location.href = '../auth/login.html';
-}
-
-// Check if user has LRO role
-if (userRole && userRole.toUpperCase() !== 'LRO' && userRole.toUpperCase() !== 'LAND RECORD OFFICER') {
-    alert('⚠️ Access denied. This dashboard is for Land Record Officers only.');
-    window.location.href = '../auth/login.html';
-}
-
-// =====================================================
-// IMAGE PREVIEW FUNCTION
-// =====================================================
-function previewImage(input, previewId) {
-  const preview = document.getElementById(previewId);
-  const file = input.files[0];
-  
-  if (!file) return;
-  
-  // Check file size (5MB limit)
-  if (file.size > 5 * 1024 * 1024) {
-    alert('❌ File size must be less than 5MB\n\nYour file: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB');
-    input.value = '';
-    return;
-  }
-
-  console.log("✅ Image preview:", file.name, "-", (file.size / 1024).toFixed(2), "KB");
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    preview.innerHTML = `
-      <img src="${e.target.result}" alt="Preview">
-      <button type="button" class="remove-image" onclick="removeImage('${input.id}')">
-        <i class="fas fa-times"></i>
-      </button>
-    `;
-    preview.classList.add('has-image');
-    console.log("✅ Image preview loaded successfully");
-  };
-  reader.onerror = function() {
-    console.error("❌ Error reading file");
-    alert("❌ Error reading file. Please try again.");
-  };
-  reader.readAsDataURL(file);
-}
-
-// =====================================================
-// REMOVE IMAGE FUNCTION
-// =====================================================
-function removeImage(inputId) {
-  console.log("🗑️ Removing image:", inputId);
-  const input = document.getElementById(inputId);
-  const previewId = inputId + 'Preview';
-  const preview = document.getElementById(previewId);
-  
-  input.value = '';
-  preview.classList.remove('has-image');
-  
-  if (inputId === 'ownerPhoto') {
-    preview.innerHTML = '<i class="fas fa-user fa-3x text-muted"></i><button type="button" class="remove-image" onclick="removeImage(\'ownerPhoto\')"><i class="fas fa-times"></i></button>';
-  } else {
-    preview.innerHTML = '<i class="fas fa-home fa-3x text-muted"></i><button type="button" class="remove-image" onclick="removeImage(\'propertyPhoto\')"><i class="fas fa-times"></i></button>';
-  }
-}
-
 // =====================================================
 // SUBMIT PROPERTY RECORD
 // =====================================================
 async function submitRecord() {
   console.log("\n" + "=".repeat(60));
-  console.log("📝 SUBMITTING PROPERTY RECORD");
+  console.log("ðŸ“ SUBMITTING PROPERTY RECORD");
   console.log("=".repeat(60));
 
   const form = document.getElementById('addRecordForm');
   
   if (!form.checkValidity()) {
-    console.log("❌ Form validation failed");
+    console.log("âŒ Form validation failed");
     form.reportValidity();
     return;
   }
 
-  console.log("✅ Form validation passed");
+  console.log("âœ… Form validation passed");
 
   const submitBtn = document.querySelector('#addRecordModal .modal-footer .btn-success');
-  if (!submitBtn) {
-    console.error("❌ Submit button not found");
-    alert("❌ Error: Submit button not found");
-    return;
-  }
-
   const originalText = submitBtn.innerHTML;
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding Record...';
@@ -1299,19 +1235,10 @@ async function submitRecord() {
     const mauza = document.getElementById('mauza')?.value?.trim() || '';
     const address = document.getElementById('address')?.value?.trim() || '';
 
-    console.log("📋 Form Data:");
+    console.log("ðŸ“‹ Form Data:");
     console.log("- Owner Name:", ownerName);
     console.log("- Owner CNIC:", ownerCnic);
-    console.log("- Father Name:", fatherName);
-
-    if (!ownerName || !ownerCnic || !fatherName || !fardNo || !khasraNo || 
-        !khatooniNo || !areaMarla || !propertyType || !district || !tehsil) {
-      console.error("❌ Missing required fields");
-      alert("❌ Please fill in all required fields");
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
-      return;
-    }
+    console.log("- Fard No:", fardNo);
 
     formData.append('ownerName', ownerName);
     formData.append('ownerCnic', ownerCnic);
@@ -1330,19 +1257,16 @@ async function submitRecord() {
     const propertyPhoto = document.getElementById('propertyPhoto')?.files[0];
     
     if (!ownerPhoto || !propertyPhoto) {
-      console.error("❌ Missing files");
-      alert('❌ Please upload both owner photo and property photo');
+      alert('âŒ Please upload both owner photo and property photo');
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
       return;
     }
 
-    console.log("📎 Files:", ownerPhoto.name, propertyPhoto.name);
-
     formData.append('ownerPhoto', ownerPhoto);
     formData.append('propertyPhoto', propertyPhoto);
 
-    console.log("🚀 Sending to:", `${API_URL}/properties/add-property`);
+    console.log("ðŸš€ Sending to:", `${API_URL}/properties/add-property`);
 
     const response = await fetch(`${API_URL}/properties/add-property`, {
       method: 'POST',
@@ -1352,25 +1276,11 @@ async function submitRecord() {
       body: formData
     });
 
-    console.log("📨 Response status:", response.status);
-
-    const responseText = await response.text();
-    console.log("📄 Response:", responseText.substring(0, 200));
-
-    let result;
-    try {
-      result = JSON.parse(responseText);
-    } catch (parseErr) {
-      console.error("❌ JSON parse error:", parseErr);
-      throw new Error("Server returned invalid JSON");
-    }
+    const result = await response.json();
 
     if (result.success) {
-      console.log("✅ SUCCESS!");
-      console.log("Property ID:", result.propertyId);
-      console.log("Blockchain Hash:", result.blockchainHash);
-
-      alert(`✅ Property Added Successfully!\n\nProperty ID: ${result.propertyId}\nBlockchain Hash: ${result.blockchainHash}\nStatus: ${result.status}`);
+      console.log("âœ… SUCCESS!");
+      alert(`âœ… Property Added Successfully!\n\nProperty ID: ${result.propertyId}\nBlockchain Hash: ${result.blockchainHash}\nStatus: ${result.status}`);
       
       const modal = bootstrap.Modal.getInstance(document.getElementById('addRecordModal'));
       if (modal) modal.hide();
@@ -1380,14 +1290,15 @@ async function submitRecord() {
       removeImage('propertyPhoto');
       
       loadDashboardStats();
+      loadRecentActivities();
     } else {
-      console.error("❌ Error:", result.message);
-      alert('❌ Error: ' + result.message);
+      console.error("âŒ Error:", result.message);
+      alert('âŒ Error: ' + result.message);
     }
 
   } catch (error) {
-    console.error("❌ SUBMISSION ERROR:", error);
-    alert(`❌ Error: ${error.message}\n\nCheck console for details`);
+    console.error("âŒ SUBMISSION ERROR:", error);
+    alert(`âŒ Error: ${error.message}\n\nCheck console for details`);
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalText;
@@ -1395,76 +1306,10 @@ async function submitRecord() {
 }
 
 // =====================================================
-// LOAD DASHBOARD STATISTICS
-// =====================================================
-async function loadDashboardStats() {
-  try {
-    const response = await fetch(`${API_URL}/properties/officer-stats`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      const stats = await response.json();
-      if (stats.success) {
-        const cards = document.querySelectorAll('.stat-card .stat-number');
-        if (cards[0]) cards[0].textContent = stats.pendingRegistrations || 0;
-        if (cards[1]) cards[1].textContent = stats.pendingTransfers || 0;
-        if (cards[2]) cards[2].textContent = stats.frozenProperties || 0;
-        if (cards[3]) cards[3].textContent = stats.approvedToday || 0;
-      }
-    }
-  } catch (err) {
-    console.error('Stats error:', err);
-  }
-}
-
-// =====================================================
-// LOAD OFFICER INFORMATION
-// =====================================================
-async function loadOfficerInfo() {
-  try {
-    const response = await fetch(`${API_URL}/auth/user-profile`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success) {
-        const nameEl = document.querySelector('.officer-info .name');
-        if (nameEl && data.name) nameEl.textContent = data.name;
-
-        const welcomeEl = document.querySelector('.welcome-title');
-        if (welcomeEl && data.name) {
-          const firstName = data.name.split(' ')[0];
-          const hour = new Date().getHours();
-          const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
-          welcomeEl.innerHTML = `<i class="fas fa-sun text-warning me-2"></i>${greeting}, Officer ${firstName}`;
-        }
-
-        const detailsEl = document.querySelector('.officer-info .details');
-        if (detailsEl && data.userId) {
-          detailsEl.textContent = `${data.role} • ID: ${data.userId}`;
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Officer info error:', err);
-  }
-}
-
-// =====================================================
-// DOM CONTENT LOADED
+// INITIALIZATION
 // =====================================================
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("🚀 Initializing dashboard...");
+  console.log("ðŸš€ Initializing dashboard...");
   
   // CNIC formatting
   const cnicInput = document.getElementById('ownerCnic');
@@ -1493,20 +1338,41 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Load data
+  // Load initial data
   loadOfficerInfo();
   loadDashboardStats();
+  loadRecentActivities();
+  updateLastRefresh();
   
-  console.log("✅ Dashboard ready!");
+  // Auto-refresh every 30 seconds
+  setInterval(() => {
+    loadDashboardStats();
+    loadRecentActivities();
+    updateLastRefresh();
+    console.log("ðŸ”„ Dashboard refreshed");
+  }, 30000);
+  
+  console.log("âœ… Dashboard ready!");
 });
 
 // Make functions globally available
 window.submitRecord = submitRecord;
 window.removeImage = removeImage;
 window.previewImage = previewImage;
+window.loadRecentActivities = loadRecentActivities;
 
-console.log("✅ Script loaded successfully");
+console.log("âœ… Script loaded successfully");
 </script>
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+

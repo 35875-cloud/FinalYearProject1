@@ -1,286 +1,785 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Punjab Land Records</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Property Registry - Secure & Transparent Land Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #11998e;
+            --warning: #f093fb;
+            --dark: #1a1a1a;
+        }
 
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
 
-  <!-- Custom CSS -->
-  <style>
+        /* Navbar */
+        .navbar {
+            background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            transition: all 0.3s;
+        }
 
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      transition: 0.3s;
-    }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    /* Navbar */
-    .navbar {
-      background: #2e7d32; /* Green */
-    }
+        .nav-link {
+            color: var(--dark) !important;
+            font-weight: 600;
+            margin: 0 0.5rem;
+            transition: all 0.3s;
+        }
 
-    .navbar-brand,
-    .navbar-nav .nav-link {
-      color: #fff !important;
-      font-weight: 600;
-    }
+        .nav-link:hover {
+            color: var(--primary) !important;
+            transform: translateY(-2px);
+        }
 
-    .theme-toggle {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 20px;
-      cursor: pointer;
-    }
+        .btn-login {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
 
-    /* Hero Section */
-    .hero {
-      background: url('https://images.pexels.com/photos/158827/field-corn-harvest-countryside-158827.jpeg') 
-                  no-repeat center/cover;
-      padding: 130px 0;
-      color: white;
-      text-align: center;
-      position: relative;
-    }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
 
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-    }
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-    .hero-content {
-      position: relative;
-      z-index: 1;
-    }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></svg>');
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
 
-    .hero h1 {
-      font-size: 48px;
-      font-weight: 700;
-    }
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
 
-    .hero p {
-      font-size: 20px;
-      margin: 15px 0 25px;
-    }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            color: white;
+        }
 
-    .btn-primary {
-      background: #2e7d32;
-      border: none;
-      padding: 12px 28px;
-      font-size: 18px;
-      border-radius: 6px;
-    }
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
 
-    /* Section Titles */
-    .section-title {
-      text-align: center;
-      margin: 60px 0 30px;
-    }
+        .hero-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
 
-    .section-title h2 {
-      font-weight: 700;
-      font-size: 32px;
-    }
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
 
-    /* Feature Cards */
-    .feature-card {
-      padding: 20px;
-      border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-align: center;
-      transition: all 0.3s ease;
-    }
+        .btn-hero {
+            padding: 1rem 2.5rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            border: none;
+        }
 
-    .feature-card i {
-      font-size: 40px;
-      color: #2e7d32;
-      margin-bottom: 15px;
-    }
+        .btn-hero-primary {
+            background: white;
+            color: var(--primary);
+        }
 
-    .feature-card:hover {
-      transform: translateY(-5px);
-    }
+        .btn-hero-primary:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255,255,255,0.3);
+            color: var(--primary);
+        }
 
-    /* Improved How It Works */
-    .step-card {
-      padding: 25px;
-      border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-align: center;
-      border-top: 4px solid #2e7d32;
-      min-height: 220px;
-    }
+        .btn-hero-outline {
+            background: transparent;
+            color: white;
+            border: 3px solid white;
+        }
 
-    .step-number {
-      background: #2e7d32;
-      color: white;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      margin: 0 auto 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-    }
+        .btn-hero-outline:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-5px);
+        }
 
-    /* Testimonials */
-    .testimonials {
-      background: #2e7d32;
-      padding: 50px 0;
-    }
+        .hero-image {
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
 
-    .testimonial-card {
-      padding: 25px;
-      background: #fff;
-      border-radius: 10px;
-      min-height: 200px;
-    }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
 
-    /* Footer */
-    .footer {
-      background: #1b1b1b;
-      color: #ccc;
-      padding: 40px 0 20px;
-    }
+        .hero-image img {
+            width: 100%;
+            max-width: 600px;
+            filter: drop-shadow(0 20px 60px rgba(0,0,0,0.3));
+        }
 
-    /* Dark Mode */
-    .dark-mode {
-      background: #1a1a1a;
-      color: #eee;
-    }
+        /* Features Section */
+        .features-section {
+            padding: 6rem 0;
+            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+        }
 
-    .dark-mode .navbar {
-      background: #0d3d0f;
-    }
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    .dark-mode .feature-card,
-    .dark-mode .step-card,
-    .dark-mode .testimonial-card {
-      background: #222;
-      color: #eee;
-    }
+        .section-subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-bottom: 4rem;
+        }
 
-    .dark-mode .footer {
-      background: #000;
-      color: #ddd;
-    }
+        .feature-card {
+            background: white;
+            border-radius: 210px;
+            padding: 2.5rem;
+            height: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
 
-  </style>
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: white;
+        }
+
+        .feature-icon.blockchain {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .feature-icon.secure {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+
+        .feature-icon.transparent {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .feature-icon.fast {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .feature-description {
+            color: #64748b;
+            line-height: 1.8;
+        }
+
+        /* How It Works Section */
+        .how-it-works-section {
+            padding: 6rem 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .step-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            height: 100%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .step-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: white;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        /* User Roles Section */
+        .roles-section {
+            padding: 6rem 0;
+            background: white;
+        }
+
+        .role-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            height: 100%;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .role-card:hover {
+            border-color: var(--primary);
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.2);
+        }
+
+        .role-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .role-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .role-description {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-role {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-role:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 4rem 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 6rem 0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+        }
+
+        .cta-description {
+            font-size: 1.2rem;
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--dark);
+            color: white;
+            padding: 3rem 0 1.5rem;
+        }
+
+        .footer-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .footer-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .footer-link:hover {
+            color: white;
+            padding-left: 5px;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+            .hero-buttons {
+                flex-direction: column;
+            }
+            .btn-hero {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
-
 <body>
 
-  <!-- Navigation -->
-  <nav class="navbar navbar-expand-lg px-4">
-    <a class="navbar-brand" href="#">Punjab Land Records</a>
-
-    <div class="ms-auto">
-      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light mode">
-  <i class="fas fa-moon"></i>
-</button>
-
-    </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-content">
-      <h1>Modern & Secure Land Record System</h1>
-      <p>Easy access to land ownership details and property records.</p>
-      <a href="../auth/login.html" class="btn btn-primary">Get Started</a>
-    </div>
-  </section>
-
-  <!-- Features -->
-  <section id="features" class="container my-5">
-    <div class="section-title">
-      <h2>Key Features</h2>
-      <p>Everything you need for transparent land management</p>
-    </div>
-
-    <div class="row">
-
-      <div class="col-md-4 mb-4">
-        <div class="feature-card">
-          <i class="fas fa-file-alt"></i>
-          <h4>Accurate Land Records</h4>
-          <p>View verified and updated property information anytime.</p>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+           
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#how-it-works">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#roles">User Roles</a>
+                    </li>
+                    
+                    <li class="nav-item ms-3">
+                        <a href="../auth/login.html" class="btn btn-login">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-      </div>
+    </nav>
 
-      <div class="col-md-4 mb-4">
-        <div class="feature-card">
-          <i class="fas fa-search-location"></i>
-          <h4>Land Search</h4>
-          <p>Instant search by CNIC, ownership, or property ID.</p>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 hero-content">
+                    <h1 class="hero-title">Secure Property Registration on Blockchain</h1>
+                    <p class="hero-subtitle">
+                        Transparent, tamper-proof, and efficient land registration system powered by blockchain technology. Protect your property rights with unbreakable digital records.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="../auth/register.html" class="btn btn-hero btn-hero-primary">
+                            <i class="fas fa-user-plus me-2"></i>Get Started
+                        </a>
+                        <a href="#how-it-works" class="btn btn-hero btn-hero-outline">
+                            <i class="fas fa-play-circle me-2"></i>Learn More
+                        </a>
+                    </div>
+                    <div class="mt-4 d-flex gap-4 text-white">
+                        <div>
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>100% Secure</strong>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Immutable Records</strong>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>24/7 Access</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 hero-image d-none d-lg-block">
+                    <div class="text-center">
+                        <i class="fas fa-building" style="font-size: 20rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <div class="col-md-4 mb-4">
-        <div class="feature-card">
-          <i class="fas fa-exchange-alt"></i>
-          <h4>Ownership Transfer</h4>
-          <p>Initiate secure land transfer requests easily.</p>
+    <!-- Stats Section
+    <section class="stats-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3 col-6">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalProperties">1,250+</div>
+                        <div class="stat-label">Properties Registered</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalTransfers">850+</div>
+                        <div class="stat-label">Successful Transfers</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalUsers">3,500+</div>
+                        <div class="stat-label">Registered Users</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+    </section> -->
 
-    </div>
-  </section>
-
-  <!-- Improved How It Works -->
-  <section id="how-it-works" class="container my-5">
-
-    <div class="section-title">
-      <h2>How It Works</h2>
-      <p>Follow three simple steps to manage your land records</p>
-    </div>
-
-    <div class="row">
-
-      <div class="col-md-4 mb-4">
-        <div class="step-card">
-          <div class="step-number">1</div>
-          <h4>Create Your Account</h4>
-          <p>Sign up using your CNIC and basic personal details.</p>
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <h2 class="section-title">Why Choose Blockchain Registry?</h2>
+            <p class="section-subtitle">Experience the future of property registration with cutting-edge blockchain technology</p>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="feature-card">
+                        <div class="feature-icon blockchain">
+                            <i class="fas fa-cubes"></i>
+                        </div>
+                        <h3 class="feature-title">Blockchain Powered</h3>
+                        <p class="feature-description">
+                            Every property record is stored on an immutable blockchain, ensuring data integrity and preventing unauthorized modifications.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="feature-card">
+                        <div class="feature-icon secure">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3 class="feature-title">100% Secure</h3>
+                        <p class="feature-description">
+                            Cryptographic security ensures your property data is protected from tampering, fraud, and unauthorized access.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="feature-card">
+                        <div class="feature-icon transparent">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3 class="feature-title">Transparent</h3>
+                        <p class="feature-description">
+                            Complete transparency with real-time tracking of property ownership history and all transactions on the blockchain.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="feature-card">
+                        <div class="feature-icon fast">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <h3 class="feature-title">Fast & Efficient</h3>
+                        <p class="feature-description">
+                            Streamlined digital processes reduce registration time from weeks to hours, with instant verification and approval.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <div class="col-md-4 mb-4">
-        <div class="step-card">
-          <div class="step-number">2</div>
-          <h4>Access Land Records</h4>
-          <p>Search, view, and verify property information instantly.</p>
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works-section">
+        <div class="container">
+            <h2 class="section-title text-white">How It Works</h2>
+            <p class="section-subtitle text-white-50">Simple, secure, and transparent property registration in 4 easy steps</p>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h3 class="step-title">Register Account</h3>
+                        <p>Create your account with verified CNIC and complete the registration process with document verification.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h3 class="step-title">Submit Property</h3>
+                        <p>Upload property documents and details. Our system validates and prepares them for blockchain registration.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h3 class="step-title">Officer Verification</h3>
+                        <p>Land Revenue Officers review and verify your property details, ensuring accuracy and legitimacy.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="step-card">
+                        <div class="step-number">4</div>
+                        <h3 class="step-title">Blockchain Recording</h3>
+                        <p>Approved properties are permanently recorded on the blockchain with tamper-proof digital certificates.</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
 
-      <div class="col-md-4 mb-4">
-        <div class="step-card">
-          <div class="step-number">3</div>
-          <h4>Transfer or Verify Ownership</h4>
-          <p>Submit transfer requests or validate ownership with ease.</p>
+    <!-- User Roles Section -->
+    <section id="roles" class="roles-section">
+        <div class="container">
+            <h2 class="section-title">User Roles</h2>            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="role-card">
+                        <div class="role-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3 class="role-title">Citizens</h3>
+                        <p class="role-description">
+                            Register properties, initiate transfers, track ownership history, and manage your property portfolio.
+                        </p>
+                        <a href="../auth/register.html" class="btn btn-role">Register Now</a>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="role-card">
+                        <div class="role-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <h3 class="role-title">LRO</h3>
+                        <p class="role-description">
+                            Verify property registrations, approve transfers, and ensure compliance with regulations.
+                        </p>
+                        <a href="../auth/register.html" class="btn btn-role">Register Now</a>
+                    </div>
+                </div>
+               
+                
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
 
-    </div>
-  </section>
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2 class="cta-title">Ready to Secure Your Property Rights?</h2>
+            <p class="cta-description">
+            </p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="../auth/register.html" class="btn btn-hero btn-hero-primary">
+                    <i class="fas fa-user-plus me-2"></i>Create Account
+                </a>
+                
+            </div>
+        </div>
+    </section>
 
-  <!-- JS for Dark Mode -->
-  <script>
-    function toggleTheme() {
-      document.body.classList.toggle("dark-mode");
-    }
-  </script>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            
+                
+              
+            </div>
+            <div class="footer-bottom">
+                <p class="mb-0">
+                    &copy; 2026 BlockChain Property Registry. All rights reserved. | 
+                    <a href="#" class="footer-link d-inline">Privacy Policy</a> | 
+                    <a href="#" class="footer-link d-inline">Terms of Service</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.padding = '0.5rem 0';
+                navbar.style.boxShadow = '0 5px 30px rgba(0,0,0,0.15)';
+            } else {
+                navbar.style.padding = '1rem 0';
+                navbar.style.boxShadow = '0 5px 30px rgba(0,0,0,0.1)';
+            }
+        });
+
+        // Animated counter for stats
+        function animateCounter(element, target) {
+            let current = 0;
+            const increment = target / 100;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = Math.ceil(target).toLocaleString() + '+';
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.ceil(current).toLocaleString();
+                }
+            }, 20);
+        }
+
+        // Trigger counter animation when stats section is in view
+        const observerOptions = {
+            threshold: 0.5
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                    entry.target.classList.add('animated');
+                    animateCounter(document.getElementById('totalProperties'), 1250);
+                    animateCounter(document.getElementById('totalTransfers'), 850);
+                    animateCounter(document.getElementById('totalUsers'), 3500);
+                }
+            });
+        }, observerOptions);
+
+        const statsSection = document.querySelector('.stats-section');
+        if (statsSection) {
+            observer.observe(statsSection);
+        }
+    </script>
 
 </body>
 </html>

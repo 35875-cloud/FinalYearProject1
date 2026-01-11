@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyer Dashboard - Property Transfers</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+:root {
+  --primary: #667eea;
+  --secondary: #764ba2;
+}
+
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding-top: 80px;
+}
+
+.navbar {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  border-left: 6px solid #ffc107;
+}
+
+.transfer-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.transfer-card.pending { border-left-color: #ffc107; }
+.transfer-card.verified { border-left-color: #28a745; }
+.transfer-card.expired { 
+  border-left-color: #dc3545; 
+  opacity: 0.6;
+}
+
+.countdown {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.security-badge {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="citizen_dashboard.html" style="color: var(--primary);">
+      <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+    <div class="d-flex align-items-center gap-2">
+      <span class="user-name text-dark fw-bold">Loading...</span>
+      <div class="badge bg-warning text-dark">
+        <i class="fas fa-bell me-1"></i>
+        <span id="pendingCount">0</span> Pending
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="bg-white rounded p-4 shadow">
+        <h3><i class="fas fa-clock text-warning me-2"></i>Property Transfer Requests</h3>
+        <p class="text-muted mb-3">Enter the exact payment amount to complete property ownership transfer</p>
+        
+        <!-- Security Info -->
+        <div class="security-badge">
+          <i class="fas fa-shield-alt"></i>
+          <div>
+            <div style="font-size: 0.85rem;">Verified Account</div>
+            <div style="font-size: 0.9rem;">CNIC: <span id="userCnicDisplay">Loading...</span></div>
+          </div>
+        </div>
+        
+        <div class="alert alert-info mb-0">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Secure Access:</strong> You can only view property transfers specifically initiated for your verified CNIC. This ensures your privacy and prevents unauthorized access.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transfers List -->
+  <div id="transfersList">
+    <div class="text-center py-5">
+      <i class="fas fa-spinner fa-spin fa-3x text-white mb-3"></i>
+      <p class="text-white">Loading your transfer requests...</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-dollar-sign me-2"></i>Enter Payment Amount
+        </h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="currentTransferId">
+        
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Important:</strong> Enter the EXACT total amount shown below.
+        </div>
+
+        <div class="alert alert-info mb-3">
+          <strong>Total Payment Required:</strong>
+          <div id="paymentAmount" class="fs-4 text-primary fw-bold">PKR 0</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Enter Payment Amount <span class="text-danger">*</span></label>
+          <input type="number" class="form-control form-control-lg" id="paidAmount" 
+                 placeholder="Enter exact amount" step="0.01" min="0" required>
+          <small class="text-muted">This amount must match the total required amount exactly</small>
+        </div>
+
+        <div class="alert alert-success">
+          <i class="fas fa-info-circle me-2"></i>
+          <small>After entering the payment, an officer will verify and approve the transfer.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success" onclick="submitPayment()">
+          <i class="fas fa-check me-2"></i>Submit Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem("authToken");
+const userId = sessionStorage.getItem("userId");
+
+// Check authentication
+if (!authToken || !userId) {
+  alert('⚠️ Please login first');
+  window.location.href = '../auth/login.html';
+}
+
+// Load user info and display CNIC
+async function loadUserInfo() {
+  try {
+    const response = await fetch(`${API_URL}/auth/profile`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.user) {
+      // Update UI with user info
+      document.querySelector('.user-name').textContent = data.user.name;
+      document.getElementById('userCnicDisplay').textContent = formatCNIC(data.user.cnic);
+      
+      console.log('✅ User authenticated:', data.user.name);
+      console.log('🔐 Verified CNIC:', data.user.cnic);
+    }
+  } catch (err) {
+    console.error('❌ Error loading user info:', err);
+  }
+}
+
+// =====================================================
+// LOAD TRANSFERS - SECURE VERSION (Using authenticated endpoint)
+// =====================================================
+async function loadTransfers() {
+  const container = document.getElementById('transfersList');
+  
+  container.innerHTML = `
+    <div class="text-center py-5">
+      <i class="fas fa-spinner fa-spin fa-3x text-white mb-3"></i>
+      <p class="text-white">Loading your transfer requests...</p>
+    </div>
+  `;
+
+  try {
+    console.log('\n========================================');
+    console.log('🔐 SECURE TRANSFER LOADING');
+    console.log('========================================');
+    console.log('User ID:', userId);
+    console.log('Using authenticated endpoint: /transfers/buyer-pending');
+    console.log('This ensures ONLY the logged-in user can see their transfers');
+    
+    // ✅ USE AUTHENTICATED ENDPOINT - No CNIC parameter needed!
+    const response = await fetch(`${API_URL}/transfers/buyer-pending`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    const data = await response.json();
+    console.log('Response:', data);
+
+    if (data.success && data.transfers.length > 0) {
+      document.getElementById('pendingCount').textContent = data.transfers.length;
+      renderTransfers(data.transfers);
+      
+      console.log('✅ Loaded', data.transfers.length, 'transfer(s) for authenticated user');
+      console.log('🔒 Security: Only transfers for THIS user\'s CNIC are shown');
+      console.log('========================================\n');
+    } else {
+      container.innerHTML = `
+        <div class="bg-white rounded p-5 text-center shadow">
+          <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+          <h5>No Transfer Requests Found</h5>
+          <p class="text-muted">You don't have any pending property transfer requests</p>
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-shield-check me-2"></i>
+            <small><strong>Secure Access:</strong> Only transfers specifically created for your verified CNIC will appear here.</small>
+          </div>
+        </div>
+      `;
+      console.log('ℹ️ No pending transfers found for this user');
+      console.log('========================================\n');
+    }
+  } catch (err) {
+    console.error('❌ Load transfers error:', err);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-times-circle me-2"></i>Failed to load transfers: ${err.message}
+      </div>
+    `;
+  }
+}
+
+// =====================================================
+// RENDER TRANSFERS
+// =====================================================
+function renderTransfers(transfers) {
+  const container = document.getElementById('transfersList');
+  
+  container.innerHTML = transfers.map(t => {
+    const expired = new Date(t.expires_at) < new Date();
+    const timeRemaining = calculateTimeRemaining(t.expires_at);
+    
+    let statusBadge = "";
+    let actionBtn = "";
+
+    if (expired) {
+      statusBadge = `<span class="badge bg-danger">Expired</span>`;
+      actionBtn = `<button class="btn btn-secondary btn-sm" disabled>
+                     <i class="fas fa-times me-2"></i>Transfer Expired
+                   </button>`;
+    } else if (t.status === 'PAYMENT_VERIFIED' || t.status === 'COMPLETED') {
+      statusBadge = `<span class="badge bg-success">Payment Verified</span>`;
+      actionBtn = `<button class="btn btn-success btn-sm" disabled>
+                     <i class="fas fa-check me-2"></i>Awaiting Officer Approval
+                   </button>`;
+    } else if (t.status === 'PAYMENT_UPLOADED') {
+      statusBadge = `<span class="badge bg-info">Payment Under Review</span>`;
+      actionBtn = `<button class="btn btn-info btn-sm" disabled>
+                     <i class="fas fa-clock me-2"></i>Under Verification
+                   </button>`;
+    } else {
+      statusBadge = `<span class="badge bg-warning text-dark">Payment Pending</span>`;
+      actionBtn = `<button class="btn btn-warning btn-sm" 
+                     onclick="openPaymentModal('${t.transfer_id}', ${t.total_amount})">
+                     <i class="fas fa-dollar-sign me-2"></i>Enter Payment Amount
+                   </button>`;
+    }
+
+    return `
+      <div class="transfer-card ${expired ? 'expired' : t.status === 'PAYMENT_VERIFIED' ? 'verified' : 'pending'}">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="mb-0">${t.property_id}</h5>
+              ${statusBadge}
+            </div>
+
+            <p class="mb-1">
+              <i class="fas fa-map-marker-alt text-primary me-1"></i>
+              <strong>Location:</strong> ${t.district}, ${t.tehsil}
+            </p>
+            <p class="mb-1">
+              <i class="fas fa-ruler-combined text-info me-1"></i>
+              <strong>Area:</strong> ${t.area_marla} Marla
+            </p>
+            <p class="mb-1">
+              <i class="fas fa-user text-success me-1"></i>
+              <strong>Seller:</strong> ${t.seller_name} (${formatCNIC(t.seller_cnic)})
+            </p>
+
+            <hr>
+
+            <div class="row">
+              <div class="col-md-6">
+                <strong>Transfer Amount:</strong>
+                <div class="fs-5 text-primary">PKR ${t.transfer_amount.toLocaleString()}</div>
+              </div>
+              <div class="col-md-6">
+                <strong>Your Tax (2%):</strong>
+                <div class="fs-6 text-warning">PKR ${t.property_tax_buyer.toLocaleString()}</div>
+              </div>
+              <div class="col-md-12 mt-2">
+                <strong>Total Payable:</strong>
+                <div class="fs-4 text-success fw-bold">PKR ${t.total_amount.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4 text-center border-start">
+            ${expired ? '' : `
+              <div class="mb-3">
+                <strong>Time Remaining:</strong>
+                <div class="countdown" id="countdown-${t.transfer_id}">
+                  ${timeRemaining}
+                </div>
+              </div>
+            `}
+            
+            <div>
+              <strong>Expires:</strong>
+              <p class="text-muted">${new Date(t.expires_at).toLocaleString()}</p>
+            </div>
+
+            ${actionBtn}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Start countdowns
+  transfers.forEach(t => {
+    if (new Date(t.expires_at) > new Date()) {
+      startCountdown(t.transfer_id, t.expires_at);
+    }
+  });
+}
+
+// =====================================================
+// COUNTDOWN TIMER
+// =====================================================
+function calculateTimeRemaining(expiresAt) {
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diff = expiry - now;
+
+  if (diff <= 0) return "Expired";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+  return `${days}d ${hours}h ${minutes}m`;
+}
+
+function startCountdown(transferId, expiresAt) {
+  const element = document.getElementById(`countdown-${transferId}`);
+  if (!element) return;
+
+  setInterval(() => {
+    const remaining = calculateTimeRemaining(expiresAt);
+    element.textContent = remaining;
+    
+    if (remaining === "Expired") {
+      location.reload();
+    }
+  }, 60000); // Update every minute
+}
+
+// =====================================================
+// PAYMENT SUBMISSION
+// =====================================================
+function openPaymentModal(transferId, totalAmount) {
+  document.getElementById('currentTransferId').value = transferId;
+  document.getElementById('paymentAmount').textContent = `PKR ${totalAmount.toLocaleString()}`;
+  document.getElementById('paidAmount').value = '';
+  document.getElementById('paidAmount').setAttribute('data-required', totalAmount);
+  new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+async function submitPayment() {
+  const transferId = document.getElementById('currentTransferId').value;
+  const paidAmount = parseFloat(document.getElementById('paidAmount').value);
+  const requiredAmount = parseFloat(document.getElementById('paidAmount').getAttribute('data-required'));
+
+  if (!paidAmount || paidAmount <= 0) {
+    alert('❌ Please enter a valid payment amount');
+    return;
+  }
+
+  if (paidAmount !== requiredAmount) {
+    alert(`❌ Payment amount must be exactly PKR ${requiredAmount.toLocaleString()}\n\nYou entered: PKR ${paidAmount.toLocaleString()}`);
+    return;
+  }
+
+  try {
+    console.log('💰 Submitting payment:', { transferId, paidAmount });
+
+    const response = await fetch(`${API_URL}/transfers/enter-payment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        transferId,
+        paidAmount
+      })
+    });
+
+    const result = await response.json();
+    console.log('Payment result:', result);
+
+    if (result.success) {
+      alert('✅ Payment submitted successfully!\n\nYour payment is being verified. An officer will approve the transfer soon.');
+      bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+      loadTransfers();
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+  } catch (err) {
+    console.error('❌ Submit payment error:', err);
+    alert('❌ Error submitting payment: ' + err.message);
+  }
+}
+
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
+
+// =====================================================
+// INITIALIZE
+// =====================================================
+document.addEventListener('DOMContentLoaded', function() {
+  loadUserInfo();
+  loadTransfers();
+});
+</script>
+
+</body>
+</html>

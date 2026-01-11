@@ -3,129 +3,711 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pending Approvals - Admin Dashboard</title>
+  <title>Admin Dashboard - Property Management</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    :root { --p: #2e7d32; --pd: #1b5e20; }
-    body { background: #f5f7fa; font-family: 'Segoe UI', sans-serif; }
-    .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-    .card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .badge-role { font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 20px; }
-    .user-card { transition: all 0.3s; }
-    .user-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    :root { 
+      --primary: #667eea; 
+      --primary-dark: #764ba2;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+    }
+    
+    body { 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding-left: 260px;
+    }
+    
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 260px;
+      height: 100vh;
+      background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+      color: white;
+      z-index: 1050;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .sidebar-menu {
+      list-style: none;
+      padding: 1rem 0;
+      margin: 0;
+    }
+
+    .sidebar-menu li {
+      padding: 0.9rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .sidebar-menu li:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .sidebar-menu i {
+      width: 22px;
+      text-align: center;
+    }
+
+    .sidebar-badge {
+      margin-left: auto;
+      background: #dc3545;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .sidebar-menu li.blockchain-item {
+      background: rgba(255,255,255,0.1);
+      border-left: 4px solid #ffd700;
+      margin: 0.5rem 0;
+    }
+    
+    .sidebar-menu li.blockchain-item:hover {
+      background: rgba(255,255,255,0.2);
+      border-left-color: #ffed4e;
+    }
+    
+    .sidebar-menu li.blockchain-item i {
+      color: #ffd700;
+    }
+    
+    .view-container {
+      display: none;
+    }
+    
+    .view-container.active {
+      display: block;
+    }
+    
+    .dashboard-container {
+      min-height: calc(100vh - 80px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .welcome-card {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      max-width: 600px;
+      text-align: center;
+    }
+    
+    .admin-icon {
+      font-size: 5rem;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+    
+    .page-header {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      transition: all 0.3s;
+      border: none;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 0;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .property-card {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border-left: 6px solid var(--warning);
+      transition: all 0.3s;
+    }
+    
+    .property-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    
+    .property-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .property-id {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+    
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .property-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .detail-item {
+      padding: 0.75rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+      border-radius: 10px;
+    }
+    
+    .detail-label {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+      font-weight: 700;
+      color: #1a1a1a;
+      font-size: 1rem;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .btn-approve {
+      background: linear-gradient(135deg, var(--success), #38ef7d);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-approve:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+      color: white;
+    }
+    
+    .btn-reject {
+      background: linear-gradient(135deg, var(--danger), #d32f2f);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-reject:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+      color: white;
+    }
+    
+    .empty-state {
+      background: white;
+      border-radius: 15px;
+      text-align: center;
+      padding: 4rem 2rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state i {
+      font-size: 5rem;
+      color: #e0e0e0;
+      margin-bottom: 1.5rem;
+    }
+    
+    .loading-state {
+      background: white;
+      border-radius: 15px;
+      padding: 4rem 2rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .search-box {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+      position: relative;
+    }
+    
+    .search-box input {
+      padding: 1rem 1rem 1rem 3rem;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      font-size: 1rem;
+      width: 100%;
+    }
+    
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      outline: none;
+    }
+    
+    .search-icon {
+      position: absolute;
+      left: 2.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 1.2rem;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding-left: 0;
+        padding-top: 60px;
+      }
+      
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      
+      .property-header {
+        flex-direction: column;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+      
+      .action-buttons button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-bold fs-4" href="admin_dashboard.html">
-      <i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard
-    </a>
-    <span class="text-white">
-      <i class="fas fa-user-shield me-2"></i>
-      <span id="adminName">Admin</span>
-    </span>
-  </div>
-</nav>
-
-<div class="container py-5">
-  <div class="row mb-4">
-    <div class="col-12">
-      <h2 class="fw-bold">
-        <i class="fas fa-clock text-warning me-2"></i>
-        Pending Approvals
-      </h2>
-      <p class="text-muted">Review and approve new user registrations</p>
-    </div>
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <i class="fas fa-shield-alt"></i>
+    <span>Admin Panel</span>
   </div>
 
-  <!-- Stats -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-4">
-      <div class="card text-center p-3">
-        <h3 class="text-warning mb-0" id="totalPending">0</h3>
-        <small class="text-muted">Pending</small>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card text-center p-3">
-        <h3 class="text-success mb-0" id="totalApproved">0</h3>
-        <small class="text-muted">Approved Today</small>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card text-center p-3">
-        <h3 class="text-danger mb-0" id="totalRejected">0</h3>
-        <small class="text-muted">Rejected Today</small>
-      </div>
-    </div>
-  </div>
+  <ul class="sidebar-menu">
+    <li onclick="showView('dashboard')">
+      <i class="fas fa-home"></i>
+      <span>Dashboard</span>
+    </li>
 
-  <!-- Pending Users List -->
-  <div class="card">
-    <div class="card-header bg-warning text-dark">
-      <h5 class="mb-0">
-        <i class="fas fa-users me-2"></i>
-        Users Awaiting Approval
-      </h5>
-    </div>
-    <div class="card-body" id="pendingUsersList">
-      <div class="text-center py-5">
-        <i class="fas fa-spinner fa-spin fa-3x text-muted"></i>
-        <p class="mt-3 text-muted">Loading pending approvals...</p>
+    <li onclick="showView('pendingUsers')">
+      <i class="fas fa-user-clock"></i>
+      <span>Pending User Approvals</span>
+      <span class="sidebar-badge" id="sidebarUserBadge">0</span>
+    </li>
+
+    <li onclick="showView('pendingProperties')">
+      <i class="fas fa-home"></i>
+      <span>Pending Properties</span>
+      <span class="sidebar-badge" id="sidebarPropertyBadge">0</span>
+    </li>
+
+    <li onclick="showView('allProperties')">
+      <i class="fas fa-list"></i>
+      <span>All Properties</span>
+    </li>
+
+    <li class="blockchain-item" onclick="window.location.href='blockchain_explorer.html'">
+      <i class="fas fa-cubes"></i>
+      <span>Blockchain Explorer</span>
+    </li>
+
+
+    
+
+    <!-- <li class="blockchain-item" data-bs-toggle="modal" data-bs-target="#addToBlockchainModal">
+      <i class="fas fa-hammer"></i>
+      <span>Mine New Block</span>
+    </li> -->
+
+    <li onclick="logoutAdmin()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Logout</span>
+    </li>
+  </ul>
+</div>
+
+<!-- Dashboard View -->
+<div id="dashboardView" class="view-container active">
+  <div class="dashboard-container">
+    <div class="welcome-card">
+      <i class="fas fa-user-shield admin-icon"></i>
+      <h2 class="fw-bold mb-3">Welcome, <span id="adminNameDisplay">Admin</span>!</h2>
+      <p class="text-muted mb-4 fs-5">Property Registration Management System</p>
+      <div class="mt-4">
+        <small class="text-muted">Use the sidebar to navigate</small>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Approve Modal -->
-<div class="modal fade" id="approveModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title">Approve User</h5>
+<!-- Pending Users View -->
+<div id="pendingUsersView" class="view-container">
+  <div class="container py-4">
+    <div class="page-header">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="fw-bold mb-2">
+            <i class="fas fa-user-clock text-warning me-2"></i>
+            Pending User Approvals
+          </h2>
+          <p class="text-muted mb-0">Review LRO and Admin registration requests</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-secondary me-2" onclick="showView('dashboard')">
+            <i class="fas fa-arrow-left me-2"></i>Back
+          </button>
+          <button class="btn btn-primary" onclick="loadPendingUsers()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pendingUsersList">
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+        <p class="mt-3 text-muted">Loading pending user approvals...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pending Properties View -->
+<div id="pendingPropertiesView" class="view-container">
+  <div class="container py-4">
+    <div class="page-header">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="fw-bold mb-2">
+            <i class="fas fa-home text-warning me-2"></i>
+            Pending Property Registrations
+          </h2>
+          <p class="text-muted mb-0">Review and approve property registration requests</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-secondary me-2" onclick="showView('dashboard')">
+            <i class="fas fa-arrow-left me-2"></i>Back
+          </button>
+          <button class="btn btn-primary" onclick="loadPendingProperties()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+          <h3 class="stat-number text-warning" id="totalPendingProps">0</h3>
+          <p class="stat-label">Pending Approval</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+          <h3 class="stat-number text-success" id="totalApprovedProps">0</h3>
+          <p class="stat-label">Total Approved</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="fas fa-ban fa-2x text-danger mb-2"></i>
+          <h3 class="stat-number text-danger" id="totalRejectedProps">0</h3>
+          <p class="stat-label">Total Rejected</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        id="propertySearch" 
+        placeholder="Search by Property ID, Owner Name, or CNIC" 
+        onkeyup="searchProperties()">
+    </div>
+
+    <div id="pendingPropertiesList">
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+        <p class="mt-3 text-muted">Loading pending properties...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- All Properties View -->
+<div id="allPropertiesView" class="view-container">
+  <div class="container py-4">
+    <div class="page-header">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="fw-bold mb-2">
+            <i class="fas fa-list text-primary me-2"></i>
+            All Properties
+          </h2>
+          <p class="text-muted mb-0">View all registered properties</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-secondary me-2" onclick="showView('dashboard')">
+            <i class="fas fa-arrow-left me-2"></i>Back
+          </button>
+          <button class="btn btn-primary" onclick="loadAllProperties()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="allPropertiesList">
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+        <p class="mt-3 text-muted">Loading all properties...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add to Blockchain Modal -->
+<div class="modal fade" id="addToBlockchainModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius: 20px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 20px 20px 0 0;">
+        <div style="width: 100%;">
+          <h5 class="modal-title text-white mb-3">
+            <i class="fas fa-cube me-2"></i>Add Existing Property to Blockchain
+          </h5>
+          
+          <!-- Property Dropdown -->
+          <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle" type="button" 
+                    id="propertyDropdownBtn"
+                    data-bs-toggle="dropdown" aria-expanded="false" 
+                    style="min-width: 300px; text-align: left;">
+              <i class="fas fa-home me-2"></i>Select Property
+            </button>
+            <ul class="dropdown-menu" id="propertyDropdownMenu" style="max-height: 400px; overflow-y: auto; width: 500px;">
+              <li><span class="dropdown-item text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i>Loading properties...
+              </span></li>
+            </ul>
+          </div>
+          <small class="text-white d-block mt-2">
+            <i class="fas fa-info-circle me-1"></i>
+            Select an approved property to auto-fill the form below
+          </small>
+        </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
+
       <div class="modal-body">
-        <p>Are you sure you want to approve this user?</p>
-        <div class="mb-3">
-          <label class="form-label">Approval Notes (Optional)</label>
-          <textarea class="form-control" id="approvalNotes" rows="3"></textarea>
+        <div class="alert alert-info">
+          <i class="fas fa-lightbulb me-2"></i>
+          <strong>How it works:</strong> Select a property from the dropdown above. The form will auto-fill with the property's existing data. All fields are locked and cannot be edited.
         </div>
-        <input type="hidden" id="approveUserId">
+
+        <form id="addRecordForm">
+          
+          <!-- Personal Information -->
+          <div class="form-section-title" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-user"></i>
+            Personal Information
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="ownerName" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">CNIC</label>
+              <input type="text" class="form-control cnic-input" id="ownerCnic" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Father's Name</label>
+              <input type="text" class="form-control" id="fatherName" readonly style="background-color: #f8f9fa;">
+            </div>
+          </div>
+
+          <!-- Property Information -->
+          <div class="form-section-title" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-home"></i>
+            Property Information
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">Fard No</label>
+              <input type="text" class="form-control" id="fardNo" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Khasra No</label>
+              <input type="text" class="form-control" id="khasraNo" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Khatooni No</label>
+              <input type="text" class="form-control" id="khatooniNo" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Area (in Marla)</label>
+              <input type="number" step="0.01" class="form-control" id="areaMarla" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property Type</label>
+              <input type="text" class="form-control" id="propertyType" readonly style="background-color: #f8f9fa;">
+            </div>
+          </div>
+
+          <!-- Location Information -->
+          <div class="form-section-title" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-map-marker-alt"></i>
+            Location Information
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">District</label>
+              <input type="text" class="form-control" id="district" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tehsil</label>
+              <input type="text" class="form-control" id="tehsil" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mauza</label>
+              <input type="text" class="form-control" id="mauza" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Address</label>
+              <textarea class="form-control" id="address" rows="2" readonly style="background-color: #f8f9fa;"></textarea>
+            </div>
+          </div>
+
+        </form>
       </div>
+      
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" onclick="confirmApprove()">
-          <i class="fas fa-check me-2"></i>Approve
+        <button type="button" class="btn btn-secondary" onclick="resetBlockchainForm()">
+          <i class="fas fa-redo me-2"></i>Reset Form
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-success" onclick="submitToBlockchain()">
+          <i class="fas fa-check me-2"></i>Submit to Blockchain
         </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Reject User</h5>
+<!-- Reject Property Modal -->
+<div class="modal fade" id="rejectPropertyModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 20px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--danger), #d32f2f); border-radius: 20px 20px 0 0;">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-times-circle me-2"></i>Reject Property Registration
+        </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p>Please provide a reason for rejection:</p>
+        <p class="mb-3">Property ID: <strong id="rejectPropertyId"></strong></p>
         <div class="mb-3">
-          <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
-          <textarea class="form-control" id="rejectionReason" rows="3" required></textarea>
+          <label class="form-label fw-bold">Rejection Reason <span class="text-danger">*</span></label>
+          <textarea 
+            class="form-control" 
+            id="rejectionReason" 
+            rows="4" 
+            placeholder="Enter detailed reason for rejection..."
+            required
+          ></textarea>
         </div>
-        <input type="hidden" id="rejectUserId">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" onclick="confirmReject()">
-          <i class="fas fa-times me-2"></i>Reject
+        <button type="button" class="btn btn-danger" onclick="confirmRejectProperty()">
+          <i class="fas fa-times-circle me-2"></i>Reject Property
         </button>
       </div>
     </div>
@@ -134,209 +716,705 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = "http://localhost:5000/api";
 const authToken = sessionStorage.getItem('authToken');
 const userRole = sessionStorage.getItem('userRole');
 
-// Check authentication and role
+// Check authentication
 if (!authToken || userRole !== 'ADMIN') {
-  alert('Access denied. Admin only.');
+  alert('❌ Access denied. Admin only.');
   window.location.href = '../auth/login.html';
 }
 
 // Load admin name
-const adminName = sessionStorage.getItem('userName');
-if (adminName) {
-  document.getElementById('adminName').textContent = adminName;
-}
+const adminName = sessionStorage.getItem('userName') || 'Admin';
+document.getElementById('adminNameDisplay').textContent = adminName;
 
-// Load pending approvals on page load
+let allPendingProperties = [];
+let currentRejectPropertyId = null;
+
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  loadPendingApprovals();
+  loadBadgeCounts();
+  
+  // Load properties when modal is opened
+  const blockchainModal = document.getElementById('addToBlockchainModal');
+  if (blockchainModal) {
+    blockchainModal.addEventListener('show.bs.modal', loadApprovedPropertiesForBlockchain);
+  }
 });
 
-async function loadPendingApprovals() {
+// Load badge counts
+async function loadBadgeCounts() {
   try {
-    const response = await fetch(`${API_URL}/pending-approvals`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
+    // Load user approvals count
+    const userResponse = await fetch(`${API_URL}/auth/pending-approvals`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const userData = await userResponse.json();
+    if (userData.success) {
+      const userCount = userData.totalPending || 0;
+      document.getElementById('sidebarUserBadge').textContent = userCount;
+      if (userCount === 0) {
+        document.getElementById('sidebarUserBadge').style.display = 'none';
       }
+    }
+
+    // Load property stats
+    const propResponse = await fetch(`${API_URL}/properties/admin/property-stats`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const propData = await propResponse.json();
+    if (propData.success) {
+      const propCount = propData.stats.pending || 0;
+      document.getElementById('sidebarPropertyBadge').textContent = propCount;
+      if (propCount === 0) {
+        document.getElementById('sidebarPropertyBadge').style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.error('Error loading badge counts:', err);
+  }
+}
+
+// View management
+function showView(viewName) {
+  // Hide all views
+  document.querySelectorAll('.view-container').forEach(view => {
+    view.classList.remove('active');
+  });
+
+  // Show selected view
+  switch(viewName) {
+    case 'dashboard':
+      document.getElementById('dashboardView').classList.add('active');
+      break;
+    case 'pendingUsers':
+      document.getElementById('pendingUsersView').classList.add('active');
+      loadPendingUsers();
+      break;
+    case 'pendingProperties':
+      document.getElementById('pendingPropertiesView').classList.add('active');
+      loadPendingProperties();
+      break;
+    case 'allProperties':
+      document.getElementById('allPropertiesView').classList.add('active');
+      loadAllProperties();
+      break;
+  }
+}
+
+// Load pending properties
+async function loadPendingProperties() {
+  const container = document.getElementById('pendingPropertiesList');
+  
+  container.innerHTML = `
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+      <p class="mt-3 text-muted">Loading pending properties...</p>
+    </div>
+  `;
+
+  try {
+    const response = await fetch(`${API_URL}/properties/admin/pending-properties`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
     });
 
     const result = await response.json();
 
-    if (result.success) {
-      document.getElementById('totalPending').textContent = result.totalPending;
-      displayPendingUsers(result.users);
+    if (result.success && result.properties.length > 0) {
+      allPendingProperties = result.properties;
+      document.getElementById('totalPendingProps').textContent = result.properties.length;
+      
+      // Load stats
+      const statsResponse = await fetch(`${API_URL}/properties/admin/property-stats`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const statsData = await statsResponse.json();
+      if (statsData.success) {
+        document.getElementById('totalApprovedProps').textContent = statsData.stats.approved;
+        document.getElementById('totalRejectedProps').textContent = statsData.stats.rejected;
+      }
+      
+      renderProperties(allPendingProperties);
     } else {
-      throw new Error(result.message);
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-check-circle text-success"></i>
+          <h4>No Pending Properties</h4>
+          <p class="text-muted">All property registrations have been processed.</p>
+        </div>
+      `;
+      document.getElementById('totalPendingProps').textContent = '0';
     }
 
   } catch (err) {
-    console.error('Error loading approvals:', err);
-    document.getElementById('pendingUsersList').innerHTML = `
-      <div class="alert alert-danger">
-        <i class="fas fa-exclamation-circle me-2"></i>
-        Error loading pending approvals: ${err.message}
+    console.error('❌ Error loading properties:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        <h4 class="text-danger">Error Loading Properties</h4>
+        <p>${err.message}</p>
+        <button class="btn btn-primary mt-3" onclick="loadPendingProperties()">
+          <i class="fas fa-redo me-2"></i>Try Again
+        </button>
       </div>
     `;
   }
 }
 
-function displayPendingUsers(users) {
-  const container = document.getElementById('pendingUsersList');
-
-  if (users.length === 0) {
+// Render properties
+function renderProperties(properties) {
+  const container = document.getElementById('pendingPropertiesList');
+  
+  if (properties.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-5">
-        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-        <h5>No Pending Approvals</h5>
-        <p class="text-muted">All registrations have been reviewed</p>
+      <div class="empty-state">
+        <i class="fas fa-search"></i>
+        <h4>No Matching Properties</h4>
+        <p class="text-muted">No properties found for your search.</p>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = users.map(user => `
-    <div class="user-card mb-3">
-      <div class="card">
-        <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <h5 class="mb-2">
-                <i class="fas fa-user-circle text-primary me-2"></i>
-                ${user.name}
-                ${getRoleBadge(user.role)}
-              </h5>
-              <p class="mb-1">
-                <i class="fas fa-envelope text-muted me-2"></i>
-                ${user.email}
-              </p>
-              <p class="mb-1">
-                <i class="fas fa-id-card text-muted me-2"></i>
-                CNIC: ${formatCNIC(user.cnic)}
-              </p>
-              <p class="mb-1">
-                <i class="fas fa-phone text-muted me-2"></i>
-                ${user.mobile || 'N/A'}
-              </p>
-              <small class="text-muted">
-                <i class="fas fa-clock me-1"></i>
-                Registered: ${formatDate(user.created_at)}
-              </small>
-            </div>
-            <div class="col-md-4 text-end">
-              <button class="btn btn-success mb-2 w-100" onclick="approveUser('${user.user_id}')">
-                <i class="fas fa-check me-2"></i>Approve
-              </button>
-              <button class="btn btn-danger w-100" onclick="rejectUser('${user.user_id}')">
-                <i class="fas fa-times me-2"></i>Reject
-              </button>
-            </div>
-          </div>
+  container.innerHTML = properties.map(prop => `
+    <div class="property-card">
+      <div class="property-header">
+        <div>
+          <div class="property-id">${prop.property_id}</div>
+          <small class="text-muted">Submitted: ${formatDate(prop.created_at)}</small>
         </div>
+        <span class="status-badge" style="background: linear-gradient(135deg, var(--warning), #f5576c);">
+          <i class="fas fa-clock"></i>
+          PENDING APPROVAL
+        </span>
+      </div>
+
+      <div class="property-details">
+        <div class="detail-item">
+          <div class="detail-label">Owner Name</div>
+          <div class="detail-value">${prop.owner_name}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Owner CNIC</div>
+          <div class="detail-value">${formatCNIC(prop.owner_cnic)}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Property Type</div>
+          <div class="detail-value">${capitalizeFirst(prop.property_type)}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Area</div>
+          <div class="detail-value">${prop.area_marla} Marla</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">District</div>
+          <div class="detail-value">${prop.district}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Tehsil</div>
+          <div class="detail-value">${prop.tehsil}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Fard No</div>
+          <div class="detail-value">${prop.fard_no}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Khasra No</div>
+          <div class="detail-value">${prop.khasra_no}</div>
+        </div>
+        ${prop.added_by_officer_name ? `
+        <div class="detail-item">
+          <div class="detail-label">Added By</div>
+          <div class="detail-value">${prop.added_by_officer_name}</div>
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn-approve" onclick="approveProperty('${prop.property_id}')">
+          <i class="fas fa-check"></i>
+          Approve Property
+        </button>
+        <button class="btn-reject" onclick="openRejectModal('${prop.property_id}')">
+          <i class="fas fa-times"></i>
+          Reject
+        </button>
       </div>
     </div>
   `).join('');
 }
 
-function getRoleBadge(role) {
-  const badges = {
-    'LRO': 'bg-primary',
-    'LAND RECORD OFFICER': 'bg-primary',
-    'NOTARY': 'bg-info',
-    'ADMIN': 'bg-danger',
-    'CITIZEN': 'bg-secondary'
-  };
-  
-  const colorClass = badges[role.toUpperCase()] || 'bg-secondary';
-  return `<span class="badge ${colorClass} badge-role">${role}</span>`;
-}
-
-function formatCNIC(cnic) {
-  if (cnic.length === 13) {
-    return `${cnic.substring(0,5)}-${cnic.substring(5,12)}-${cnic.substring(12)}`;
-  }
-  return cnic;
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-}
-
-function approveUser(userId) {
-  document.getElementById('approveUserId').value = userId;
-  new bootstrap.Modal(document.getElementById('approveModal')).show();
-}
-
-function rejectUser(userId) {
-  document.getElementById('rejectUserId').value = userId;
-  document.getElementById('rejectionReason').value = '';
-  new bootstrap.Modal(document.getElementById('rejectModal')).show();
-}
-
-async function confirmApprove() {
-  const userId = document.getElementById('approveUserId').value;
-  const notes = document.getElementById('approvalNotes').value;
-
-  try {
-    const response = await fetch(`${API_URL}/approve-user`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId, notes })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      alert('✅ User approved successfully!');
-      bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
-      loadPendingApprovals();
-    } else {
-      alert('❌ Error: ' + result.message);
-    }
-  } catch (err) {
-    console.error('Approve error:', err);
-    alert('❌ Error approving user');
-  }
-}
-
-async function confirmReject() {
-  const userId = document.getElementById('rejectUserId').value;
-  const reason = document.getElementById('rejectionReason').value.trim();
-
-  if (!reason) {
-    alert('Please provide a rejection reason');
+// Approve property
+async function approveProperty(propertyId) {
+  if (!confirm(`Are you sure you want to approve property ${propertyId}?`)) {
     return;
   }
 
   try {
-    const response = await fetch(`${API_URL}/reject-user`, {
+    const response = await fetch(`${API_URL}/properties/admin/approve-property`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ userId, reason })
+      body: JSON.stringify({ propertyId })
     });
 
     const result = await response.json();
 
     if (result.success) {
-      alert('✅ User rejected successfully');
-      bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
-      loadPendingApprovals();
+      showAlert('success', `✅ Property ${propertyId} approved successfully!`);
+      loadPendingProperties();
+      loadBadgeCounts();
     } else {
-      alert('❌ Error: ' + result.message);
+      showAlert('danger', '❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('Error approving property:', err);
+    showAlert('danger', 'Error approving property. Please try again.');
+  }
+}
+
+// Open reject modal
+function openRejectModal(propertyId) {
+  currentRejectPropertyId = propertyId;
+  document.getElementById('rejectPropertyId').textContent = propertyId;
+  document.getElementById('rejectionReason').value = '';
+  new bootstrap.Modal(document.getElementById('rejectPropertyModal')).show();
+}
+
+// Confirm reject
+async function confirmRejectProperty() {
+  const reason = document.getElementById('rejectionReason').value.trim();
+  
+  if (!reason) {
+    showAlert('warning', '⚠️ Please enter a rejection reason');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/properties/admin/reject-property`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        propertyId: currentRejectPropertyId,
+        reason: reason
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      bootstrap.Modal.getInstance(document.getElementById('rejectPropertyModal')).hide();
+      showAlert('warning', `✅ Property ${currentRejectPropertyId} rejected successfully!`);
+      loadPendingProperties();
+      loadBadgeCounts();
+    } else {
+      showAlert('danger', '❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('Error rejecting property:', err);
+    showAlert('danger', 'Error rejecting property. Please try again.');
+  }
+}
+
+// Search properties
+function searchProperties() {
+  const searchValue = document.getElementById('propertySearch').value.toLowerCase();
+  
+  if (!searchValue) {
+    renderProperties(allPendingProperties);
+    return;
+  }
+
+  const filtered = allPendingProperties.filter(prop => {
+    return prop.property_id.toLowerCase().includes(searchValue) ||
+           prop.owner_name.toLowerCase().includes(searchValue) ||
+           prop.owner_cnic.includes(searchValue.replace(/\D/g, ''));
+  });
+
+  renderProperties(filtered);
+}
+
+// Load pending users
+async function loadPendingUsers() {
+  const container = document.getElementById('pendingUsersList');
+  container.innerHTML = `
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+      <p class="mt-3 text-muted">Loading pending users...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${API_URL}/auth/pending-approvals`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const result = await response.json();
+    
+    if (result.success && result.users && result.users.length > 0) {
+      container.innerHTML = result.users.map(user => `
+        <div class="property-card">
+          <h5>${user.name} - ${user.role}</h5>
+          <p>Email: ${user.email}</p>
+          <p>CNIC: ${formatCNIC(user.cnic)}</p>
+          <div class="action-buttons">
+            <button class="btn-approve" onclick="approveUser('${user.user_id}')">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button class="btn-reject" onclick="rejectUser('${user.user_id}')">
+              <i class="fas fa-times"></i> Reject
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-check-circle text-success"></i>
+          <h4>No Pending User Approvals</h4>
+          <p class="text-muted">All user registrations have been processed.</p>
+        </div>
+      `;
     }
   } catch (err) {
-    console.error('Reject error:', err);
-    alert('❌ Error rejecting user');
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        <h4>Error Loading Users</h4>
+        <p>${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+// Approve user (placeholder)
+async function approveUser(userId) {
+  alert('User approval functionality - implement based on your auth system');
+}
+
+// Reject user (placeholder)
+async function rejectUser(userId) {
+  alert('User rejection functionality - implement based on your auth system');
+}
+
+// Load all properties
+async function loadAllProperties() {
+  const container = document.getElementById('allPropertiesList');
+  container.innerHTML = `
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+      <p class="mt-3 text-muted">Loading all properties...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${API_URL}/properties/admin/all-properties`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const result = await response.json();
+    
+    if (result.success && result.properties.length > 0) {
+      container.innerHTML = result.properties.map(prop => `
+        <div class="property-card" style="border-left-color: ${getStatusColor(prop.status)}">
+          <div class="property-header">
+            <div class="property-id">${prop.property_id}</div>
+            <span class="status-badge" style="background: ${getStatusColor(prop.status)}">
+              ${prop.status}
+            </span>
+          </div>
+          <div class="property-details">
+            <div class="detail-item">
+              <div class="detail-label">Owner</div>
+              <div class="detail-value">${prop.owner_name}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Area</div>
+              <div class="detail-value">${prop.area_marla} Marla</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Location</div>
+              <div class="detail-value">${prop.district}, ${prop.tehsil}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Created</div>
+              <div class="detail-value">${formatDate(prop.created_at)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-home"></i>
+          <h4>No Properties Found</h4>
+        </div>
+      `;
+    }
+  } catch (err) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        <h4>Error Loading Properties</h4>
+        <p>${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+// Utility functions
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-PK', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function getStatusColor(status) {
+  const colors = {
+    'PENDING_APPROVAL': '#ffc107',
+    'APPROVED': '#28a745',
+    'REJECTED': '#dc3545',
+    'FROZEN': '#6c757d'
+  };
+  return colors[status] || '#6c757d';
+}
+
+function showAlert(type, message) {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+  alertDiv.style.zIndex = '9999';
+  alertDiv.style.width = 'auto';
+  alertDiv.style.maxWidth = '500px';
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => alertDiv.remove(), 4000);
+}
+
+function logoutAdmin() {
+  if (confirm('Are you sure you want to logout?')) {
+    sessionStorage.clear();
+    window.location.href = '../auth/login.html';
+  }
+}
+
+// =====================================================
+// BLOCKCHAIN MODAL FUNCTIONS
+// =====================================================
+
+let selectedPropertyForBlockchain = null;
+
+// Load approved properties for blockchain modal
+async function loadApprovedPropertiesForBlockchain() {
+  const dropdownMenu = document.getElementById('propertyDropdownMenu');
+  const dropdownBtn = document.getElementById('propertyDropdownBtn');
+  
+  dropdownMenu.innerHTML = '<li><span class="dropdown-item text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading approved properties...</span></li>';
+
+  try {
+    const response = await fetch(`${API_URL}/properties/admin/all-properties`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    const result = await response.json();
+
+    if (result.success && result.properties) {
+      // Filter only APPROVED properties
+      const approvedProperties = result.properties.filter(prop => prop.status === 'APPROVED');
+      
+      if (approvedProperties.length === 0) {
+        dropdownMenu.innerHTML = '<li><span class="dropdown-item text-muted">No approved properties available</span></li>';
+        return;
+      }
+
+      // Clear and populate dropdown
+      dropdownMenu.innerHTML = '';
+      
+      approvedProperties.forEach(prop => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <a class="dropdown-item py-2 border-bottom" href="javascript:void(0)" 
+             onclick="selectPropertyForBlockchain('${prop.property_id}')">
+            <div>
+              <i class="fas fa-home me-2 text-primary"></i>
+              <strong>${prop.property_id}</strong>
+            </div>
+            <small class="text-muted ms-4">
+              ${prop.owner_name} | ${prop.district}, ${prop.tehsil}
+            </small>
+          </a>`;
+        dropdownMenu.appendChild(li);
+      });
+
+      console.log('✅ Loaded', approvedProperties.length, 'approved properties');
+    } else {
+      dropdownMenu.innerHTML = '<li><span class="dropdown-item text-danger">Error loading properties</span></li>';
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading properties for blockchain:', err);
+    dropdownMenu.innerHTML = '<li><span class="dropdown-item text-danger">Error: ' + err.message + '</span></li>';
+  }
+}
+
+// Select property and auto-fill form
+async function selectPropertyForBlockchain(propertyId) {
+  const dropdownBtn = document.getElementById('propertyDropdownBtn');
+  
+  // Update button text
+  dropdownBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Loading property details...`;
+
+  try {
+    const response = await fetch(`${API_URL}/properties/details/${propertyId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    const result = await response.json();
+
+    if (result.success && result.property) {
+      const prop = result.property;
+      selectedPropertyForBlockchain = prop;
+      
+      // Update button
+      dropdownBtn.innerHTML = `<i class="fas fa-home me-2"></i>${propertyId}`;
+      
+      // Auto-fill form fields
+      document.getElementById('ownerName').value = prop.owner_name || '';
+      document.getElementById('ownerCnic').value = formatCNIC(prop.owner_cnic) || '';
+      document.getElementById('fatherName').value = prop.father_name || '';
+      document.getElementById('fardNo').value = prop.fard_no || '';
+      document.getElementById('khasraNo').value = prop.khasra_no || '';
+      document.getElementById('khatooniNo').value = prop.khatooni_no || '';
+      document.getElementById('areaMarla').value = prop.area_marla || '';
+      document.getElementById('propertyType').value = prop.property_type || '';
+      document.getElementById('district').value = prop.district || '';
+      document.getElementById('tehsil').value = prop.tehsil || '';
+      document.getElementById('mauza').value = prop.mauza || '';
+      document.getElementById('address').value = prop.address || '';
+
+      console.log('✅ Form filled for property:', propertyId);
+      
+      showAlert('success', '✅ Property details loaded successfully!');
+      
+    } else {
+      throw new Error(result.message || 'Failed to load property details');
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading property details:', err);
+    dropdownBtn.innerHTML = `<i class="fas fa-home me-2"></i>Select Property`;
+    showAlert('danger', '❌ Error loading property: ' + err.message);
+  }
+}
+
+// Reset blockchain form
+function resetBlockchainForm() {
+  selectedPropertyForBlockchain = null;
+  
+  // Reset button
+  const dropdownBtn = document.getElementById('propertyDropdownBtn');
+  dropdownBtn.innerHTML = `<i class="fas fa-home me-2"></i>Select Property`;
+  
+  // Clear all form fields
+  document.getElementById('ownerName').value = '';
+  document.getElementById('ownerCnic').value = '';
+  document.getElementById('fatherName').value = '';
+  document.getElementById('fardNo').value = '';
+  document.getElementById('khasraNo').value = '';
+  document.getElementById('khatooniNo').value = '';
+  document.getElementById('areaMarla').value = '';
+  document.getElementById('propertyType').value = '';
+  document.getElementById('district').value = '';
+  document.getElementById('tehsil').value = '';
+  document.getElementById('mauza').value = '';
+  document.getElementById('address').value = '';
+  
+  console.log('🔄 Blockchain form reset');
+}
+
+// Submit to blockchain
+async function submitToBlockchain() {
+  if (!selectedPropertyForBlockchain) {
+    showAlert('warning', '⚠️ Please select a property first');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to add property ${selectedPropertyForBlockchain.property_id} to the blockchain?\n\nThis action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const blockchainData = {
+      propertyId: selectedPropertyForBlockchain.property_id,
+      ownerName: selectedPropertyForBlockchain.owner_name,
+      ownerCnic: selectedPropertyForBlockchain.owner_cnic,
+      fatherName: selectedPropertyForBlockchain.father_name,
+      fardNo: selectedPropertyForBlockchain.fard_no,
+      khasraNo: selectedPropertyForBlockchain.khasra_no,
+      khatooniNo: selectedPropertyForBlockchain.khatooni_no,
+      areaMarla: selectedPropertyForBlockchain.area_marla,
+      propertyType: selectedPropertyForBlockchain.property_type,
+      district: selectedPropertyForBlockchain.district,
+      tehsil: selectedPropertyForBlockchain.tehsil,
+      mauza: selectedPropertyForBlockchain.mauza,
+      address: selectedPropertyForBlockchain.address
+    };
+
+    console.log('📤 Submitting to blockchain:', blockchainData);
+
+    // TODO: Replace with actual blockchain API endpoint
+    // const response = await fetch(`${API_URL}/blockchain/add-property`, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Authorization': `Bearer ${authToken}`,
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify(blockchainData)
+    // });
+    // 
+    // const result = await response.json();
+    // 
+    // if (result.success) {
+    //   showAlert('success', '✅ Property added to blockchain successfully!');
+    //   bootstrap.Modal.getInstance(document.getElementById('addToBlockchainModal')).hide();
+    //   resetBlockchainForm();
+    // } else {
+    //   showAlert('danger', '❌ Error: ' + result.message);
+    // }
+
+    // For now, show success message (remove this when API is ready)
+    showAlert('success', `✅ Property ${selectedPropertyForBlockchain.property_id} submitted to blockchain successfully!\n\n⚠️ Note: Replace this with actual blockchain API integration.`);
+    
+    bootstrap.Modal.getInstance(document.getElementById('addToBlockchainModal')).hide();
+    resetBlockchainForm();
+
+  } catch (err) {
+    console.error('❌ Error submitting to blockchain:', err);
+    showAlert('danger', '❌ Error submitting to blockchain: ' + err.message);
   }
 }
 </script>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rejected Transfers - PLRA Punjab</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-green: #2e7d32;
+      --primary-dark: #1b5e20;
+      --accent-red: #d32f2f;
+      --bg-light: #f5f7fa;
+    }
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+    .navbar {
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    }
+    .navbar-brand {
+      font-weight: 700;
+      color: var(--primary-dark) !important;
+    }
+    .container-main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .page-header {
+      background: white;
+      border-radius: 20px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .page-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 0.5rem;
+    }
+    .search-section {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .search-box {
+      position: relative;
+    }
+    .search-box input {
+      padding-left: 3rem;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      height: 50px;
+      font-size: 1rem;
+    }
+    .search-box input:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+    }
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 1.2rem;
+    }
+    .transfer-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-left: 6px solid var(--accent-red);
+      transition: all 0.3s;
+    }
+    .transfer-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    .transfer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .property-id {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f44336, #c62828);
+      color: white;
+    }
+    .rejection-reason {
+      background: #ffebee;
+      border-left: 4px solid var(--accent-red);
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+    .reason-label {
+      font-weight: 700;
+      color: var(--accent-red);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .reason-text {
+      color: #c62828;
+      font-size: 0.95rem;
+    }
+    .transfer-section {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-weight: 700;
+      color: #666;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .transfer-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    .detail-item {
+      padding: 0.75rem;
+      background: white;
+      border-radius: 10px;
+    }
+    .detail-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.25rem;
+    }
+    .detail-value {
+      font-weight: 600;
+      color: #333;
+    }
+    .officer-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #fce4ec;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      flex: 1;
+      min-width: 150px;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn-view {
+      background: linear-gradient(135deg, #2196f3, #1565c0);
+      color: white;
+      border: none;
+    }
+    .btn-view:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(33, 150, 243, 0.4);
+    }
+    .btn-reconsider {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: white;
+      border: none;
+    }
+    .btn-reconsider:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(255, 152, 0, 0.4);
+    }
+    .no-results, .loading-state {
+      text-align: center;
+      padding: 3rem;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    @media (max-width: 768px) {
+      .transfer-header {
+        flex-direction: column;
+      }
+      .action-buttons {
+        flex-direction: column;
+      }
+      .btn-action {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="officer_dashboard.html">
+      <i class="fas fa-arrow-left me-2"></i>
+      Back to Dashboard
+    </a>
+    <span class="badge bg-danger">
+      <i class="fas fa-times-circle me-1"></i>
+      <span id="rejectedCount">0</span> Rejected
+    </span>
+  </div>
+</nav>
+
+<div class="container-main">
+  
+  <div class="page-header">
+    <div class="page-title">
+      <i class="fas fa-times-circle text-danger me-2"></i>
+      Rejected Property Transfers
+    </div>
+    <p class="text-muted mb-0">View and manage rejected property transfer requests</p>
+  </div>
+
+  <div class="search-section">
+    <div class="search-box">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        class="form-control" 
+        id="cnicSearch" 
+        placeholder="Search by CNIC (Current or New Owner)" 
+        maxlength="15">
+    </div>
+    <small class="text-muted d-block mt-2">
+      <i class="fas fa-info-circle"></i> Search rejected transfers by seller or buyer CNIC
+    </small>
+  </div>
+
+  <div id="transfersList">
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x text-danger mb-3"></i>
+      <p class="text-muted">Loading rejected transfers...</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem('authToken');
+
+// Check authentication
+if (!authToken) {
+  alert('Please login first');
+  window.location.href = 'login.html';
+}
+
+let allRejections = [];
+
+// Load rejected transfers from API
+async function loadRejectedTransfers() {
+  const container = document.getElementById('transfersList');
+  
+  try {
+    console.log('🔍 Loading rejected transfers...');
+    
+    const response = await fetch(`${API_URL}/transfers/officer-rejected`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+    console.log('Response:', result);
+
+    if (result.success && result.transfers && result.transfers.length > 0) {
+      allRejections = result.transfers;
+      renderRejections(allRejections);
+    } else {
+      container.innerHTML = `
+        <div class="no-results">
+          <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+          <h4>No Rejected Transfers Found</h4>
+          <p class="text-muted">Great! All transfers are either approved or pending.</p>
+        </div>
+      `;
+      document.getElementById('rejectedCount').textContent = '0';
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading rejected transfers:', err);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Error loading rejected transfers</strong><br>
+        <small>${err.message}</small><br>
+        <button class="btn btn-sm btn-primary mt-2" onclick="loadRejectedTransfers()">
+          <i class="fas fa-sync me-1"></i>Retry
+        </button>
+      </div>
+    `;
+  }
+}
+
+function formatCNIC(value) {
+  let cleaned = value.replace(/\D/g, '');
+  if (cleaned.length > 5) cleaned = cleaned.slice(0,5) + '-' + cleaned.slice(5);
+  if (cleaned.length > 13) cleaned = cleaned.slice(0,13) + '-' + cleaned.slice(13,14);
+  return cleaned;
+}
+
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-PK', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function renderRejections(rejections) {
+  const container = document.getElementById('transfersList');
+  document.getElementById('rejectedCount').textContent = rejections.length;
+
+  if (rejections.length === 0) {
+    container.innerHTML = `
+      <div class="no-results">
+        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+        <h4>No Rejected Transfers Found</h4>
+        <p class="text-muted">Great! All transfers are either approved or pending, or no matches for your search.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = rejections.map(t => `
+    <div class="transfer-card">
+      <div class="transfer-header">
+        <div>
+          <div class="property-id">${t.property_id}</div>
+          <small class="text-muted">Transfer ID: ${t.transfer_id}</small>
+        </div>
+        <span class="status-badge">
+          <i class="fas fa-times-circle"></i> REJECTED
+        </span>
+      </div>
+
+      <div class="rejection-reason">
+        <div class="reason-label">
+          <i class="fas fa-exclamation-triangle"></i>
+          Rejection Reason
+        </div>
+        <div class="reason-text">${t.rejection_reason || 'No reason provided'}</div>
+      </div>
+
+      <div class="transfer-section">
+        <div class="section-title">
+          <i class="fas fa-user-minus"></i>
+          Current Owner (Seller)
+        </div>
+        <div class="transfer-details">
+          <div class="detail-item">
+            <div class="detail-label">Name</div>
+            <div class="detail-value">${t.seller_name || 'N/A'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">CNIC</div>
+            <div class="detail-value">${formatCNIC(t.seller_cnic || '')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="transfer-section">
+        <div class="section-title">
+          <i class="fas fa-user-plus"></i>
+          Proposed New Owner (Buyer)
+        </div>
+        <div class="transfer-details">
+          <div class="detail-item">
+            <div class="detail-label">Name</div>
+            <div class="detail-value">${t.buyer_name}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">CNIC</div>
+            <div class="detail-value">${formatCNIC(t.buyer_cnic)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Father's Name</div>
+            <div class="detail-value">${t.buyer_father_name || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="transfer-section">
+        <div class="section-title">
+          <i class="fas fa-info-circle"></i>
+          Transfer Details
+        </div>
+        <div class="transfer-details">
+          <div class="detail-item">
+            <div class="detail-label">Property Type</div>
+            <div class="detail-value">${t.property_type || 'N/A'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Area</div>
+            <div class="detail-value">${t.area_marla || 'N/A'} Marla</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Location</div>
+            <div class="detail-value">${t.district || 'N/A'}, ${t.tehsil || 'N/A'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Transfer Amount</div>
+            <div class="detail-value">PKR ${(t.transfer_amount || 0).toLocaleString()}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Total Amount</div>
+            <div class="detail-value">PKR ${(t.total_amount || 0).toLocaleString()}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Submitted Date</div>
+            <div class="detail-value">${formatDate(t.created_at)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Rejected Date</div>
+            <div class="detail-value">${formatDate(t.rejected_at)}</div>
+          </div>
+        </div>
+      </div>
+
+      ${t.rejected_by_name ? `
+        <div class="officer-info">
+          <i class="fas fa-user-shield text-danger"></i>
+          <strong>Rejected By:</strong> ${t.rejected_by_name}
+        </div>
+      ` : ''}
+
+      <div class="action-buttons mt-3">
+        <button class="btn btn-view btn-action" onclick="viewDetails('${t.transfer_id}')">
+          <i class="fas fa-eye me-2"></i>View Full Details
+        </button>
+        <button class="btn btn-reconsider btn-action" onclick="reconsider('${t.transfer_id}', '${t.property_id}', '${t.buyer_name}')">
+          <i class="fas fa-redo me-2"></i>Reconsider Request
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function searchByCNIC() {
+  const searchValue = document.getElementById('cnicSearch').value.replace(/\D/g, '');
+  
+  if (searchValue.length === 0) {
+    renderRejections(allRejections);
+    return;
+  }
+
+  const filtered = allRejections.filter(t => {
+    const sellerCnic = (t.seller_cnic || '').replace(/\D/g, '');
+    const buyerCnic = (t.buyer_cnic || '').replace(/\D/g, '');
+    return sellerCnic.includes(searchValue) || buyerCnic.includes(searchValue);
+  });
+
+  renderRejections(filtered);
+}
+
+function viewDetails(transferId) {
+  // Navigate to transfer details page
+  window.location.href = `officer_transfer_details.html?id=${transferId}`;
+}
+
+async function reconsider(transferId, propertyId, buyerName) {
+  const notes = prompt(
+    `Reconsider Transfer Request ${transferId}\n\n` +
+    `Property: ${propertyId}\n` +
+    `Buyer: ${buyerName}\n\n` +
+    `If the applicant has resolved the issues, you can move this back to pending for re-review.\n\n` +
+    `Enter reconsideration notes:`
+  );
+  
+  if (!notes || !notes.trim()) {
+    return;
+  }
+
+  if (!confirm(`Move ${transferId} back to Pending?\n\nThis will allow fresh review of the transfer request with corrected documentation.`)) {
+    return;
+  }
+
+  try {
+    console.log('🔄 Reconsidering transfer:', transferId);
+    
+    const response = await fetch(`${API_URL}/transfers/reconsider`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        transferId, 
+        notes 
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert(`✅ Transfer Moved to Pending\n\nTransfer ID: ${transferId}\nStatus: Under Review\nNotes: ${notes}\n\nApplicant will be notified to resubmit corrected documents.`);
+      loadRejectedTransfers(); // Reload the list
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('❌ Error reconsidering transfer:', err);
+    alert('Error reconsidering transfer. Please try again.');
+  }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  const cnicInput = document.getElementById('cnicSearch');
+  
+  cnicInput.addEventListener('input', function(e) {
+    this.value = formatCNIC(this.value);
+    searchByCNIC();
+  });
+
+  loadRejectedTransfers();
+});
+</script>
+
+</body>
+</html>

@@ -1,311 +1,463 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pending Transfers – Officer Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <style>
-    :root {
-      --p: #2e7d32;
-      --pd: #1b5e20;
-    }
-    body {
-      background: #f0f7f0;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .navbar {
-      background: linear-gradient(135deg, #000, var(--pd));
-    }
-    .transfer-card {
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: all 0.3s;
-      margin-bottom: 1.5rem;
-    }
-    .transfer-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    .status-badge {
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
-    .status-pending {
-      background: #fff3cd;
-      color: #856404;
-    }
-    .status-paid {
-      background: #d1ecf1;
-      color: #0c5460;
-    }
-    .status-approved {
-      background: #d4edda;
-      color: #155724;
-    }
-    .countdown {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #d32f2f;
-    }
-    .image-thumb {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 2px solid #ddd;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Transfers - Officer Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --success: #11998e;
+    --warning: #f093fb;
+  }
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding-top: 80px;
+  }
+  .navbar {
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  }
+  .container-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .page-header {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  }
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .transfer-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 6px solid var(--warning);
+    transition: all 0.3s;
+  }
+  .transfer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  }
+  .transfer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .property-id {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--secondary);
+  }
+  .status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .badge-uploaded {
+    background: linear-gradient(135deg, #2196f3, #1565c0);
+    color: white;
+  }
+  .badge-verified {
+    background: linear-gradient(135deg, var(--success), #38ef7d);
+    color: white;
+  }
+  .transfer-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .detail-item {
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border-radius: 10px;
+  }
+  .detail-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  .detail-value {
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .ownership-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-weight: 700;
+    color: var(--secondary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-approve {
+    background: linear-gradient(135deg, var(--success), #38ef7d);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .btn-approve:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
+    color: white;
+  }
+  .btn-reject {
+    background: linear-gradient(135deg, #f5576c, #d32f2f);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .btn-reject:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+    color: white;
+  }
+  .info-box {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 5px solid var(--primary);
+  }
+  .loading-state, .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  }
+</style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-bold fs-4" href="officer_dashboard.html">
-      <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold" href="officer_dashboard.html" style="color: var(--secondary);">
+      <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
     </a>
-    <div class="text-end text-white">
-      <div class="fw-bold">Pending Transfers</div>
-      <small>Land Record Officer</small>
-    </div>
+    <span class="badge" style="background: linear-gradient(135deg, var(--warning), #f5576c);">
+      <i class="fas fa-clock me-1"></i>
+      <span id="pendingCount">0</span> Pending
+    </span>
   </div>
 </nav>
 
-<div class="container py-5">
-  <div class="row mb-4">
-    <div class="col-12">
-      <h2 class="text-success"><i class="fas fa-exchange-alt me-2"></i>Pending Property Transfers</h2>
-      <p class="text-muted">Review and approve property transfer requests</p>
-    </div>
+<div class="container-main">
+  
+  <div class="page-header">
+    <h1 class="page-title">
+      <i class="fas fa-exchange-alt me-2"></i>Pending Property Transfers
+    </h1>
+    <p class="text-muted mb-0">Review and approve property ownership transfers</p>
   </div>
 
-  <!-- Transfer Requests List -->
+  <div class="info-box">
+    <h6 style="color: var(--secondary); font-weight: 700;">
+      <i class="fas fa-info-circle me-2"></i>How Transfer Approval Works
+    </h6>
+    <p class="mb-0">
+      <strong>For LRO, TEHSILDAR & ADMIN:</strong> Buyers enter the exact payment amount instead of uploading challans. Once you approve a transfer, the property ownership will be transferred from the seller to the buyer. The buyer will see the property in their "My Properties" page, and the seller will no longer have access to it.
+    </p>
+  </div>
+
   <div id="transfersList">
-    <!-- Transfer Card 1 -->
-    <div class="card transfer-card">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-8">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h5 class="mb-1">Transfer Request #TR-2025-001</h5>
-                <small class="text-muted">Submitted: 15 Dec 2025, 10:30 AM</small>
-              </div>
-              <span class="status-badge status-pending">
-                <i class="fas fa-clock me-1"></i>Awaiting Payment
-              </span>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <strong class="text-success"><i class="fas fa-user-tie me-1"></i>Current Owner (Seller)</strong>
-                <p class="mb-1">Ahmed Ali</p>
-                <small class="text-muted">CNIC: 35202-1234567-8</small><br>
-                <small class="text-muted">Father: Muhammad Ali</small>
-              </div>
-              <div class="col-md-6">
-                <strong class="text-primary"><i class="fas fa-user me-1"></i>New Owner (Buyer)</strong>
-                <p class="mb-1">Hassan Raza</p>
-                <small class="text-muted">CNIC: 35202-9876543-2</small><br>
-                <small class="text-muted">Father: Raza Ahmed</small>
-              </div>
-            </div>
-
-            <div class="border-top pt-3 mb-3">
-              <strong class="text-info"><i class="fas fa-home me-1"></i>Property Details</strong>
-              <div class="row mt-2">
-                <div class="col-md-4">
-                  <small class="text-muted">Fard No:</small> <strong>FAR-45678</strong>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted">Khasra No:</small> <strong>KH-123</strong>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted">Khatooni No:</small> <strong>KT-567</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Area:</small> <strong>5.5 Marla</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Type:</small> <strong>Residential</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Location:</small> <strong>Lahore, Model Town</strong>
-                </div>
-              </div>
-            </div>
-
-            <div class="alert alert-warning mb-0">
-              <i class="fas fa-hourglass-half me-2"></i>
-              <strong>Time Remaining:</strong> 
-              <span class="countdown">28 days 14 hours</span>
-              <span class="float-end"><small>Duration: 30 days</small></span>
-            </div>
-          </div>
-
-          <div class="col-md-4 text-center border-start">
-            <strong class="d-block mb-3">Attachments</strong>
-            <img src="https://via.placeholder.com/80" alt="Buyer" class="image-thumb mb-2">
-            <p class="small mb-2">Buyer Photo</p>
-            <img src="https://via.placeholder.com/80" alt="Property" class="image-thumb">
-            <p class="small mb-3">Property Image</p>
-            
-            <div class="d-grid gap-2">
-              <button class="btn btn-success btn-sm" onclick="viewDetails('TR-2025-001')">
-                <i class="fas fa-eye me-1"></i>View Full Details
-              </button>
-              <button class="btn btn-outline-primary btn-sm" onclick="downloadFard('TR-2025-001')">
-                <i class="fas fa-download me-1"></i>Download Fard
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Transfer Card 2 - Paid -->
-    <div class="card transfer-card">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-8">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h5 class="mb-1">Transfer Request #TR-2025-002</h5>
-                <small class="text-muted">Submitted: 12 Dec 2025, 02:15 PM</small>
-              </div>
-              <span class="status-badge status-paid">
-                <i class="fas fa-check-circle me-1"></i>Payment Verified
-              </span>
-            </div>
-
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <strong class="text-success"><i class="fas fa-user-tie me-1"></i>Current Owner (Seller)</strong>
-                <p class="mb-1">Fatima Khan</p>
-                <small class="text-muted">CNIC: 35202-5555555-5</small><br>
-                <small class="text-muted">Father: Khan Sahib</small>
-              </div>
-              <div class="col-md-6">
-                <strong class="text-primary"><i class="fas fa-user me-1"></i>New Owner (Buyer)</strong>
-                <p class="mb-1">Usman Ali</p>
-                <small class="text-muted">CNIC: 35202-6666666-6</small><br>
-                <small class="text-muted">Father: Ali Ahmed</small>
-              </div>
-            </div>
-
-            <div class="border-top pt-3 mb-3">
-              <strong class="text-info"><i class="fas fa-home me-1"></i>Property Details</strong>
-              <div class="row mt-2">
-                <div class="col-md-4">
-                  <small class="text-muted">Fard No:</small> <strong>FAR-78901</strong>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted">Khasra No:</small> <strong>KH-456</strong>
-                </div>
-                <div class="col-md-4">
-                  <small class="text-muted">Khatooni No:</strong> <strong>KT-890</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Area:</small> <strong>10 Marla</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Type:</small> <strong>Commercial</strong>
-                </div>
-                <div class="col-md-4 mt-2">
-                  <small class="text-muted">Location:</small> <strong>Islamabad, F-7</strong>
-                </div>
-              </div>
-            </div>
-
-            <div class="alert alert-success mb-0">
-              <i class="fas fa-check-circle me-2"></i>
-              <strong>Payment Status:</strong> Verified & Approved
-              <span class="float-end">
-                <button class="btn btn-sm btn-outline-success" onclick="viewChallan('TR-2025-002')">
-                  <i class="fas fa-file-invoice me-1"></i>View Challan
-                </button>
-              </span>
-            </div>
-          </div>
-
-          <div class="col-md-4 text-center border-start">
-            <strong class="d-block mb-3">Attachments</strong>
-            <img src="https://via.placeholder.com/80" alt="Buyer" class="image-thumb mb-2">
-            <p class="small mb-2">Buyer Photo</p>
-            <img src="https://via.placeholder.com/80" alt="Property" class="image-thumb">
-            <p class="small mb-3">Property Image</p>
-            
-            <div class="d-grid gap-2">
-              <button class="btn btn-success" onclick="approveTransfer('TR-2025-002')">
-                <i class="fas fa-check me-1"></i>Approve Transfer
-              </button>
-              <button class="btn btn-danger btn-sm" onclick="rejectTransfer('TR-2025-002')">
-                <i class="fas fa-times me-1"></i>Reject
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- View Details Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-success text-white">
-        <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Transfer Details</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Details will be loaded here -->
-      </div>
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--primary);"></i>
+      <p class="mt-3">Loading pending transfers...</p>
     </div>
   </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function viewDetails(transferId) {
-  const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
-  document.getElementById('modalBody').innerHTML = `
-    <h6>Transfer ID: ${transferId}</h6>
-    <p>Full details would be loaded here from the database...</p>
-  `;
-  modal.show();
+const API_URL = "http://localhost:5000/api";
+const authToken = sessionStorage.getItem('authToken');
+const userRole = sessionStorage.getItem('userRole');
+
+// Check authentication
+if (!authToken) {
+  alert('Please login first');
+  window.location.href = 'login.html';
 }
 
-function viewChallan(transferId) {
-  alert('Opening payment challan for ' + transferId);
-  // TODO: Open challan in new window or modal
-}
+let allTransfers = [];
 
-function downloadFard(transferId) {
-  alert('Downloading Fard for ' + transferId);
-  // TODO: Generate and download PDF
-}
+// Load pending transfers
+async function loadPendingTransfers() {
+  const container = document.getElementById('transfersList');
+  
+  try {
+    console.log('📋 Loading pending transfers for officer...');
+    
+    const response = await fetch(`${API_URL}/transfers/officer-pending`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-function approveTransfer(transferId) {
-  if (confirm('Are you sure you want to approve this transfer?\n\nThis will:\n✅ Transfer ownership to the buyer\n✅ Update blockchain records\n✅ Generate new Fard')) {
-    alert('✅ Transfer approved successfully!\n\nOwnership has been transferred to the new owner.');
-    // TODO: Send approval to backend
-    location.reload();
+    const result = await response.json();
+    console.log('Response:', result);
+
+    if (result.success && result.transfers && result.transfers.length > 0) {
+      allTransfers = result.transfers;
+      renderTransfers(allTransfers);
+      document.getElementById('pendingCount').textContent = result.transfers.length;
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+          <h4>No Pending Transfers</h4>
+          <p class="text-muted">All transfers have been processed.</p>
+        </div>
+      `;
+      document.getElementById('pendingCount').textContent = '0';
+    }
+
+  } catch (err) {
+    console.error('❌ Error loading transfers:', err);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Error loading transfers</strong><br>
+        <small>${err.message}</small><br>
+        <button class="btn btn-sm btn-primary mt-2" onclick="loadPendingTransfers()">
+          <i class="fas fa-sync me-1"></i>Retry
+        </button>
+      </div>
+    `;
   }
 }
 
-function rejectTransfer(transferId) {
+// Render transfers
+function renderTransfers(transfers) {
+  const container = document.getElementById('transfersList');
+  
+  container.innerHTML = transfers.map(t => `
+    <div class="transfer-card">
+      <div class="transfer-header">
+        <div>
+          <div class="property-id">${t.property_id}</div>
+          <small class="text-muted">Transfer ID: ${t.transfer_id}</small>
+        </div>
+        <span class="status-badge ${t.status === 'PAYMENT_VERIFIED' ? 'badge-verified' : 'badge-uploaded'}">
+          <i class="fas fa-${t.status === 'PAYMENT_VERIFIED' ? 'check-circle' : 'clock'}"></i>
+          ${t.status === 'PAYMENT_VERIFIED' ? 'Payment Verified' : 'Payment Submitted'}
+        </span>
+      </div>
+
+      <div class="ownership-section">
+        <div class="section-title">
+          <i class="fas fa-user-minus text-danger"></i>
+          Current Owner (Seller)
+        </div>
+        <div class="transfer-details">
+          <div class="detail-item">
+            <div class="detail-label">Name</div>
+            <div class="detail-value">${t.seller_name}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">CNIC</div>
+            <div class="detail-value">${formatCNIC(t.seller_cnic)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ownership-section" style="background: #e8f5e9;">
+        <div class="section-title" style="color: var(--success);">
+          <i class="fas fa-user-plus"></i>
+          New Owner (Buyer)
+        </div>
+        <div class="transfer-details">
+          <div class="detail-item">
+            <div class="detail-label">Name</div>
+            <div class="detail-value">${t.buyer_name}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">CNIC</div>
+            <div class="detail-value">${formatCNIC(t.buyer_cnic)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="transfer-details">
+        <div class="detail-item">
+          <div class="detail-label">Property Type</div>
+          <div class="detail-value">${t.property_type || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Area</div>
+          <div class="detail-value">${t.area_marla || 'N/A'} Marla</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Location</div>
+          <div class="detail-value">${t.district}, ${t.tehsil}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Transfer Amount</div>
+          <div class="detail-value">PKR ${(t.transfer_amount || 0).toLocaleString()}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Total Amount</div>
+          <div class="detail-value">PKR ${(t.total_amount || 0).toLocaleString()}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Initiated On</div>
+          <div class="detail-value">${formatDate(t.created_at)}</div>
+        </div>
+      </div>
+
+      ${t.paid_amount ? `
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle me-2"></i>
+          <strong>Payment Completed:</strong> PKR ${parseFloat(t.paid_amount).toLocaleString()}
+          <small class="d-block mt-1">Buyer has entered the exact payment amount</small>
+        </div>
+      ` : ''}
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-approve" onclick="approveTransfer('${t.transfer_id}', '${t.property_id}', '${t.buyer_name}')">
+          <i class="fas fa-check me-2"></i>Approve Transfer
+        </button>
+        <button class="btn-reject" onclick="rejectTransfer('${t.transfer_id}')">
+          <i class="fas fa-times me-2"></i>Reject Transfer
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Approve transfer
+async function approveTransfer(transferId, propertyId, buyerName) {
+  if (!confirm(`Are you sure you want to approve this transfer?\n\nProperty: ${propertyId}\nNew Owner: ${buyerName}\n\n⚠️ This action will transfer ownership and cannot be undone!`)) {
+    return;
+  }
+
+  try {
+    console.log('✅ Approving transfer:', transferId);
+    
+    const response = await fetch(`${API_URL}/transfers/approve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ transferId })
+    });
+
+    const result = await response.json();
+    console.log('Approval result:', result);
+
+    if (result.success) {
+      alert(`✅ Transfer Approved Successfully!\n\nProperty: ${propertyId}\nNew Owner: ${buyerName}\nNew Owner ID: ${result.newOwnerId}\n\nOwnership has been transferred. The buyer can now see this property in their "My Properties" page.`);
+      loadPendingTransfers(); // Reload the list
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('❌ Error approving transfer:', err);
+    alert('Error approving transfer. Please try again.');
+  }
+}
+
+// Reject transfer
+async function rejectTransfer(transferId) {
   const reason = prompt('Enter reason for rejection:');
-  if (reason) {
-    alert('❌ Transfer rejected.\n\nReason: ' + reason);
-    // TODO: Send rejection to backend
-    location.reload();
+  
+  if (!reason || !reason.trim()) {
+    return;
+  }
+
+  try {
+    console.log('❌ Rejecting transfer:', transferId);
+    
+    const response = await fetch(`${API_URL}/transfers/reject`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ transferId, reason })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert(`✅ Transfer Rejected\n\nTransfer ID: ${transferId}\nReason: ${reason}\n\nThe seller and buyer will be notified.`);
+      loadPendingTransfers(); // Reload the list
+    } else {
+      alert('❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('❌ Error rejecting transfer:', err);
+    alert('Error rejecting transfer. Please try again.');
   }
 }
+
+// Utility functions
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-PK', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  loadPendingTransfers();
+});
 </script>
 
 </body>
