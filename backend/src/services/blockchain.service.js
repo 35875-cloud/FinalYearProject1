@@ -1,622 +1,182 @@
-// // backend/src/services/blockchain.service.js
-// import { ethers } from "ethers";
-// import fs from "fs";
-// import path from "path";
-
-// const PropertyRegistryJSON = JSON.parse(
-//   fs.readFileSync(
-//     path.resolve("../../blockchain/artifacts/contracts/PropertyRegistry.sol/PropertyRegistry.json"),
-//     "utf-8"
-//   )
-// );
-
-// const PropertyTransferJSON = JSON.parse(
-//   fs.readFileSync(
-//     path.resolve("../../blockchain/artifacts/contracts/PropertyTransfer.sol/PropertyTransfer.json"),
-//     "utf-8"
-//   )
-// );
-
-// class BlockchainService {
-//   constructor() {
-//     this.provider = new ethers.JsonRpcProvider(
-//       process.env.BLOCKCHAIN_RPC_URL || "http://localhost:8545"
-//     );
-
-//     const deploymentInfo = JSON.parse(
-//       fs.readFileSync(path.resolve("../../blockchain/deployment-info.json"), "utf-8")
-//     );
-
-//     this.propertyRegistryAddress = deploymentInfo.propertyRegistry;
-//     this.propertyTransferAddress = deploymentInfo.propertyTransfer;
-
-//     this.adminWallet = new ethers.Wallet(
-//       process.env.ADMIN_PRIVATE_KEY,
-//       this.provider
-//     );
-
-//     this.propertyRegistry = new ethers.Contract(
-//       this.propertyRegistryAddress,
-//       PropertyRegistryJSON.abi,
-//       this.adminWallet
-//     );
-
-//     this.propertyTransfer = new ethers.Contract(
-//       this.propertyTransferAddress,
-//       PropertyTransferJSON.abi,
-//       this.adminWallet
-//     );
-
-//     console.log("✅ Blockchain Service initialized");
-//   }
-
-//   // ... Keep your methods: registerProperty, approveProperty, etc. ...
-
-
-
-//   async registerProperty(propertyData) {
-//     const tx = await this.propertyRegistry.registerProperty(
-//       propertyData.propertyId,
-//       propertyData.ownerId,
-//       propertyData.ownerName,
-//       propertyData.ownerCnic,
-//       propertyData.fatherName,
-//       propertyData.fardNo,
-//       propertyData.khasraNo,
-//       propertyData.khatooniNo,
-//       propertyData.areaMarla,
-//       propertyData.propertyType,
-//       propertyData.district,
-//       propertyData.tehsil,
-//       propertyData.documentHash
-//     );
-//     const receipt = await tx.wait();
-//     return {
-//       success: true,
-//       transactionHash: receipt.transactionHash,
-//       blockNumber: receipt.blockNumber,
-//       gasUsed: receipt.gasUsed.toString()
-//     };
-//   }
-
-//   // ... Keep other methods the same (approveProperty, getProperty, etc.) ...
-
-
-//   /**
-//    * Approve property (Tehsildar)
-//    */
-//   async approveProperty(propertyId, tehsildarWallet) {
-//     try {
-//       console.log("✅ Approving property:", propertyId);
-
-//       const contract = this.propertyRegistry.connect(tehsildarWallet);
-//       const tx = await contract.approveProperty(propertyId);
-//       const receipt = await tx.wait();
-
-//       console.log("✅ Property approved on blockchain");
-
-//       return {
-//         success: true,
-//         transactionHash: receipt.transactionHash,
-//         blockNumber: receipt.blockNumber
-//       };
-//     } catch (error) {
-//       console.error("❌ Approval error:", error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Get property from blockchain
-//    */
-//   async getProperty(propertyId) {
-//     try {
-//       const property = await this.propertyRegistry.getProperty(propertyId);
-      
-//       return {
-//         propertyId: property.propertyId,
-//         ownerId: property.ownerId,
-//         ownerName: property.ownerName,
-//         ownerCnic: property.ownerCnic,
-//         fardNo: property.fardNo,
-//         khasraNo: property.khasraNo,
-//         isApproved: property.isApproved,
-//         isFrozen: property.isFrozen,
-//         status: property.status,
-//         registrationDate: new Date(property.registrationDate.toNumber() * 1000),
-//         addedBy: property.addedBy,
-//         approvedBy: property.approvedBy
-//       };
-//     } catch (error) {
-//       console.error("❌ Get property error:", error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Initiate property transfer
-//    */
-//   async initiateTransfer(transferData) {
-//     try {
-//       console.log("🔄 Initiating transfer:", transferData.transferId);
-
-//       const tx = await this.propertyTransfer.initiateTransfer(
-//         transferData.transferId,
-//         transferData.propertyId,
-//         transferData.sellerId,
-//         transferData.sellerCnic,
-//         transferData.buyerId,
-//         transferData.buyerCnic,
-//         transferData.buyerName,
-//         transferData.buyerFatherName,
-//         transferData.transferAmount,
-//         transferData.durationDays
-//       );
-
-//       const receipt = await tx.wait();
-
-//       console.log("✅ Transfer initiated on blockchain");
-
-//       return {
-//         success: true,
-//         transactionHash: receipt.transactionHash,
-//         blockNumber: receipt.blockNumber
-//       };
-//     } catch (error) {
-//       console.error("❌ Transfer initiation error:", error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Complete property transfer
-//    */
-//   async completeTransfer(transferId, tehsildarWallet) {
-//     try {
-//       console.log("✅ Completing transfer:", transferId);
-
-//       const contract = this.propertyTransfer.connect(tehsildarWallet);
-//       const tx = await contract.completeTransfer(transferId);
-//       const receipt = await tx.wait();
-
-//       console.log("✅ Transfer completed on blockchain");
-
-//       return {
-//         success: true,
-//         transactionHash: receipt.transactionHash,
-//         blockNumber: receipt.blockNumber
-//       };
-//     } catch (error) {
-//       console.error("❌ Transfer completion error:", error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Verify blockchain integrity
-//    */
-//   async verifyBlockchainIntegrity() {
-//     try {
-//       const blockNumber = await this.provider.getBlockNumber();
-//       const network = await this.provider.getNetwork();
-
-//       return {
-//         isConnected: true,
-//         currentBlock: blockNumber,
-//         chainId: network.chainId,
-//         networkName: network.name
-//       };
-//     } catch (error) {
-//       return {
-//         isConnected: false,
-//         error: error.message
-//       };
-//     }
-//   }
-// }
-
-
-// export default new BlockchainService();
-
-// import { Wallet, JsonRpcProvider } from "ethers";
-
-// this.provider = new JsonRpcProvider(process.env.RPC_URL);
-
-// if (process.env.PRIVATE_KEY) {
-//   this.wallet = new Wallet(process.env.PRIVATE_KEY, this.provider);
-// } else {
-//   console.warn("⚠️ No PRIVATE_KEY found. Running in read-only mode.");
-//   this.wallet = null;
-// }
 // =====================================================
-// BLOCKCHAIN SERVICE - Updated for Private Key Management
+// BLOCKCHAIN SERVICE - FIXED VERSION
 // Location: backend/src/services/blockchain.service.js
 // =====================================================
 
-import { ethers } from "ethers";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import CryptoJS from "crypto-js";
-import pool from "../config/db.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import crypto from 'crypto';
+import pool from '../config/db.js';
 
 class BlockchainService {
-  constructor() {
-    this.isConnected = false;
-    this.provider = null;
-    this.propertyRegistry = null;
-    this.propertyTransfer = null;
-    
-    this.initialize();
-  }
-
-  async initialize() {
-    try {
-      console.log("\n🔗 Initializing Blockchain Service...");
-
-      // Check if blockchain is configured
-      if (!process.env.BLOCKCHAIN_RPC_URL) {
-        console.warn("⚠️  Blockchain RPC URL not configured.");
-        return;
-      }
-
-      // Connect to provider
-      this.provider = new ethers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC_URL);
-
-      // Test connection
-      const network = await this.provider.getNetwork();
-      console.log("✅ Connected to blockchain network:", network.chainId.toString());
-
-      // Load contract addresses from deployment info
-      const deploymentPath = path.join(__dirname, "../../../blockchain/deployment-info.json");
-      
-      if (!fs.existsSync(deploymentPath)) {
-        console.warn("⚠️  Deployment info not found. Please deploy contracts first.");
-        return;
-      }
-
-      const deploymentInfo = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
-      
-      // Load ABIs
-     const registryArtifact = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "../../../blockchain/artifacts/contracts/PropertyRegistry.sol/PropertyRegistry.json"),
-    "utf8"
-  )
-);
-
-const transferArtifact = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "../../../blockchain/artifacts/contracts/PropertyTransfer.sol/PropertyTransfer.json"),
-    "utf8"
-  )
-);
-
-      // Store contract addresses and ABIs
-      this.registryAddress = deploymentInfo.contracts.PropertyRegistry.address;
-      this.transferAddress = deploymentInfo.contracts.PropertyTransfer.address;
-      this.registryABI = registryArtifact.abi;
-      this.transferABI = transferArtifact.abi;
-
-
-      this.isConnected = true;
-      console.log("✅ Blockchain Service initialized");
-      console.log("   PropertyRegistry:", this.registryAddress);
-      console.log("   PropertyTransfer:", this.transferAddress);
-
-    } catch (error) {
-      console.error("❌ Blockchain Service initialization failed:", error.message);
-      this.isConnected = false;
-    }
-  }
-
-  /**
-   * Check if blockchain is available
-   */
-  isAvailable() {
-    return this.isConnected;
-  }
-
-  /**
-   * Decrypt user's private key using their password
-   */
-  decryptPrivateKey(encryptedKey, userPassword) {
-    try {
-      const secretKey = process.env.AES_SECRET_KEY || "default-secret-key-32chars-long";
-      const decrypted = CryptoJS.AES.decrypt(
-        encryptedKey,
-        userPassword + secretKey
-      ).toString(CryptoJS.enc.Utf8);
-      
-      if (!decrypted) {
-        throw new Error("Failed to decrypt private key");
-      }
-      
-      return decrypted;
-    } catch (error) {
-      console.error("❌ Decryption error:", error);
-      throw new Error("Invalid password or corrupted private key");
-    }
-  }
-
-  /**
-   * Get user's wallet for signing transactions
-   * IMPORTANT: This is called every time user performs blockchain action
-   */
-  async getUserWallet(userId, userPassword) {
-    try {
-      // Get encrypted private key from database
-      const result = await pool.query(
-        "SELECT encrypted_private_key, blockchain_address FROM users WHERE user_id = $1",
-        [userId]
-      );
-
-      if (result.rows.length === 0) {
-        throw new Error("User not found");
-      }
-
-      const { encrypted_private_key, blockchain_address } = result.rows[0];
-
-      // Decrypt private key
-      const privateKey = this.decryptPrivateKey(encrypted_private_key, userPassword);
-
-      // Create and return wallet
-      const wallet = new ethers.Wallet(privateKey, this.provider);
-      
-      console.log("✅ Wallet created for user:", userId);
-      console.log("   Address:", wallet.address);
-      console.log("   Expected:", blockchain_address);
-
-      return wallet;
-    } catch (error) {
-      console.error("❌ Error creating wallet:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Register property on blockchain
-   * Called from: POST /api/properties/add-property
-   */
-  async registerProperty(propertyData, lroUserId, lroPassword) {
-    if (!this.isConnected) {
-      throw new Error("Blockchain not connected");
+    constructor() {
+        this.difficulty = 4; // Proof of Work difficulty
     }
 
-    try {
-      console.log("📝 Registering property on blockchain:", propertyData.propertyId);
-
-      // Get LRO's wallet
-      const lroWallet = await this.getUserWallet(lroUserId, lroPassword);
-
-      // Create contract instance with LRO's wallet
-      const contract = new ethers.Contract(
-        this.registryAddress,
-        this.registryABI,
-        lroWallet
-      );
-
-      // Call smart contract
-      const tx = await contract.registerProperty(
-        propertyData.propertyId,
-        propertyData.ownerId,
-        propertyData.ownerName,
-        propertyData.ownerCnic,
-        propertyData.fatherName,
-        propertyData.fardNo,
-        propertyData.khasraNo,
-        propertyData.khatooniNo,
-        ethers.parseUnits(propertyData.areaMarla.toString(), 0), // Convert to BigNumber
-        propertyData.propertyType,
-        propertyData.district,
-        propertyData.tehsil,
-        propertyData.documentHash
-      );
-
-      console.log("⏳ Transaction sent:", tx.hash);
-      console.log("   Waiting for confirmation...");
-      
-      // Wait for confirmation
-      const receipt = await tx.wait();
-      
-      console.log("✅ Transaction confirmed!");
-      console.log("   Block:", receipt.blockNumber);
-      console.log("   Gas used:", receipt.gasUsed.toString());
-
-      return {
-        success: true,
-        transactionHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed.toString()
-      };
-    } catch (error) {
-      console.error("❌ Blockchain registration error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Approve property registration (LRO)
-   * Called from: POST /api/properties/approve
-   */
-  async approveProperty(propertyId, lroUserId, lroPassword) {
-    if (!this.isConnected) {
-      throw new Error("Blockchain not connected");
+    calculateHash(index, previousHash, timestamp, data, nonce) {
+        return crypto
+            .createHash('sha256')
+            .update(index + previousHash + timestamp + JSON.stringify(data) + nonce)
+            .digest('hex');
     }
 
-    try {
-      console.log("✅ Approving property on blockchain:", propertyId);
-
-      const lroWallet = await this.getUserWallet(lroUserId, lroPassword);
-      
-      const contract = new ethers.Contract(
-        this.registryAddress,
-        this.registryABI,
-        lroWallet
-      );
-
-      const tx = await contract.approveProperty(propertyId);
-      console.log("⏳ Transaction sent:", tx.hash);
-      
-      const receipt = await tx.wait();
-      console.log("✅ Property approved on blockchain!");
-
-      return {
-        success: true,
-        transactionHash: receipt.hash,
-        blockNumber: receipt.blockNumber
-      };
-    } catch (error) {
-      console.error("❌ Approval error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get property from blockchain
-   */
-  async getProperty(propertyId) {
-    if (!this.isConnected) {
-      throw new Error("Blockchain not connected");
+    async getLatestBlock() {
+        const result = await pool.query(
+            "SELECT * FROM blockchain_ledger ORDER BY block_index DESC LIMIT 1"
+        );
+        return result.rows[0];
     }
 
-    try {
-      // Read-only, no wallet needed
-      const contract = new ethers.Contract(
-        this.registryAddress,
-        this.registryABI,
-        this.provider
-      );
-
-      const property = await contract.getProperty(propertyId);
-      
-      return {
-        propertyId: property.propertyId,
-        ownerId: property.ownerId,
-        ownerName: property.ownerName,
-        ownerCnic: property.ownerCnic,
-        fardNo: property.fardNo,
-        isApproved: property.isApproved,
-        isFrozen: property.isFrozen,
-        status: Number(property.status),
-        registrationDate: new Date(Number(property.registrationDate) * 1000),
-        addedBy: property.addedBy,
-        approvedBy: property.approvedBy
-      };
-    } catch (error) {
-      console.error("❌ Get property error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Initiate property transfer
-   * Called from: POST /api/transfers/initiate
-   */
-  async initiateTransfer(transferData, sellerUserId, sellerPassword) {
-    if (!this.isConnected) {
-      throw new Error("Blockchain not connected");
+    async getPropertyData(propertyId) {
+        const result = await pool.query(
+            `SELECT * FROM properties 
+             WHERE property_id = $1 AND status = 'APPROVED'`,
+            [propertyId]
+        );
+        return result.rows.length > 0 ? result.rows[0] : null;
     }
 
-    try {
-      console.log("🔄 Initiating transfer on blockchain:", transferData.transferId);
+    async mineBlock(propertyData, adminId) {
+        const latestBlock = await this.getLatestBlock();
+        const index = latestBlock ? latestBlock.block_index + 1 : 0;
+        const previousHash = latestBlock ? latestBlock.blockchain_hash : "0";
+        const timestamp = new Date().toISOString();
+        let nonce = 0;
+        let hash = '';
 
-      const sellerWallet = await this.getUserWallet(sellerUserId, sellerPassword);
-      
-      const contract = new ethers.Contract(
-        this.transferAddress,
-        this.transferABI,
-        sellerWallet
-      );
+        console.log(`⛏️  Mining Block ${index}...`);
+        
+        const target = Array(this.difficulty + 1).join("0");
+        const startTime = Date.now();
+        
+        while (true) {
+            hash = this.calculateHash(index, previousHash, timestamp, propertyData, nonce);
+            
+            if (hash.substring(0, this.difficulty) === target) {
+                const miningTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                console.log(`✅ Block mined! Time: ${miningTime}s, Nonce: ${nonce}`);
+                break;
+            }
+            nonce++;
+        }
 
-      const tx = await contract.initiateTransfer(
-        transferData.transferId,
-        transferData.propertyId,
-        transferData.sellerId,
-        transferData.sellerCnic,
-        transferData.buyerId,
-        transferData.buyerCnic,
-        transferData.buyerName,
-        transferData.buyerFatherName,
-        ethers.parseUnits(transferData.transferAmount.toString(), 0),
-        transferData.durationDays
-      );
+        const newBlock = await pool.query(
+            `INSERT INTO blockchain_ledger 
+            (block_index, property_id, transaction_data, previous_hash, 
+             blockchain_hash, nonce, mined_by, mined_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
+            RETURNING *`,
+            [index, propertyData.property_id, JSON.stringify(propertyData), 
+             previousHash, hash, nonce, adminId]
+        );
 
-      console.log("⏳ Transaction sent:", tx.hash);
-      const receipt = await tx.wait();
-      console.log("✅ Transfer initiated on blockchain!");
-
-      return {
-        success: true,
-        transactionHash: receipt.hash,
-        blockNumber: receipt.blockNumber
-      };
-    } catch (error) {
-      console.error("❌ Transfer initiation error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Verify blockchain health
-   */
-  async verifyBlockchainIntegrity() {
-    if (!this.isConnected) {
-      return { isConnected: false, message: "Blockchain not available" };
+        return newBlock.rows[0];
     }
 
-    try {
-      const blockNumber = await this.provider.getBlockNumber();
-      const network = await this.provider.getNetwork();
-
-      return {
-        isConnected: true,
-        currentBlock: blockNumber,
-        chainId: network.chainId.toString(),
-        registryAddress: this.registryAddress,
-        transferAddress: this.transferAddress
-      };
-    } catch (error) {
-      return { isConnected: false, error: error.message };
+    // ✅ FIXED: No type casting needed since mined_by is now VARCHAR
+    async getFullChain() {
+        const result = await pool.query(
+            `SELECT 
+                bl.*,
+                u.name as miner_name
+             FROM blockchain_ledger bl
+             LEFT JOIN users u ON bl.mined_by = u.user_id
+             ORDER BY bl.block_index DESC`
+        );
+        return result.rows;
     }
-  }
-  
 
+    async getPropertyHistory(propertyId) {
+        const result = await pool.query(
+            `SELECT 
+                bl.*,
+                u.name as miner_name
+             FROM blockchain_ledger bl
+             LEFT JOIN users u ON bl.mined_by = u.user_id
+             WHERE bl.property_id = $1 
+             ORDER BY bl.block_index ASC`,
+            [propertyId]
+        );
+        return result.rows;
+    }
 
+    async verifyChain() {
+        const chain = await pool.query(
+            "SELECT * FROM blockchain_ledger ORDER BY block_index ASC"
+        );
 
-//   async buyProperty(transferId, buyerUserId, buyerPassword) {
-//   if (!this.isConnected) throw new Error("Blockchain not connected");
+        if (chain.rows.length === 0) return true;
 
-//   try {
-//     const buyerWallet = await this.getUserWallet(buyerUserId, buyerPassword);
+        for (let i = 1; i < chain.rows.length; i++) {
+            const currentBlock = chain.rows[i];
+            const previousBlock = chain.rows[i - 1];
 
-//     const transferContract = new ethers.Contract(
-//       this.transferAddress,
-//       this.transferABI,
-//       buyerWallet
-//     );
+            if (currentBlock.previous_hash !== previousBlock.blockchain_hash) {
+                return false;
+            }
 
-//     const tx = await transferContract.completeTransfer(transferId, {
-//       value: await transferContract.getPrice(transferId) // send ETH if needed
-//     });
+            const calculatedHash = this.calculateHash(
+                currentBlock.block_index,
+                currentBlock.previous_hash,
+                currentBlock.mined_at,
+                currentBlock.transaction_data,
+                currentBlock.nonce
+            );
 
-//     const receipt = await tx.wait();
-//     console.log("✅ Property purchased on blockchain:", transferId);
+            if (calculatedHash !== currentBlock.blockchain_hash) {
+                return false;
+            }
+        }
 
-//     return {
-//       success: true,
-//       transactionHash: receipt.hash,
-//       blockNumber: receipt.blockNumber
-//     };
-//   } catch (error) {
-//     console.error("❌ Buy property error:", error);
-//     throw error;
-//   }
-// }
+        return true;
+    }
 
+    async getBlockchainStats() {
+        const totalBlocksResult = await pool.query(
+            "SELECT COUNT(*) as total FROM blockchain_ledger"
+        );
+
+        const uniquePropertiesResult = await pool.query(
+            "SELECT COUNT(DISTINCT property_id) as total FROM blockchain_ledger"
+        );
+
+        const latestBlock = await this.getLatestBlock();
+
+        const topMinersResult = await pool.query(
+            `SELECT 
+                u.name as miner_name,
+                bl.mined_by,
+                COUNT(*) as blocks_mined
+             FROM blockchain_ledger bl
+             LEFT JOIN users u ON bl.mined_by = u.user_id
+             GROUP BY bl.mined_by, u.name
+             ORDER BY blocks_mined DESC
+             LIMIT 10`
+        );
+
+        const isValid = await this.verifyChain();
+
+        return {
+            total_blocks: parseInt(totalBlocksResult.rows[0].total),
+            unique_properties: parseInt(uniquePropertiesResult.rows[0].total),
+            latest_block_index: latestBlock ? latestBlock.block_index : null,
+            latest_block_hash: latestBlock ? latestBlock.blockchain_hash : null,
+            blockchain_valid: isValid,
+            difficulty_level: this.difficulty,
+            top_miners: topMinersResult.rows
+        };
+    }
+
+    async getBlockByIndex(blockIndex) {
+        const result = await pool.query(
+            `SELECT 
+                bl.*,
+                u.name as miner_name
+             FROM blockchain_ledger bl
+             LEFT JOIN users u ON bl.mined_by = u.user_id
+             WHERE bl.block_index = $1`,
+            [blockIndex]
+        );
+        return result.rows[0] || null;
+    }
 }
 
 export default new BlockchainService();

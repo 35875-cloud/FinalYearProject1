@@ -2,9 +2,9 @@
 // SERVER.JS - Main Backend Server (ESM Version)
 // Location: backend/src/server.js
 // =====================================================
-import 'dotenv/config';  // add at the very top of server.js
+import 'dotenv/config';
 import dotenv from "dotenv";
-dotenv.config({ path: "../.env" }); // Load .env from backend folder
+dotenv.config({ path: "../.env" });
 
 import express from "express";
 import cors from "cors";
@@ -14,9 +14,14 @@ import morgan from "morgan";
 // Import routes using ESM syntax
 import authRoutes from "./routes/auth.js";
 import propertyRoutes from "./routes/property.js";
+import transferRoutes from "./routes/transfer.js";
+import ownershipHistoryRoutes from "./routes/ownershipHistory.js";
+import marketAnalyticsRoutes from "./routes/marketAnalytics.js";
+import blockchainRoutes from "./routes/blockchain.js";
 
 // Import DB pool (ESM-compatible)
 import pool from "./config/db.js";
+
 
 const app = express();
 
@@ -79,6 +84,18 @@ app.get("/api/health", async (req, res) => {
 // =====================================================
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
+app.use("/api/transfers", transferRoutes);
+app.use("/api/ownership-history", ownershipHistoryRoutes);
+app.use("/api/market", marketAnalyticsRoutes);
+app.use("/api/blockchain", blockchainRoutes);
+
+console.log("✅ Routes registered:");
+console.log("   - /api/auth");
+console.log("   - /api/properties");
+console.log("   - /api/transfers");
+console.log("   - /api/ownership-history");
+console.log("   - /api/blockchain");  // ✅ FIXED
+console.log("   - /api/market");
 
 // =====================================================
 // ERROR HANDLING
@@ -111,9 +128,13 @@ app.listen(PORT, () => {
     console.log(`✅ Server running on: http://localhost:${PORT}`);
     console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
     console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
+    console.log(`🏠 Property API: http://localhost:${PORT}/api/properties`);
+    console.log(`🔄 Transfer API: http://localhost:${PORT}/api/transfers`);
+    console.log(`📊 Market API: http://localhost:${PORT}/api/market`);
     console.log(`📅 Started at: ${new Date().toLocaleString()}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log("=====================================================\n");
+    
 });
 
 // Handle unhandled promise rejections
