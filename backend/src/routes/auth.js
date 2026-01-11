@@ -147,16 +147,23 @@ function authenticateToken(req, res, next) {
 // =====================================================
 router.post("/register-citizen", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role } = req.body;
+    let { name, cnic, email, mobile, password, role, fatherName } = req.body;
 
     name = name.trim();
     email = email.trim().toLowerCase();
     mobile = mobile.trim();
+    const father_name = fatherName ? fatherName.trim() : null;
+    
+    // Debug log
+    console.log("✅ Processing father_name:", father_name);
     cnic = cnic.replace(/\D/g, "");
 
     if (!name || !cnic || !email || !mobile || !password || !role) {
       return res.json({ success: false, message: "All fields are required" });
     }
+    
+    // Log fatherName for debugging
+    console.log("📝 Registration received - Father Name:", fatherName);
 
     const existing = await pool.query(
       "SELECT * FROM users WHERE cnic=$1 OR email=$2 OR mobile=$3",
@@ -182,9 +189,29 @@ router.post("/register-citizen", async (req, res) => {
 
     await sendEmail(email, "Registration OTP", `Your OTP: ${otp}\nValid for 5 minutes.`);
 
-    console.log("📧 Registration OTP:", otp);
+    // ✅ DISPLAY OTP PROMINENTLY IN TERMINAL
+    console.log("\n" + "=".repeat(60));
+    console.log("🔑  REGISTRATION OTP CODE");
+    console.log("=".repeat(60));
+    console.log(`📧 Email: ${email}`);
+    console.log(`👤 Name: ${name}`);
+    console.log("");
+    console.log("    ╔════════════════════════════════════╗");
+    console.log(`    ║          OTP:  ${otp}          ║`);
+    console.log("    ╚════════════════════════════════════╝");
+    console.log("");
+    console.log(`⏰ Expires in: 5 minutes`);
+    console.log(`📱 Type: Registration`);
+    console.log("=".repeat(60) + "\n");
 
-    return res.json({ success: true, message: "OTP sent to email" });
+    // ✅ DEVELOPMENT MODE: Return OTP in response for auto-fill
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    return res.json({ 
+      success: true, 
+      message: "OTP sent to email",
+      ...(isDevelopment && { otp: otp }) // Only include OTP in development
+    });
   } catch (err) {
     console.error("❌ register-citizen error:", err);
     return res.status(500).json({ success: false, message: "Server error: " + err.message });
@@ -196,7 +223,7 @@ router.post("/register-citizen", async (req, res) => {
 // =====================================================
 router.post("/verify-otp", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role, otp } = req.body;
+    let { name, cnic, email, mobile, password, role, otp, fatherName } = req.body;
 
     email = email.trim().toLowerCase();
     otp = otp.trim();
@@ -233,6 +260,10 @@ router.post("/verify-otp", async (req, res) => {
     cnic = cnic.replace(/\D/g, "");
     name = name.trim();
     mobile = mobile.trim();
+    const father_name = fatherName ? fatherName.trim() : null;
+    
+    // Debug log
+    console.log("✅ Processing father_name:", father_name);
 
     // Set approval status based on role
     const roleUpper = role.toUpperCase();
@@ -242,10 +273,10 @@ router.post("/verify-otp", async (req, res) => {
 
     await pool.query(
       `INSERT INTO users (id, user_id, role, name, cnic, email, mobile, password_hash, 
-       public_key, encrypted_private_key, blockchain_address, approval_status, is_active) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       public_key, encrypted_private_key, blockchain_address, approval_status, is_active, father_name) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [id, userID, role.toUpperCase(), name, cnic, email, mobile, hash, publicKey, 
-       encryptedPrivateKey, blockchainAddress, approvalStatus, isActive]
+       encryptedPrivateKey, blockchainAddress, approvalStatus, isActive, father_name]
     );
 
     await pool.query(
@@ -367,6 +398,17 @@ router.post("/login", async (req, res) => {
 
     await recordLoginAttempt(email, ipAddress, true);
 
+    // ✅ DISPLAY LOGIN SUCCESS IN TERMINAL
+    console.log("\n" + "=".repeat(60));
+    console.log("✅  LOGIN SUCCESSFUL");
+    console.log("=".repeat(60));
+    console.log(`📧 Email: ${email}`);
+    console.log(`👤 User ID: ${user.user_id}`);
+    console.log(`🎭 Role: ${user.role}`);
+    console.log(`🌐 IP Address: ${ipAddress}`);
+    console.log(`🕐 Time: ${new Date().toLocaleString()}`);
+    console.log("=".repeat(60) + "\n");
+
     return res.json({
       success: true,
       role: user.role,
@@ -419,11 +461,28 @@ router.post("/request-password-reset", async (req, res) => {
       `Hi ${user.rows[0].name},\n\nYour reset code: ${otp}\nValid for 15 minutes.`
     );
 
-    console.log("📧 Password Reset OTP:", otp);
+    // ✅ DISPLAY OTP PROMINENTLY IN TERMINAL
+    console.log("\n" + "=".repeat(60));
+    console.log("🔐  PASSWORD RESET OTP CODE");
+    console.log("=".repeat(60));
+    console.log(`📧 Email: ${email}`);
+    console.log(`👤 Name: ${user.rows[0].name}`);
+    console.log("");
+    console.log("    ╔════════════════════════════════════╗");
+    console.log(`    ║          OTP:  ${otp}          ║`);
+    console.log("    ╚════════════════════════════════════╝");
+    console.log("");
+    console.log(`⏰ Expires in: 15 minutes`);
+    console.log(`📱 Type: Password Reset`);
+    console.log("=".repeat(60) + "\n");
+
+    // ✅ DEVELOPMENT MODE: Return OTP in response for auto-fill
+    const isDevelopment = process.env.NODE_ENV !== 'production';
 
     return res.json({
       success: true,
       message: "If email exists, reset code sent",
+      ...(isDevelopment && { otp: otp }) // Only include OTP in development
     });
   } catch (err) {
     console.error("❌ reset request error:", err);
@@ -552,6 +611,7 @@ router.get("/user-profile", authenticateToken, async (req, res) => {
       email: user.email,
       cnic: user.cnic,
       mobile: user.mobile,
+        father_name: user.father_name,
       role: user.role,
       blockchain_address: user.blockchain_address,
       created_at: user.created_at,
@@ -774,5 +834,188 @@ router.post("/reject-user", authenticateToken, async (req, res) => {
     });
   }
 });
+// GET USER PROFILE
+// =====================================================
+router.get("/profile", authenticateToken, async (req, res) => {
+  try {
+    console.log("\n========================================");
+    console.log("👤 GET USER PROFILE REQUEST");
+    console.log("========================================");
+    console.log("User ID:", req.user.userId);
 
+    // Fetch user details from database
+    const result = await pool.query(
+      `SELECT user_id, role, name, cnic, email, mobile, father_name, 
+              blockchain_address, created_at, last_login, is_active
+       FROM users 
+       WHERE user_id = $1`,
+      [req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const user = result.rows[0];
+
+    console.log("✅ Profile fetched successfully");
+    console.log("   Name:", user.name);
+    console.log("   Email:", user.email);
+    console.log("   Role:", user.role);
+    console.log("========================================\n");
+
+    return res.json({
+      success: true,
+      user: {
+        user_id: user.user_id,
+        role: user.role,
+        name: user.name,
+        cnic: user.cnic,
+        email: user.email,
+        mobile: user.mobile,
+        father_name: user.father_name,
+        blockchain_address: user.blockchain_address,
+        created_at: user.created_at,
+        last_login: user.last_login,
+        is_active: user.is_active
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Get profile error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+// Add this new route to your auth.js file (after the existing routes)
+
+// =====================================================
+// GET ALL REGISTRATIONS (EXCLUDING CITIZENS) - ADMIN ONLY
+// =====================================================
+router.get("/all-registrations", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Admin only." 
+      });
+    }
+
+    // Fetch PENDING registrations (LRO, NOTARY, ADMIN only - NO CITIZENS)
+    const pendingUsers = await pool.query(
+      `SELECT 
+        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
+        u.created_at, u.approval_status
+       FROM users u
+       WHERE u.approval_status = 'PENDING' 
+       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       ORDER BY u.created_at DESC`
+    );
+
+    // Fetch APPROVED registrations (LRO, NOTARY, ADMIN only - NO CITIZENS)
+    const approvedUsers = await pool.query(
+      `SELECT 
+        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
+        u.created_at, u.approved_at, u.approved_by
+       FROM users u
+       WHERE u.approval_status = 'APPROVED' 
+       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       ORDER BY u.approved_at DESC`
+    );
+
+    // Fetch REJECTED registrations (LRO, NOTARY, ADMIN only - NO CITIZENS)
+    const rejectedUsers = await pool.query(
+      `SELECT 
+        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
+        u.created_at, u.approved_at, u.approved_by, u.rejection_reason
+       FROM users u
+       WHERE u.approval_status = 'REJECTED' 
+       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       ORDER BY u.approved_at DESC`
+    );
+
+    return res.json({
+      success: true,
+      pending: pendingUsers.rows,
+      approved: approvedUsers.rows,
+      rejected: rejectedUsers.rows
+    });
+
+  } catch (err) {
+    console.error("❌ Get all registrations error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
+  }
+});
+
+// =====================================================
+// ALSO UPDATE THE EXISTING /pending-approvals ROUTE
+// Add this filter to exclude citizens:
+// =====================================================
+// =====================================================
+// UPDATE THE EXISTING /pending-approvals ROUTE IN auth.js
+// Replace the existing route with this updated version
+// =====================================================
+
+router.get("/pending-approvals", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Admin only." 
+      });
+    }
+
+    // Fetch PENDING registrations (LRO and ADMIN only - NO CITIZENS, NO NOTARY)
+    const pendingUsers = await pool.query(
+      `SELECT 
+        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
+        u.created_at, u.approval_status
+       FROM users u
+       WHERE u.approval_status = 'PENDING'
+       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')
+       ORDER BY u.created_at DESC`
+    );
+
+    // Count approvals for today
+    const approvedToday = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM users
+       WHERE approval_status = 'APPROVED'
+       AND DATE(approved_at) = CURRENT_DATE
+       AND role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')`
+    );
+
+    // Count rejections for today
+    const rejectedToday = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM users
+       WHERE approval_status = 'REJECTED'
+       AND DATE(approved_at) = CURRENT_DATE
+       AND role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')`
+    );
+
+    return res.json({
+      success: true,
+      totalPending: pendingUsers.rows.length,
+      approvedToday: parseInt(approvedToday.rows[0].count),
+      rejectedToday: parseInt(rejectedToday.rows[0].count),
+      users: pendingUsers.rows
+    });
+
+  } catch (err) {
+    console.error("❌ Get pending approvals error:", err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
+  }
+});
 export default router;
