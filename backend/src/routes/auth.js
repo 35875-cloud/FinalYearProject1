@@ -147,15 +147,17 @@ function authenticateToken(req, res, next) {
 // =====================================================
 router.post("/register-citizen", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role, fatherName } = req.body;
+    let { name, cnic, email, mobile, password, role, fatherName, fatherCnic } = req.body;
 
     name = name.trim();
     email = email.trim().toLowerCase();
     mobile = mobile.trim();
     const father_name = fatherName ? fatherName.trim() : null;
+    const father_cnic = fatherCnic ? fatherCnic.replace(/\D/g, "") : null;
     
     // Debug log
     console.log("✅ Processing father_name:", father_name);
+    console.log("✅ Processing father_cnic:", father_cnic);
     cnic = cnic.replace(/\D/g, "");
 
     if (!name || !cnic || !email || !mobile || !password || !role) {
@@ -221,13 +223,15 @@ router.post("/register-citizen", async (req, res) => {
 // =====================================================
 // 2️⃣ VERIFY OTP & CREATE USER
 // =====================================================
+
 router.post("/verify-otp", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role, otp, fatherName } = req.body;
+    let { name, cnic, email, mobile, password, role, otp, fatherName, fatherCnic } = req.body;
 
     email = email.trim().toLowerCase();
     otp = otp.trim();
 
+    // Verify OTP
     const checkOtp = await pool.query(
       "SELECT * FROM otp_verification WHERE email = $1 AND otp = $2 AND otp_type = 'registration'",
       [email, otp]
@@ -242,11 +246,13 @@ router.post("/verify-otp", async (req, res) => {
       return res.json({ success: false, message: "OTP has expired" });
     }
 
+    // Generate blockchain credentials
     const { publicKey, privateKey } = generateKeyPair();
     const encryptedPrivateKey = encryptPrivateKey(privateKey, password);
     const blockchainAddress = generateBlockchainAddress(publicKey);
     const hash = await bcrypt.hash(password, 10);
 
+    // Generate unique User ID
     let userID;
     let attempts = 0;
     while (attempts < 10) {
@@ -261,58 +267,154 @@ router.post("/verify-otp", async (req, res) => {
     name = name.trim();
     mobile = mobile.trim();
     const father_name = fatherName ? fatherName.trim() : null;
-    
-    // Debug log
-    console.log("✅ Processing father_name:", father_name);
+    const father_cnic = fatherCnic ? fatherCnic.replace(/\D/g, "") : null;
 
-    // Set approval status based on role
+    // ✅ CRITICAL: Determine approval status based on role
     const roleUpper = role.toUpperCase();
-    const needsApproval = ['LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN'].includes(roleUpper);
+    
+    // These roles REQUIRE admin approval
+    const rolesNeedingApproval = [
+      'LAND RECORD OFFICER', 
+      'LRO',
+      'TEHSILDAR', 
+      'AC', 
+      'ASSISTANT COMMISSIONER',
+      'DC',
+      'DEPUTY COMMISSIONER',
+      'ADMIN'
+    ];
+
+    const needsApproval = rolesNeedingApproval.includes(roleUpper);
+    
+    // Set approval status and active status
     const approvalStatus = needsApproval ? 'PENDING' : 'APPROVED';
     const isActive = needsApproval ? false : true;
 
-    await pool.query(
-      `INSERT INTO users (id, user_id, role, name, cnic, email, mobile, password_hash, 
-       public_key, encrypted_private_key, blockchain_address, approval_status, is_active, father_name) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-      [id, userID, role.toUpperCase(), name, cnic, email, mobile, hash, publicKey, 
-       encryptedPrivateKey, blockchainAddress, approvalStatus, isActive, father_name]
-    );
+    console.log("\n========================================");
+    console.log("📝 USER REGISTRATION");
+    console.log("========================================");
+    console.log("Name:", name);
+    console.log("Email:", email);
+    console.log("Role:", roleUpper);
+    console.log("Needs Approval:", needsApproval);
+    console.log("Approval Status:", approvalStatus);
+    console.log("Is Active:", isActive);
+    console.log("========================================\n");
 
+    // Insert user with proper approval status
+    // Add requested_at to your main user insert
+await pool.query(
+  `INSERT INTO users (
+    id, user_id, role, name, cnic, email, mobile, password_hash, 
+    public_key, encrypted_private_key, blockchain_address, 
+    approval_status, is_active, father_name, father_cnic, requested_at
+  ) 
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+  [
+    id, userID, roleUpper, name, cnic, email, mobile, hash, 
+    publicKey, encryptedPrivateKey, blockchainAddress, 
+    approvalStatus, isActive, father_name, father_cnic
+  ]
+);
+
+    // Insert blockchain identity
     await pool.query(
       `INSERT INTO blockchain_identities (user_id, public_key, blockchain_address) 
        VALUES ($1, $2, $3)`,
       [userID, publicKey, blockchainAddress]
     );
 
+    // // Create approval request if needed
+    // if (needsApproval) {
+    //   const requestId = uuidv4();
+    //   await pool.query(
+    //     `INSERT INTO approval_requests (
+    //       request_id, user_id, request_type, status, requested_at
+    //     )
+    //     VALUES ($1, $2, $3, $4, NOW())`,
+    //     [requestId, userID, 'USER_REGISTRATION', 'PENDING']
+    //   );
+
+    //   console.log("✅ Approval request created:", requestId);
+    // }
+
+    // Delete used OTP
     await pool.query("DELETE FROM otp_verification WHERE email=$1", [email]);
 
+    // Send appropriate email based on approval status
     if (needsApproval) {
       await sendEmail(
         email, 
         "Registration Pending Approval", 
-        `Dear ${name},\n\nThank you for registering as ${role}.\n\nYour account is pending admin approval. You will receive an email notification once your account is approved.\n\nUser ID: ${userID}\nBlockchain Address: ${blockchainAddress}\n\nBest regards,\nBlockchain Land Records Team`
+        `Dear ${name},
+
+Thank you for registering as ${role}.
+
+Your account is pending admin approval. You will receive an email notification once your account is approved.
+
+User ID: ${userID}
+Blockchain Address: ${blockchainAddress}
+
+Please do not attempt to login until you receive approval confirmation.
+
+Best regards,
+Blockchain Land Records Team`
       );
+
+      // Notify admin about new registration
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@landrecords.gov.pk";
+      await sendEmail(
+        adminEmail,
+        "New User Registration Requires Approval",
+        `A new ${role} registration requires your approval:
+
+Name: ${name}
+Email: ${email}
+CNIC: ${cnic}
+User ID: ${userID}
+
+Please review and approve/reject this registration in the admin panel.`
+      );
+
     } else {
+      // Citizen registration - auto-approved
       await sendEmail(
         email, 
-        "Welcome!", 
-        `Welcome ${name}!\nUser ID: ${userID}\nBlockchain: ${blockchainAddress}\n\nYou can now login to your account.`
+        "Welcome to Blockchain Land Records!", 
+        `Welcome ${name}!
+
+Your account has been successfully created and is ready to use.
+
+User ID: ${userID}
+Blockchain Address: ${blockchainAddress}
+
+You can now login at: ${process.env.FRONTEND_URL || 'http://localhost:5000'}
+
+Best regards,
+Blockchain Land Records Team`
       );
     }
 
     return res.json({
       success: true,
-      message: "User registered successfully",
+      message: needsApproval 
+        ? "Registration submitted. Pending admin approval." 
+        : "User registered successfully",
       userID,
       blockchainAddress,
-      needsApproval
+      needsApproval,
+      approvalStatus
     });
+
   } catch (err) {
     console.error("❌ verify-otp error:", err);
-    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
   }
 });
+
 
 // =====================================================
 // 3️⃣ LOGIN WITH APPROVAL CHECK
@@ -323,88 +425,134 @@ router.post("/login", async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || "unknown";
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email and password required" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email and password required" 
+      });
     }
 
+    // Check if account is locked
     const locked = await isAccountLocked(email);
     if (locked) {
       await recordLoginAttempt(email, ipAddress, false, "Account locked");
       return res.json({
         success: false,
-        message: "Account locked. Try again in 25 minutes.",
+        message: "Account locked due to multiple failed login attempts. Please try again later.",
       });
     }
 
+    // Fetch user details
     const result = await pool.query(
-      `SELECT user_id, role, password_hash, is_active, approval_status, approved_at 
-       FROM users WHERE email = $1`,
+      `SELECT user_id, role, password_hash, is_active, approval_status, 
+              approved_at, name, rejection_reason
+       FROM users 
+       WHERE email = $1`,
       [email.toLowerCase()]
     );
 
     if (result.rows.length === 0) {
       await recordLoginAttempt(email, ipAddress, false, "User not found");
-      return res.json({ success: false, message: "Invalid email or password" });
+      return res.json({ 
+        success: false, 
+        message: "Invalid email or password" 
+      });
     }
 
     const user = result.rows[0];
 
-    // ✅ CHECK APPROVAL STATUS FOR LRO/NOTARY/ADMIN
-    if (['LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN'].includes(user.role.toUpperCase())) {
+    console.log("\n========================================");
+    console.log("🔐 LOGIN ATTEMPT");
+    console.log("========================================");
+    console.log("Email:", email);
+    console.log("Role:", user.role);
+    console.log("Approval Status:", user.approval_status);
+    console.log("Is Active:", user.is_active);
+    console.log("========================================\n");
+
+    // ✅ CRITICAL: Check approval status for restricted roles
+    const restrictedRoles = [
+      'LAND RECORD OFFICER', 
+      'LRO',
+      'TEHSILDAR', 
+      'AC', 
+      'ASSISTANT COMMISSIONER',
+      'DC',
+      'DEPUTY COMMISSIONER',
+      'ADMIN'
+    ];
+
+    if (restrictedRoles.includes(user.role.toUpperCase())) {
+      // Check if pending approval
       if (user.approval_status === 'PENDING') {
         await recordLoginAttempt(email, ipAddress, false, "Account pending approval");
         return res.json({
           success: false,
-          message: "Your account is pending admin approval. Please wait for approval confirmation.",
+          message: "Your account is pending admin approval. Please wait for approval confirmation email.",
           reason: "PENDING_APPROVAL"
         });
       }
       
+      // Check if rejected
       if (user.approval_status === 'REJECTED') {
         await recordLoginAttempt(email, ipAddress, false, "Account rejected");
         return res.json({
           success: false,
-          message: "Your account registration was not approved. Please contact support.",
+          message: user.rejection_reason 
+            ? `Your registration was not approved. Reason: ${user.rejection_reason}` 
+            : "Your account registration was not approved. Please contact support.",
           reason: "ACCOUNT_REJECTED"
+        });
+      }
+
+      // Check if account is not active even after approval
+      if (!user.is_active) {
+        await recordLoginAttempt(email, ipAddress, false, "Account inactive");
+        return res.json({ 
+          success: false, 
+          message: "Your account is currently inactive. Please contact administrator." 
         });
       }
     }
 
-    if (!user.is_active) {
-      await recordLoginAttempt(email, ipAddress, false, "Account inactive");
-      return res.json({ success: false, message: "Account inactive. Contact admin." });
-    }
-
+    // Verify password
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
       await handleFailedLogin(email, ipAddress);
       await recordLoginAttempt(email, ipAddress, false, "Invalid password");
-      return res.json({ success: false, message: "Invalid email or password" });
+      return res.json({ 
+        success: false, 
+        message: "Invalid email or password" 
+      });
     }
 
+    // Reset failed login attempts and update last login
     await pool.query(
       "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE email = $1",
       [email]
     );
 
+    // Generate JWT token
     const token = generateJWT(user.user_id, user.role, email);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // Store JWT session
     await pool.query(
       `INSERT INTO jwt_sessions (user_id, token, expires_at, ip_address, user_agent) 
        VALUES ($1, $2, $3, $4, $5)`,
       [user.user_id, token, expiresAt, ipAddress, req.get("user-agent") || "unknown"]
     );
 
+    // Record successful login
     await recordLoginAttempt(email, ipAddress, true);
 
-    // ✅ DISPLAY LOGIN SUCCESS IN TERMINAL
     console.log("\n" + "=".repeat(60));
     console.log("✅  LOGIN SUCCESSFUL");
     console.log("=".repeat(60));
     console.log(`📧 Email: ${email}`);
     console.log(`👤 User ID: ${user.user_id}`);
     console.log(`🎭 Role: ${user.role}`);
+    console.log(`✓ Approval Status: ${user.approval_status}`);
     console.log(`🌐 IP Address: ${ipAddress}`);
     console.log(`🕐 Time: ${new Date().toLocaleString()}`);
     console.log("=".repeat(60) + "\n");
@@ -416,12 +564,15 @@ router.post("/login", async (req, res) => {
       token,
       message: "Login successful",
     });
+
   } catch (err) {
     console.error("❌ Login error:", err);
-    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+    });
   }
 });
-
 // =====================================================
 // 4️⃣ REQUEST PASSWORD RESET (SEND OTP)
 // =====================================================
@@ -611,7 +762,7 @@ router.get("/user-profile", authenticateToken, async (req, res) => {
       email: user.email,
       cnic: user.cnic,
       mobile: user.mobile,
-        father_name: user.father_name,
+      father_name: user.father_name,
       role: user.role,
       blockchain_address: user.blockchain_address,
       created_at: user.created_at,
@@ -661,15 +812,14 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
     }
 
     const pendingUsers = await pool.query(
-      `SELECT 
-        u.user_id, u.name, u.email, u.cnic, u.mobile, u.role,
-        u.created_at, u.approval_status,
-        ar.request_id, ar.decision_notes
-       FROM users u
-       LEFT JOIN approval_requests ar ON u.user_id = ar.user_id
-       WHERE u.approval_status = 'PENDING'
-       ORDER BY u.created_at DESC`
-    );
+  `SELECT 
+    user_id, name, email, cnic, mobile, role,
+    created_at, requested_at, approval_status
+   FROM users
+   WHERE approval_status = 'PENDING'
+   AND role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')
+   ORDER BY requested_at DESC`
+);
 
     return res.json({
       success: true,
@@ -845,7 +995,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
 
     // Fetch user details from database
     const result = await pool.query(
-      `SELECT user_id, role, name, cnic, email, mobile, father_name, 
+      `SELECT user_id, role, name, cnic, email, mobile, father_name, father_cnic,
               blockchain_address, created_at, last_login, is_active
        FROM users 
        WHERE user_id = $1`,
@@ -877,6 +1027,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
         email: user.email,
         mobile: user.mobile,
         father_name: user.father_name,
+        father_cnic: user.father_cnic,
         blockchain_address: user.blockchain_address,
         created_at: user.created_at,
         last_login: user.last_login,
@@ -913,7 +1064,7 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
         u.created_at, u.approval_status
        FROM users u
        WHERE u.approval_status = 'PENDING' 
-       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       AND u.role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')
        ORDER BY u.created_at DESC`
     );
 
@@ -924,7 +1075,7 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
         u.created_at, u.approved_at, u.approved_by
        FROM users u
        WHERE u.approval_status = 'APPROVED' 
-       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       AND u.role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')
        ORDER BY u.approved_at DESC`
     );
 
@@ -935,15 +1086,35 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
         u.created_at, u.approved_at, u.approved_by, u.rejection_reason
        FROM users u
        WHERE u.approval_status = 'REJECTED' 
-       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'NOTARY', 'ADMIN')
+       AND u.role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')
        ORDER BY u.approved_at DESC`
+    );
+
+    // Count approvals for today
+    const approvedToday = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM users
+       WHERE approval_status = 'APPROVED'
+       AND DATE(approved_at) = CURRENT_DATE
+       AND role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')`
+    );
+
+    // Count rejections for today
+    const rejectedToday = await pool.query(
+      `SELECT COUNT(*) as count
+       FROM users
+       WHERE approval_status = 'REJECTED'
+       AND DATE(approved_at) = CURRENT_DATE
+       AND role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')`
     );
 
     return res.json({
       success: true,
       pending: pendingUsers.rows,
       approved: approvedUsers.rows,
-      rejected: rejectedUsers.rows
+      rejected: rejectedUsers.rows,
+      approvedToday: parseInt(approvedToday.rows[0].count),
+      rejectedToday: parseInt(rejectedToday.rows[0].count)
     });
 
   } catch (err) {
@@ -954,7 +1125,6 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
     });
   }
 });
-
 // =====================================================
 // ALSO UPDATE THE EXISTING /pending-approvals ROUTE
 // Add this filter to exclude citizens:
@@ -980,7 +1150,7 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
         u.created_at, u.approval_status
        FROM users u
        WHERE u.approval_status = 'PENDING'
-       AND u.role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')
+       AND u.role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')
        ORDER BY u.created_at DESC`
     );
 
@@ -990,7 +1160,7 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
        FROM users
        WHERE approval_status = 'APPROVED'
        AND DATE(approved_at) = CURRENT_DATE
-       AND role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')`
+       AND role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')`
     );
 
     // Count rejections for today
@@ -999,7 +1169,7 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
        FROM users
        WHERE approval_status = 'REJECTED'
        AND DATE(approved_at) = CURRENT_DATE
-       AND role IN ('LRO', 'LAND RECORD OFFICER', 'ADMIN')`
+       AND role IN ('LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC')`
     );
 
     return res.json({
