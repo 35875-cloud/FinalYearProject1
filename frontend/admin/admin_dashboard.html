@@ -371,6 +371,7 @@
       <span>Dashboard</span>
     </li>
 
+    
     <li onclick="showView('pendingUsers')">
       <i class="fas fa-user-clock"></i>
       <span>Pending User Approvals</span>
@@ -1094,17 +1095,197 @@ async function loadPendingUsers() {
     `;
   }
 }
+// =====================================================
+// USER APPROVAL FUNCTIONS - Add these to admin_dashboard.html
+// =====================================================
 
-// Approve user (placeholder)
+// Approve user
 async function approveUser(userId) {
-  alert('User approval functionality - implement based on your auth system');
+  if (!confirm('Are you sure you want to approve this user?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/auth/approve-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        userId: userId,
+        notes: 'Approved by admin' 
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showAlert('success', `✅ User approved successfully!`);
+      loadPendingUsers(); // Reload the list
+      loadBadgeCounts(); // Update badge counts
+    } else {
+      showAlert('danger', '❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('Error approving user:', err);
+    showAlert('danger', 'Error approving user. Please try again.');
+  }
 }
 
-// Reject user (placeholder)
+// Reject user with reason
 async function rejectUser(userId) {
-  alert('User rejection functionality - implement based on your auth system');
+  // Show prompt for rejection reason
+  const reason = prompt('Please enter the reason for rejection:');
+  
+  if (!reason || reason.trim() === '') {
+    showAlert('warning', '⚠️ Rejection reason is required');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to reject this user?\n\nReason: ${reason}`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/auth/reject-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        userId: userId,
+        reason: reason.trim()
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showAlert('warning', `✅ User registration rejected`);
+      loadPendingUsers(); // Reload the list
+      loadBadgeCounts(); // Update badge counts
+    } else {
+      showAlert('danger', '❌ Error: ' + result.message);
+    }
+
+  } catch (err) {
+    console.error('Error rejecting user:', err);
+    showAlert('danger', 'Error rejecting user. Please try again.');
+  }
 }
 
+// Updated loadPendingUsers function with better UI
+async function loadPendingUsers() {
+  const container = document.getElementById('pendingUsersList');
+  container.innerHTML = `
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+      <p class="mt-3 text-muted">Loading pending users...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${API_URL}/auth/pending-approvals`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const result = await response.json();
+    
+    if (result.success && result.users && result.users.length > 0) {
+      container.innerHTML = result.users.map(user => `
+        <div class="property-card" style="border-left-color: #ff9800;">
+          <div class="property-header">
+            <div>
+              <div class="property-id">${user.name}</div>
+              <small class="text-muted">Registered: ${formatDate(user.created_at)}</small>
+            </div>
+            <span class="status-badge" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
+              <i class="fas fa-clock"></i>
+              PENDING APPROVAL
+            </span>
+          </div>
+
+          <div class="property-details">
+            <div class="detail-item">
+              <div class="detail-label">User ID</div>
+              <div class="detail-value">${user.user_id}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Role</div>
+              <div class="detail-value">${user.role}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Email</div>
+              <div class="detail-value">${user.email}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">CNIC</div>
+              <div class="detail-value">${formatCNIC(user.cnic)}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Mobile</div>
+              <div class="detail-value">${user.mobile}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Request Date</div>
+              <div class="detail-value">${formatDate(user.requested_at || user.created_at)}</div>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn-approve" onclick="approveUser('${user.user_id}')">
+              <i class="fas fa-check"></i> Approve User
+            </button>
+            <button class="btn-reject" onclick="rejectUser('${user.user_id}')">
+              <i class="fas fa-times"></i> Reject
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-check-circle text-success"></i>
+          <h4>No Pending User Approvals</h4>
+          <p class="text-muted">All user registrations have been processed.</p>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error('❌ Error loading users:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        <h4>Error Loading Users</h4>
+        <p>${err.message}</p>
+        <button class="btn btn-primary mt-3" onclick="loadPendingUsers()">
+          <i class="fas fa-redo me-2"></i>Try Again
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Helper function to format date
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-PK', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Helper function to format CNIC
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+}
 // Load all properties
 async function loadAllProperties() {
   const container = document.getElementById('allPropertiesList');
