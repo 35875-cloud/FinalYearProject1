@@ -1188,4 +1188,5 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
     });
   }
 });
+
 export default router;
