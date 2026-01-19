@@ -559,11 +559,13 @@ router.get("/pending-registrations", authenticateToken, async (req, res) => {
   }
 });
 
-// =====================================================
 // GET ALL TEHSILDARS (for LRO dropdown)
-// =====================================================
 router.get("/get-tehsildars", authenticateToken, async (req, res) => {
   try {
+    console.log("\n========================================");
+    console.log("📋 FETCHING TEHSILDARS FOR DROPDOWN");
+    console.log("========================================");
+    
     const userRole = req.user.role.toUpperCase();
     
     if (!['LRO', 'LAND RECORD OFFICER', 'ADMIN'].includes(userRole)) {
@@ -573,16 +575,38 @@ router.get("/get-tehsildars", authenticateToken, async (req, res) => {
       });
     }
 
+    // More flexible query - get APPROVED and ACTIVE Tehsildars
     const result = await pool.query(
-      `SELECT user_id, name, email, district, tehsil 
+      `SELECT user_id, name, email, role, approval_status, is_active
        FROM users 
-       WHERE UPPER(role) = 'TEHSILDAR' AND account_verified = TRUE
+       WHERE UPPER(role) = 'TEHSILDAR' 
+         AND approval_status = 'APPROVED'
+         AND is_active = TRUE
        ORDER BY name ASC`
     );
 
+    console.log("✅ Found", result.rows.length, "Tehsildars");
+    
+    if (result.rows.length > 0) {
+      console.log("Available Tehsildars:");
+      result.rows.forEach(t => {
+        console.log(`  - ${t.name} (${t.user_id}) - ${t.district}/${t.tehsil}`);
+      });
+    } else {
+      console.log("⚠️ No Tehsildars found!");
+      console.log("Please ensure:");
+      console.log("  1. Tehsildars are registered");
+      console.log("  2. Admin has approved them");
+      console.log("  3. approval_status = 'APPROVED'");
+      console.log("  4. is_active = TRUE");
+    }
+    
+    console.log("========================================\n");
+
     return res.json({
       success: true,
-      tehsildars: result.rows
+      tehsildars: result.rows,
+      total: result.rows.length
     });
 
   } catch (err) {
@@ -594,11 +618,16 @@ router.get("/get-tehsildars", authenticateToken, async (req, res) => {
   }
 });
 
+
 // =====================================================
 // GET ALL ACs (for Tehsildar dropdown)
-// =====================================================
+// GET ALL ACs (for Tehsildar dropdown)
 router.get("/get-acs", authenticateToken, async (req, res) => {
   try {
+    console.log("\n========================================");
+    console.log("📋 FETCHING ACs FOR DROPDOWN");
+    console.log("========================================");
+    
     const userRole = req.user.role.toUpperCase();
     
     if (!['TEHSILDAR', 'ADMIN'].includes(userRole)) {
@@ -609,15 +638,31 @@ router.get("/get-acs", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT user_id, name, email, district 
+      `SELECT user_id, name, email, role, approval_status, is_active
        FROM users 
-       WHERE UPPER(role) = 'AC' AND account_verified = TRUE
+       WHERE UPPER(role) = 'AC'
+         AND approval_status = 'APPROVED'
+         AND is_active = TRUE
        ORDER BY name ASC`
     );
 
+    console.log("✅ Found", result.rows.length, "ACs");
+    
+    if (result.rows.length > 0) {
+      console.log("Available ACs:");
+      result.rows.forEach(ac => {
+        console.log(`  - ${ac.name} (${ac.user_id}) - ${ac.district}`);
+      });
+    } else {
+      console.log("⚠️ No ACs found!");
+    }
+    
+    console.log("========================================\n");
+
     return res.json({
       success: true,
-      acs: result.rows
+      acs: result.rows,
+      total: result.rows.length
     });
 
   } catch (err) {
@@ -631,9 +676,13 @@ router.get("/get-acs", authenticateToken, async (req, res) => {
 
 // =====================================================
 // GET ALL DCs (for AC dropdown)
-// =====================================================
+// GET ALL DCs (for AC dropdown)
 router.get("/get-dcs", authenticateToken, async (req, res) => {
   try {
+    console.log("\n========================================");
+    console.log("📋 FETCHING DCs FOR DROPDOWN");
+    console.log("========================================");
+    
     const userRole = req.user.role.toUpperCase();
     
     if (!['AC', 'ADMIN'].includes(userRole)) {
@@ -644,15 +693,31 @@ router.get("/get-dcs", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT user_id, name, email, district 
+      `SELECT user_id, name, email, role, approval_status, is_active
        FROM users 
-       WHERE UPPER(role) = 'DC' AND account_verified = TRUE
+       WHERE UPPER(role) = 'DC'
+         AND approval_status = 'APPROVED'
+         AND is_active = TRUE
        ORDER BY name ASC`
     );
 
+    console.log("✅ Found", result.rows.length, "DCs");
+    
+    if (result.rows.length > 0) {
+      console.log("Available DCs:");
+      result.rows.forEach(dc => {
+        console.log(`  - ${dc.name} (${dc.user_id}) - ${dc.district}`);
+      });
+    } else {
+      console.log("⚠️ No DCs found!");
+    }
+    
+    console.log("========================================\n");
+
     return res.json({
       success: true,
-      dcs: result.rows
+      dcs: result.rows,
+      total: result.rows.length
     });
 
   } catch (err) {
@@ -663,7 +728,6 @@ router.get("/get-dcs", authenticateToken, async (req, res) => {
     });
   }
 });
-
 // =====================================================
 // GET FATHER NAME BY CNIC (Auto-fill functionality)
 // =====================================================
