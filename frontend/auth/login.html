@@ -800,8 +800,14 @@ loginForm.addEventListener('submit', async (e) => {
             else if (role === 'ADMIN') {
                 window.location.href = '../admin/admin_dashboard.html';
             }
-            else if (role === 'NOTARY') {
-                window.location.href = '../notary/notary_dashboard.html';
+            else if (role === 'TEHSILDAR') {
+                window.location.href = '../tehsildar/tehsildar_dashboard.html';
+            }
+             else if (role === 'AC') {
+                window.location.href = '../ac/ac_dashboard.html';
+            }
+             else if (role === 'DC') {
+                window.location.href = '../dc/dc_dashboard.html';
             }
             else {
                 alert(`Login successful! Role: ${role}. Dashboard not configured yet.`);

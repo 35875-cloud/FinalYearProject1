@@ -3,26 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pending Registrations - AC Dashboard</title>
+  <title>AC Dashboard - PLRA Punjab</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    :root { 
-      --p: #667eea; 
-      --pd: #764ba2; 
+    :root {
+      --primary: #1565c0;
+      --primary-dark: #0d47a1;
       --success: #11998e;
-      --warning: #f093fb;
       --danger: #f5576c;
     }
     
-    body { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    body {
+      background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
       font-family: 'Inter', 'Segoe UI', sans-serif;
       min-height: 100vh;
       padding-top: 80px;
     }
     
-    .navbar { 
+    .navbar {
       background: rgba(255, 255, 255, 0.98) !important;
       backdrop-filter: blur(20px);
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -45,206 +44,23 @@
     .page-title {
       font-size: 2.5rem;
       font-weight: 800;
-      background: linear-gradient(135deg, var(--p), var(--pd));
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 0.5rem;
     }
     
-    .search-box {
-      background: white;
-      border-radius: 16px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-      position: relative;
-    }
-    
-    .search-box input {
-      padding: 1rem 1rem 1rem 3rem;
-      border: 2px solid #e9ecef;
-      border-radius: 12px;
-      font-size: 1rem;
-      width: 100%;
-    }
-    
-    .search-box input:focus {
-      border-color: var(--p);
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      outline: none;
-    }
-    
-    .search-icon {
-      position: absolute;
-      left: 2.5rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af;
-      font-size: 1.2rem;
-    }
-    
-    .card-item { 
+    .card-item {
       background: white;
       border-radius: 16px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-      border-left: 6px solid var(--warning);
-      transition: all 0.3s ease;
+      border-left: 6px solid var(--primary);
     }
     
-    .card-item:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    }
-    
-    .property-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    
-    .property-id {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: var(--pd);
-    }
-    
-    .status-badge {
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      background: linear-gradient(135deg, var(--warning), #f5576c);
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .property-details {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    .detail-item {
-      padding: 0.75rem;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
-      border-radius: 10px;
-    }
-    
-    .detail-label {
-      font-size: 0.8rem;
-      color: #64748b;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-bottom: 0.25rem;
-    }
-    
-    .detail-value {
-      font-weight: 700;
-      color: #1a1a1a;
-      font-size: 1rem;
-    }
-    
-    .action-buttons {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    
-    .btn-approve {
+    .btn-forward {
       background: linear-gradient(135deg, var(--success), #38ef7d);
       color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 10px;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .btn-approve:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
-      color: white;
-    }
-    
-    .btn-reject {
-      background: linear-gradient(135deg, var(--danger), #d32f2f);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 10px;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .btn-reject:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
-      color: white;
-    }
-    
-    .loading-state {
-      text-align: center;
-      padding: 3rem;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-    }
-    
-    .empty-state i {
-      font-size: 4rem;
-      color: #e0e0e0;
-      margin-bottom: 1.5rem;
-    }
-    
-    .info-box {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 15px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-      border-left: 5px solid var(--p);
-    }
-    
-    .info-box h6 {
-      color: var(--pd);
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
-    
-    @media (max-width: 768px) {
-      .property-header {
-        flex-direction: column;
-      }
-      
-      .action-buttons {
-        flex-direction: column;
-      }
-      
-      .action-buttons button {
-        width: 100%;
-      }
     }
   </style>
 </head>
@@ -252,82 +68,53 @@
 
 <nav class="navbar navbar-dark fixed-top">
   <div class="container-fluid px-4">
-    <a class="navbar-brand fw-bold" href="officer_dashboard.html" style="color: var(--pd);">
-      <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    <a class="navbar-brand fw-bold" style="color: var(--primary-dark);">
+      <i class="fas fa-user-shield me-2"></i>AC Dashboard
     </a>
-    <span class="badge" style="background: linear-gradient(135deg, var(--warning), #f5576c);">
-      <i class="fas fa-clock me-1"></i>
-      <span id="pendingCount">0</span> Pending
-    </span>
+    <div class="d-flex align-items-center gap-3">
+      <span class="badge bg-primary">
+        <span id="pendingCount">0</span> Pending
+      </span>
+      <button class="btn btn-sm btn-danger" onclick="logout()">Logout</button>
+    </div>
   </div>
 </nav>
 
 <div class="container-main">
-  
   <div class="page-header">
-    <h1 class="page-title">
-      <i class="fas fa-clipboard-list me-2"></i>Pending Property Registrations
-    </h1>
-    <p class="text-muted mb-0">Review and approve citizen property registration requests</p>
+    <h1 class="page-title">Properties Pending AC Approval</h1>
+    <p class="text-muted">Review and select DC to forward for final approval</p>
   </div>
 
-  <div class="info-box">
-    <h6><i class="fas fa-info-circle me-2"></i>How Approval Works</h6>
-    <p class="mb-0">
-      <strong>For Ac:</strong> You can approve properties directly. Click "Approve" to change status to APPROVED, which will make the property available for transfer by the owner.
-    </p>
-  </div>
-
-  <div class="search-box">
-    <i class="fas fa-search search-icon"></i>
-    <input 
-      type="text" 
-      id="cnicSearch" 
-      placeholder="Search by Owner CNIC (e.g., 12345-1234567-1)" 
-      maxlength="15"
-      onkeyup="searchByCNIC()">
-    <small class="text-muted d-block mt-2">
-      <i class="fas fa-info-circle"></i> Search pending registrations by owner CNIC
-    </small>
-  </div>
-
-  <div id="registrationsList">
-    <div class="loading-state">
-      <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--p);"></i>
-      <p class="mt-3">Loading pending registrations...</p>
+  <div id="propertiesList">
+    <div class="text-center py-5">
+      <i class="fas fa-spinner fa-spin fa-3x"></i>
     </div>
   </div>
-
 </div>
 
-<!-- Rejection Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+<!-- Forward to DC Modal -->
+<div class="modal fade" id="forwardModal" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content" style="border-radius: 20px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, var(--danger), #d32f2f);">
-        <h5 class="modal-title text-white">
-          <i class="fas fa-times-circle me-2"></i>Reject Property Registration
-        </h5>
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Forward to DC</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-3">Property ID: <strong id="rejectPropertyId"></strong></p>
+        <p><strong>Property ID:</strong> <span id="forwardPropertyId"></span></p>
         <div class="mb-3">
-          <label class="form-label fw-bold">Rejection Reason <span class="text-danger">*</span></label>
-          <textarea 
-            class="form-control" 
-            id="rejectionReason" 
-            rows="4" 
-            placeholder="Enter detailed reason for rejection..."
-            required
-          ></textarea>
+          <label class="form-label">Select DC <span class="text-danger">*</span></label>
+          <select class="form-select" id="selectedDc" required></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Comments</label>
+          <textarea class="form-control" id="forwardComments" rows="3"></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" onclick="confirmReject()">
-          <i class="fas fa-times-circle me-2"></i>Reject Property
-        </button>
+        <button type="button" class="btn btn-success" onclick="confirmForward()">Forward</button>
       </div>
     </div>
   </div>
@@ -335,300 +122,86 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const API_URL = "http://localhost:5000/api";
+const API_URL = 'http://localhost:5000/api';
 const authToken = sessionStorage.getItem('authToken');
-const userRole = sessionStorage.getItem('userRole');
+let currentPropertyId = null;
 
-// Check authentication
-if (!authToken) {
-  alert('Please login first');
-  window.location.href = 'login.html';
-}
-
-let allRegistrations = [];
-let currentRejectPropertyId = null;
-
-// Load pending registrations
-async function loadPendingRegistrations() {
-  const container = document.getElementById('registrationsList');
-  
+async function loadProperties() {
   try {
-    console.log('📋 Loading pending registrations...');
-    
-    const response = await fetch(`${API_URL}/properties/pending-registrations`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
+    const res = await fetch(`${API_URL}/properties/ac-pending`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
     });
-
-    const result = await response.json();
-    console.log('Response:', result);
-
-    if (result.success && result.properties && result.properties.length > 0) {
-      allRegistrations = result.properties;
-      renderRegistrations(allRegistrations);
+    const result = await res.json();
+    
+    if (result.success && result.properties.length > 0) {
       document.getElementById('pendingCount').textContent = result.properties.length;
+      document.getElementById('propertiesList').innerHTML = result.properties.map(p => `
+        <div class="card-item">
+          <h5>${p.property_id}</h5>
+          <p><strong>Owner:</strong> ${p.owner_name} | <strong>CNIC:</strong> ${p.owner_cnic}</p>
+          <p><strong>Location:</strong> ${p.mauza}, ${p.tehsil}, ${p.district}</p>
+          <p><strong>Forwarded by Tehsildar:</strong> ${p.tehsildar_name}</p>
+          <button class="btn btn-success" onclick="openForwardModal('${p.property_id}')">
+            Forward to DC
+          </button>
+        </div>
+      `).join('');
     } else {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-check-circle text-success"></i>
-          <h4>No Pending Registrations</h4>
-          <p class="text-muted">All property registrations have been processed.</p>
-        </div>
-      `;
-      document.getElementById('pendingCount').textContent = '0';
+      document.getElementById('propertiesList').innerHTML = '<p class="text-center">No pending properties</p>';
     }
-
   } catch (err) {
-    console.error('❌ Error loading registrations:', err);
-    container.innerHTML = `
-      <div class="alert alert-danger">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Error loading registrations</strong><br>
-        <small>${err.message}</small><br>
-        <button class="btn btn-sm btn-primary mt-2" onclick="loadPendingRegistrations()">
-          <i class="fas fa-sync me-1"></i>Retry
-        </button>
-      </div>
-    `;
+    console.error(err);
   }
 }
 
-// Render registrations
-function renderRegistrations(registrations) {
-  const container = document.getElementById('registrationsList');
-  
-  if (registrations.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-search"></i>
-        <h4>No Matching Registrations</h4>
-        <p class="text-muted">No registrations found for your search criteria.</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = registrations.map(reg => `
-    <div class="card-item">
-      <div class="property-header">
-        <div>
-          <div class="property-id">${reg.property_id}</div>
-          <small class="text-muted">Submitted: ${formatDate(reg.created_at)}</small>
-        </div>
-        <span class="status-badge">
-          <i class="fas fa-clock"></i>
-          PENDING APPROVAL
-        </span>
-      </div>
-
-      <div class="property-details">
-        <div class="detail-item">
-          <div class="detail-label">Owner Name</div>
-          <div class="detail-value">${reg.owner_name}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Owner CNIC</div>
-          <div class="detail-value">${formatCNIC(reg.owner_cnic)}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Property Type</div>
-          <div class="detail-value">${capitalizeFirst(reg.property_type)}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Area</div>
-          <div class="detail-value">${reg.area_marla} Marla</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">District</div>
-          <div class="detail-value">${reg.district}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Tehsil</div>
-          <div class="detail-value">${reg.tehsil}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Fard No</div>
-          <div class="detail-value">${reg.fard_no}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Khasra No</div>
-          <div class="detail-value">${reg.khasra_no}</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Khatooni No</div>
-          <div class="detail-value">${reg.khatooni_no}</div>
-        </div>
-        ${reg.added_by_officer_name ? `
-        <div class="detail-item">
-          <div class="detail-label">Added By</div>
-          <div class="detail-value">${reg.added_by_officer_name}</div>
-        </div>
-        ` : ''}
-      </div>
-
-      <div class="action-buttons">
-        <button class="btn-approve" onclick="approveProperty('${reg.property_id}')">
-          <i class="fas fa-check"></i>
-          Approve Property
-        </button>
-        <button class="btn-reject" onclick="openRejectModal('${reg.property_id}')">
-          <i class="fas fa-times"></i>
-          Reject
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-// Approve property
-async function approveProperty(propertyId) {
-  if (!confirm(`Are you sure you want to approve property ${propertyId}?\n\nThis will make it available for transfer by the owner.`)) {
-    return;
-  }
-
-  try {
-    console.log('✅ Approving property:', propertyId);
-    
-    const response = await fetch(`${API_URL}/properties/approve-property`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ propertyId })
-    });
-
-    const result = await response.json();
-    console.log('Approval result:', result);
-
-    if (result.success) {
-      alert(`✅ Property Approved Successfully!\n\nProperty ID: ${propertyId}\nStatus: APPROVED\n\nThe property is now available for transfer by the owner.`);
-      loadPendingRegistrations(); // Reload the list
-    } else {
-      alert('❌ Error: ' + result.message);
-    }
-
-  } catch (err) {
-    console.error('❌ Error approving property:', err);
-    alert('Error approving property. Please try again.');
-  }
-}
-
-// Open reject modal
-function openRejectModal(propertyId) {
-  currentRejectPropertyId = propertyId;
-  document.getElementById('rejectPropertyId').textContent = propertyId;
-  document.getElementById('rejectionReason').value = '';
-  
-  const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
-  modal.show();
-}
-
-// Confirm rejection
-async function confirmReject() {
-  const reason = document.getElementById('rejectionReason').value.trim();
-  
-  if (!reason) {
-    alert('Please enter a rejection reason');
-    return;
-  }
-
-  try {
-    console.log('❌ Rejecting property:', currentRejectPropertyId);
-    
-    const response = await fetch(`${API_URL}/properties/reject-property`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        propertyId: currentRejectPropertyId,
-        reason: reason
-      })
-    });
-
-    const result = await response.json();
-    console.log('Rejection result:', result);
-
-    if (result.success) {
-      alert(`✅ Property Rejected\n\nProperty ID: ${currentRejectPropertyId}\nReason: ${reason}\n\nThe owner will be notified.`);
-      
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
-      modal.hide();
-      
-      loadPendingRegistrations(); // Reload the list
-    } else {
-      alert('❌ Error: ' + result.message);
-    }
-
-  } catch (err) {
-    console.error('❌ Error rejecting property:', err);
-    alert('Error rejecting property. Please try again.');
-  }
-}
-
-// Search by CNIC
-function searchByCNIC() {
-  const searchValue = document.getElementById('cnicSearch').value.replace(/\D/g, '');
-  
-  if (searchValue.length === 0) {
-    renderRegistrations(allRegistrations);
-    return;
-  }
-
-  const filtered = allRegistrations.filter(reg => {
-    const cnic = reg.owner_cnic.replace(/\D/g, '');
-    return cnic.includes(searchValue);
+async function loadDCs() {
+  const res = await fetch(`${API_URL}/properties/get-dcs`, {
+    headers: { 'Authorization': `Bearer ${authToken}` }
   });
-
-  renderRegistrations(filtered);
+  const result = await res.json();
+  document.getElementById('selectedDc').innerHTML = 
+    '<option value="">Select DC</option>' + 
+    result.dcs.map(dc => `<option value="${dc.user_id}">${dc.name} - ${dc.district}</option>`).join('');
 }
 
-// Utility functions
-function formatCNIC(cnic) {
-  if (!cnic || cnic.length !== 13) return cnic;
-  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+function openForwardModal(propertyId) {
+  currentPropertyId = propertyId;
+  document.getElementById('forwardPropertyId').textContent = propertyId;
+  loadDCs();
+  new bootstrap.Modal(document.getElementById('forwardModal')).show();
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-PK', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+async function confirmForward() {
+  const dcId = document.getElementById('selectedDc').value;
+  if (!dcId) return alert('Select a DC');
+  
+  const res = await fetch(`${API_URL}/properties/ac-forward-to-dc`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${authToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      propertyId: currentPropertyId,
+      assignedDcId: dcId,
+      comments: document.getElementById('forwardComments').value
+    })
   });
-}
-
-function capitalizeFirst(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-// Auto-format CNIC input
-document.getElementById('cnicSearch')?.addEventListener('input', function(e) {
-  let value = e.target.value.replace(/\D/g, '');
   
-  if (value.length > 5 && value.length <= 12) {
-    value = value.slice(0, 5) + '-' + value.slice(5);
-  } else if (value.length > 12) {
-    value = value.slice(0, 5) + '-' + value.slice(5, 12) + '-' + value.slice(12, 13);
+  const result = await res.json();
+  if (result.success) {
+    alert('Forwarded to DC');
+    bootstrap.Modal.getInstance(document.getElementById('forwardModal')).hide();
+    loadProperties();
   }
-  
-  e.target.value = value;
-});
+}
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-  loadPendingRegistrations();
-});
+function logout() {
+  sessionStorage.removeItem('authToken');
+  window.location.href = '../auth/login.html';
+}
+
+loadProperties();
 </script>
-
 </body>
 </html>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -263,140 +262,119 @@ body::before {
 }
 
 /* Links */
-.back-link, a {
+a {
     color: var(--primary);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
     text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
 }
 
-.back-link:hover, a:hover {
+a:hover {
     color: var(--secondary);
-    transform: translateX(5px);
+    text-decoration: underline;
 }
 
-/* Login Illustration */
-.login-illustration {
-    max-width: 80%;
-    height: auto;
-    margin: 0 auto 1.5rem;
-    display: block;
-    animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-}
-
-/* Register Section */
-.register-section {
-    background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
-    border-radius: 20px;
-    padding: 2rem;
-    margin-top: 2rem;
-    text-align: center;
-    border: 2px solid rgba(79, 172, 254, 0.2);
-    transition: all 0.3s ease;
-}
-
-.register-section:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(79, 172, 254, 0.2);
-    border-color: var(--info);
-}
-
-.register-section h5 {
-    background: linear-gradient(135deg, var(--info), #00f2fe);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 1rem;
-    font-weight: 800;
-}
-
-/* Progress Steps */
+/* Progress Container */
 .progress-container {
-    margin: 2rem 0;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+    padding: 0 1rem;
+}
+
+.progress-container::before {
+    content: '';
+    position: absolute;
+    top: 35px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: linear-gradient(90deg, #e2e8f0 0%, #e2e8f0 100%);
+    z-index: 0;
 }
 
 .progress-step {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
-    transition: all 0.3s;
-}
-
-.progress-step:hover {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-    transform: translateX(5px);
+    flex: 1;
+    position: relative;
+    z-index: 1;
 }
 
 .step-number {
-    width: 45px;
-    height: 45px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
-    background: #e2e8f0;
+    background: white;
+    border: 4px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 15px;
+    font-size: 1.5rem;
     font-weight: 800;
-    font-size: 1.1rem;
+    color: #cbd5e1;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.step-text {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
     transition: all 0.3s;
 }
 
 .step-active .step-number {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    border-color: var(--primary);
+    transform: scale(1.15);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
     animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    0%, 100% { transform: scale(1.15); }
+    50% { transform: scale(1.25); }
+}
+
+.step-active .step-text {
+    color: var(--primary);
+    font-weight: 700;
 }
 
 .step-completed .step-number {
     background: linear-gradient(135deg, var(--success), #38ef7d);
     color: white;
+    border-color: var(--success);
 }
 
-.step-text {
-    font-weight: 600;
-    color: #64748b;
-}
-
-.step-active .step-text {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-weight: 800;
+.step-completed .step-text {
+    color: var(--success);
 }
 
 /* Password Strength */
 .password-strength {
-    height: 5px;
-    margin-top: 8px;
-    border-radius: 10px;
-    transition: all 0.3s;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    height: 8px;
+    border-radius: 50px;
+    background: #e2e8f0;
+    transition: all 0.3s ease;
+    width: 0;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .password-weak {
-    background: linear-gradient(135deg, var(--danger), #d32f2f);
-    width: 25%;
+    background: linear-gradient(135deg, var(--danger), #ff6b6b);
+    width: 33%;
 }
 
 .password-medium {
-    background: linear-gradient(135deg, var(--warning), var(--danger));
-    width: 50%;
+    background: linear-gradient(135deg, var(--warning), #ffa500);
+    width: 66%;
 }
 
 .password-strong {
@@ -453,6 +431,33 @@ body::before {
     border-radius: 20px;
     margin-bottom: 1.5rem;
     box-shadow: 0 10px 30px rgba(79, 172, 254, 0.2);
+}
+
+/* OTP Display Box */
+.otp-display-box {
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.1));
+    border: 3px solid var(--success);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(17, 153, 142, 0.3);
+    animation: slideIn 0.5s ease;
+}
+
+.otp-display-box .otp-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--success);
+    margin-bottom: 0.5rem;
+}
+
+.otp-display-box .otp-code {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 10px;
+    color: var(--success);
+    font-family: 'Courier New', monospace;
 }
 
 /* Text Utilities */
@@ -559,6 +564,11 @@ body::before {
         font-size: 1.5rem;
         letter-spacing: 10px;
     }
+    
+    .otp-display-box .otp-code {
+        font-size: 1.8rem;
+        letter-spacing: 5px;
+    }
 }
 
 /* Additional Enhancements */
@@ -641,16 +651,29 @@ body::before {
                                     <option value="">-- Select Role --</option>
                                     <option value="citizen">Citizen</option>
                                     <option value="lro">Land Record Officer</option>
+                                    <option value="ac">Assistant Commissioner (AC)</option>
+                                    <option value="dc">Deputy Commissioner (DC)</option>
+                                    <option value="tehsildar">Tehsildar</option>
                                 </select>
                             </div>
 
-                            <div class="mb-4">
-                                <label class="form-label">CNIC <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-                                    <input type="text" class="form-control" id="cnic" maxlength="15" placeholder="Enter CNIC (xxxxx-xxxxxxx-x)">
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">CNIC <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                        <input type="text" class="form-control" id="cnic" maxlength="15" placeholder="Enter CNIC (xxxxx-xxxxxxx-x)">
+                                    </div>
+                                    <div class="form-text">Enter your 13-digit CNIC (system auto-formats with dashes).</div>
                                 </div>
-                                <div class="form-text">Enter your 13-digit CNIC (system auto-formats with dashes).</div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Father's CNIC <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-id-card-alt"></i></span>
+                                        <input type="text" class="form-control" id="fatherCnic" maxlength="15" placeholder="Enter Father's CNIC">
+                                    </div>
+                                    <div class="form-text">Enter father's 13-digit CNIC.</div>
+                                </div>
                             </div>
 
                             <div class="row">
@@ -728,8 +751,17 @@ body::before {
                         <!-- OTP Verification -->
                         <div id="otpForm" class="mt-4" style="display:none;">
                             <h5 class="mb-3">Verify Your Email Number</h5>
+                            
+                            <!-- OTP Display Box (Auto-filled) -->
+                            <div id="otpDisplayBox" class="otp-display-box" style="display:none;">
+                                <div class="otp-label">
+                                    <i class="fas fa-key me-2"></i>Your OTP Code (Auto-filled):
+                                </div>
+                                <div class="otp-code" id="displayedOtp"></div>
+                            </div>
+                            
                             <div class="otp-info">
-                                <p class="mb-2"><i class="fas fa-info-circle me-2"></i>We've sent a 6-digit verification code to your Email number.</p>
+                                <p class="mb-2"><i class="fas fa-info-circle me-2"></i>We've sent a 6-digit verification code to your Email.</p>
                                 <p class="mb-0" id="emailNumberDisplay"></p>
                             </div>
                             <div class="mb-4">
@@ -748,48 +780,63 @@ body::before {
                         </div>
 
                         <!-- Success Message -->
-                        <div id="successMessage" class="success-message" style="display:none;">
-                            <h5><i class="fas fa-check-circle text-success me-2"></i>Registration Successful!</h5>
-                            <p class="mb-2">Your account is created. Blockchain ID: <strong id="bkId">blk1Pk7x9aB3...</strong></p>
-                            <p class="mb-0">Private key encrypted & stored securely. Login now.</p>
+                        <div id="successMessage" class="text-center" style="display:none;">
+                            <div class="success-message">
+                                <i class="fas fa-check-circle mb-3"></i>
+                                <h5 class="mb-3">Registration Successful!</h5>
+                                <p>Your account has been created successfully.</p>
+                                <p class="mb-0"><strong>Blockchain ID:</strong> <span id="bkIdSpan"></span></p>
+                                <div class="mt-3">
+                                    <small class="text-muted">Redirecting to login page...</small>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="text-center mt-4">
-                            <p>Already have an account? <a href="login.html" class="fw-bold">Sign In</a></p>
+                            <p class="text-muted mb-0">
+                                Already have an account? 
+                                <a href="login.html" class="text-decoration-none">Login here</a>
+                            </p>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script>
-    let tempUser = {};
 
-const registerForm = document.getElementById("registerForm");
-const submitButton = registerForm.querySelector("button[type=submit]");
-const otpForm = document.getElementById("otpForm");
-const successMessage = document.getElementById("successMessage");
-const bkIdSpan = document.getElementById("bkId");
+<!-- Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-// Backend API URL - CHANGE THIS IF YOUR SERVER RUNS ON DIFFERENT PORT
+<script>
 const API_URL = "http://localhost:5000/api/auth";
 
-// CNIC auto-format: xxxxx-xxxxxxx-x
-const cnicInput = document.getElementById("cnic");
-cnicInput.addEventListener("input", function () {
-    let value = this.value.replace(/\D/g, ""); // remove non-digits
-    if (value.length > 5) value = value.slice(0,5) + "-" + value.slice(5);
-    if (value.length > 13) value = value.slice(0,13) + "-" + value.slice(13,14);
-    this.value = value;
-});
+let tempUser = {};
+const registerForm = document.getElementById("registerForm");
+const otpForm = document.getElementById("otpForm");
+const successMessage = document.getElementById("successMessage");
+const bkIdSpan = document.getElementById("bkIdSpan");
+const submitButton = registerForm.querySelector('button[type="submit"]');
 
-// Password toggle
-document.querySelectorAll(".toggle-password").forEach(btn => {
-    btn.addEventListener("click", function() {
+// CNIC Auto-formatting
+const cnicInput = document.getElementById("cnic");
+const fatherCnicInput = document.getElementById("fatherCnic");
+
+function formatCNIC(input) {
+    input.addEventListener("input", function (e) {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value.length > 5) value = value.slice(0, 5) + "-" + value.slice(5);
+        if (value.length > 13) value = value.slice(0, 13) + "-" + value.slice(13);
+        if (value.length > 15) value = value.slice(0, 15);
+        e.target.value = value;
+    });
+}
+
+formatCNIC(cnicInput);
+formatCNIC(fatherCnicInput);
+
+// Toggle password visibility
+document.querySelectorAll(".toggle-password").forEach((btn) => {
+    btn.addEventListener("click", function () {
         const target = document.getElementById(this.dataset.target);
         target.type = target.type === "password" ? "text" : "password";
         this.querySelector("i").classList.toggle("fa-eye");
@@ -854,8 +901,9 @@ registerForm.addEventListener("submit", async function (e) {
 
     const role = document.getElementById("role").value;
     let cnic = cnicInput.value.replace(/\D/g, "").trim();
+    let fatherCnic = fatherCnicInput.value.replace(/\D/g, "").trim();
     const name = document.getElementById("name").value.trim();
-    const fatherName = document.getElementById("fatherName").value.trim(); // ✅ GET FATHER NAME
+    const fatherName = document.getElementById("fatherName").value.trim();
     const mobile = document.getElementById("mobile").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
@@ -869,7 +917,7 @@ registerForm.addEventListener("submit", async function (e) {
         return;
     }
     
-    if (!fatherName || fatherName === "") { // ✅ VALIDATE FATHER NAME
+    if (!fatherName || fatherName === "") {
         alert("Father's name is required");
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
@@ -878,6 +926,13 @@ registerForm.addEventListener("submit", async function (e) {
     
     if (!/^\d{13}$/.test(cnic)) {
         alert("Enter a valid 13-digit CNIC");
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+        return;
+    }
+    
+    if (!/^\d{13}$/.test(fatherCnic)) {
+        alert("Enter a valid 13-digit Father's CNIC");
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
         return;
@@ -904,12 +959,11 @@ registerForm.addEventListener("submit", async function (e) {
         return;
     }
 
-    // ✅ INCLUDE FATHER NAME IN DATA
-    const data = { role, cnic, name, fatherName, mobile, email, password };
+    const data = { role, cnic, fatherCnic, name, fatherName, mobile, email, password };
     tempUser = data;
 
     try {
-        console.log("Sending registration request with father name:", fatherName);
+        console.log("Sending registration request with father CNIC and name:", fatherCnic, fatherName);
         
         const res = await fetch(`${API_URL}/register-citizen`, {
             method: "POST",
@@ -933,6 +987,14 @@ registerForm.addEventListener("submit", async function (e) {
             otpForm.style.display = "block";
             document.getElementById("emailNumberDisplay").innerText = email;
             
+            // ✅ AUTO-FILL OTP IF RETURNED (Development Mode)
+            if (result.otp) {
+                document.getElementById("emailOtp").value = result.otp;
+                document.getElementById("displayedOtp").innerText = result.otp;
+                document.getElementById("otpDisplayBox").style.display = "block";
+                console.log("🔑 OTP Auto-filled:", result.otp);
+            }
+            
             alert("OTP sent to your email. Please check your inbox.");
         } else {
             alert(result.message || "Registration failed");
@@ -947,6 +1009,7 @@ registerForm.addEventListener("submit", async function (e) {
         submitButton.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
     }
 });
+
 // VERIFY OTP
 document.getElementById("verifyOtp").addEventListener("click", async function () {
     const otp = document.getElementById("emailOtp").value.trim();
@@ -964,7 +1027,7 @@ document.getElementById("verifyOtp").addEventListener("click", async function ()
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
 
-    const data = { ...tempUser, otp }; // combine user data + OTP
+    const data = { ...tempUser, otp };
 
     try {
         console.log("Sending OTP verification to:", `${API_URL}/verify-otp`);
@@ -1032,6 +1095,13 @@ document.getElementById("resendOtp").addEventListener("click", async function ()
         const result = await res.json();
         
         if (result.success) {
+            // ✅ AUTO-FILL NEW OTP IF RETURNED
+            if (result.otp) {
+                document.getElementById("emailOtp").value = result.otp;
+                document.getElementById("displayedOtp").innerText = result.otp;
+                document.getElementById("otpDisplayBox").style.display = "block";
+                console.log("🔑 New OTP Auto-filled:", result.otp);
+            }
             alert("OTP resent successfully! Check your email.");
         } else {
             alert(result.message || "Failed to resend OTP");
@@ -1044,6 +1114,9 @@ document.getElementById("resendOtp").addEventListener("click", async function ()
         this.innerHTML = '<i class="fas fa-redo me-2"></i>Resend Code';
     }
 });
+
+
+
 </script>
 
 </body>
