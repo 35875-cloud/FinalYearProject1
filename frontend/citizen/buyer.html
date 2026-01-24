@@ -12,6 +12,8 @@
 :root {
   --primary: #667eea;
   --secondary: #764ba2;
+  --success: #11998e;
+  --warning: #f093fb;
 }
 
 body {
@@ -26,14 +28,30 @@ body {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 }
 
+.page-header {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .transfer-card {
   background: white;
-  border-radius: 15px;
+  border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  border-left: 6px solid var(--warning);
   transition: all 0.3s;
-  border-left: 6px solid #ffc107;
 }
 
 .transfer-card:hover {
@@ -41,29 +59,113 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-.transfer-card.pending { border-left-color: #ffc107; }
-.transfer-card.verified { border-left-color: #28a745; }
-.transfer-card.expired { 
-  border-left-color: #dc3545; 
-  opacity: 0.6;
-}
-
-.countdown {
-  font-size: 1.3rem;
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
   font-weight: 700;
-  color: var(--primary);
-}
-
-.security-badge {
-  background: linear-gradient(135deg, #11998e, #38ef7d);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
+  font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+}
+
+.badge-pending {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+}
+
+.badge-uploaded {
+  background: linear-gradient(135deg, #2196f3, #1565c0);
+  color: white;
+}
+
+.limited-access-banner {
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+  padding: 1rem;
+  border-radius: 10px;
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  border-radius: 10px;
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.blurred-section {
+  position: relative;
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.blur-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  z-index: 10;
+}
+
+.blur-message {
+  background: var(--warning);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-weight: 700;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-upload {
+  background: linear-gradient(135deg, var(--success), #38ef7d);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-upload:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
+  color: white;
+}
+
+.countdown {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f5576c;
 }
 </style>
 </head>
@@ -76,89 +178,108 @@ body {
     <a class="navbar-brand fw-bold" href="citizen_dashboard.html" style="color: var(--primary);">
       <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
     </a>
-    <div class="d-flex align-items-center gap-2">
-      <span class="user-name text-dark fw-bold">Loading...</span>
-      <div class="badge bg-warning text-dark">
-        <i class="fas fa-bell me-1"></i>
+    <div class="d-flex align-items-center gap-3">
+      <span class="badge" style="background: linear-gradient(135deg, var(--warning), #f5576c);">
+        <i class="fas fa-clock me-1"></i>
         <span id="pendingCount">0</span> Pending
-      </div>
+      </span>
+      <button class="btn btn-sm btn-danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </nav>
 
 <div class="container mt-4">
 
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="bg-white rounded p-4 shadow">
-        <h3><i class="fas fa-clock text-warning me-2"></i>Property Transfer Requests</h3>
-        <p class="text-muted mb-3">Enter the exact payment amount to complete property ownership transfer</p>
-        
-        <!-- Security Info -->
-        <div class="security-badge">
-          <i class="fas fa-shield-alt"></i>
-          <div>
-            <div style="font-size: 0.85rem;">Verified Account</div>
-            <div style="font-size: 0.9rem;">CNIC: <span id="userCnicDisplay">Loading...</span></div>
-          </div>
-        </div>
-        
-        <div class="alert alert-info mb-0">
-          <i class="fas fa-info-circle me-2"></i>
-          <strong>Secure Access:</strong> You can only view property transfers specifically initiated for your verified CNIC. This ensures your privacy and prevents unauthorized access.
-        </div>
-      </div>
+  <div class="page-header">
+    <h1 class="page-title">
+      <i class="fas fa-file-contract me-2"></i>Pending Transfer Applications
+    </h1>
+    <p class="text-muted mb-0">Properties being transferred to you - Complete payment to proceed</p>
+  </div>
+
+  <div class="limited-access-banner">
+    <i class="fas fa-lock fa-2x"></i>
+    <div>
+      <h6 class="mb-1">Limited Access Mode</h6>
+      <p class="mb-0 small">You can see basic property information only. Full details will be available after transfer approval and payment completion.</p>
     </div>
   </div>
 
   <!-- Transfers List -->
   <div id="transfersList">
     <div class="text-center py-5">
-      <i class="fas fa-spinner fa-spin fa-3x text-white mb-3"></i>
-      <p class="text-white">Loading your transfer requests...</p>
+      <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--primary);"></i>
+      <p class="mt-3 text-white">Loading pending transfers...</p>
     </div>
   </div>
 
 </div>
 
-<!-- Payment Modal -->
+<!-- Payment Upload Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header bg-success text-white">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--success), #38ef7d); color: white;">
         <h5 class="modal-title">
-          <i class="fas fa-dollar-sign me-2"></i>Enter Payment Amount
+          <i class="fas fa-upload me-2"></i>Upload Payment Challan
         </h5>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="hidden" id="currentTransferId">
-        
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>Important:</strong> Enter the EXACT total amount shown below.
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Payment Instructions:</strong>
+          <ul class="mb-0 mt-2">
+            <li>Visit the nearest 1-Link/Easypaisa/Bank branch</li>
+            <li>Pay the exact amount shown below</li>
+            <li>Get the payment challan/receipt</li>
+            <li>Upload a clear photo/scan of the challan here</li>
+          </ul>
         </div>
 
-        <div class="alert alert-info mb-3">
-          <strong>Total Payment Required:</strong>
-          <div id="paymentAmount" class="fs-4 text-primary fw-bold">PKR 0</div>
+        <div class="detail-grid mb-3">
+          <div class="detail-item">
+            <div class="detail-label">Transfer ID</div>
+            <div class="detail-value" id="modalTransferId"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Property ID</div>
+            <div class="detail-value" id="modalPropertyId"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Transfer Amount</div>
+            <div class="detail-value" id="modalTransferAmount"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Property Tax</div>
+            <div class="detail-value" id="modalPropertyTax"></div>
+          </div>
+          <div class="detail-item" style="grid-column: span 2;">
+            <div class="detail-label">Total Amount to Pay</div>
+            <div class="detail-value text-success fs-4" id="modalTotalAmount"></div>
+          </div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label fw-bold">Enter Payment Amount <span class="text-danger">*</span></label>
-          <input type="number" class="form-control form-control-lg" id="paidAmount" 
-                 placeholder="Enter exact amount" step="0.01" min="0" required>
-          <small class="text-muted">This amount must match the total required amount exactly</small>
+          <label class="form-label">Paid Amount <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" id="paidAmount" placeholder="Enter exact amount paid" step="0.01" required>
+          <small class="text-muted">Must match the total amount exactly</small>
         </div>
 
-        <div class="alert alert-success">
-          <i class="fas fa-info-circle me-2"></i>
-          <small>After entering the payment, an officer will verify and approve the transfer.</small>
+        <div class="mb-3">
+          <label class="form-label">Payment Challan URL <span class="text-danger">*</span></label>
+          <input type="url" class="form-control" id="challanUrl" placeholder="https://example.com/challan.jpg" required>
+          <small class="text-muted">Upload your challan to a cloud service (Google Drive, Dropbox) and paste the public link here</small>
+        </div>
+
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Important:</strong> Make sure the challan image is clear and readable. Blurry or incomplete challans will be rejected.
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-success" onclick="submitPayment()">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success btn-upload" onclick="submitPayment()">
           <i class="fas fa-check me-2"></i>Submit Payment
         </button>
       </div>
@@ -179,84 +300,57 @@ if (!authToken || !userId) {
   window.location.href = '../auth/login.html';
 }
 
-// Load user info and display CNIC
-async function loadUserInfo() {
-  try {
-    const response = await fetch(`${API_URL}/auth/profile`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-
-    const data = await response.json();
-
-    if (data.success && data.user) {
-      // Update UI with user info
-      document.querySelector('.user-name').textContent = data.user.name;
-      document.getElementById('userCnicDisplay').textContent = formatCNIC(data.user.cnic);
-      
-      console.log('✅ User authenticated:', data.user.name);
-      console.log('🔐 Verified CNIC:', data.user.cnic);
-    }
-  } catch (err) {
-    console.error('❌ Error loading user info:', err);
-  }
-}
+let currentTransfer = null;
+let allTransfers = [];
 
 // =====================================================
-// LOAD TRANSFERS - SECURE VERSION (Using authenticated endpoint)
+// LOAD TRANSFERS
 // =====================================================
 async function loadTransfers() {
   const container = document.getElementById('transfersList');
   
-  container.innerHTML = `
-    <div class="text-center py-5">
-      <i class="fas fa-spinner fa-spin fa-3x text-white mb-3"></i>
-      <p class="text-white">Loading your transfer requests...</p>
-    </div>
-  `;
-
   try {
-    console.log('\n========================================');
-    console.log('🔐 SECURE TRANSFER LOADING');
-    console.log('========================================');
-    console.log('User ID:', userId);
-    console.log('Using authenticated endpoint: /transfers/buyer-pending');
-    console.log('This ensures ONLY the logged-in user can see their transfers');
+    console.log('📋 Loading buyer pending transfers...');
     
-    // ✅ USE AUTHENTICATED ENDPOINT - No CNIC parameter needed!
     const response = await fetch(`${API_URL}/transfers/buyer-pending`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    const data = await response.json();
-    console.log('Response:', data);
+    const result = await response.json();
+    console.log('Response:', result);
 
-    if (data.success && data.transfers.length > 0) {
-      document.getElementById('pendingCount').textContent = data.transfers.length;
-      renderTransfers(data.transfers);
+    if (result.success && result.transfers && result.transfers.length > 0) {
+      allTransfers = result.transfers;
+      renderTransfers(allTransfers);
+      document.getElementById('pendingCount').textContent = result.transfers.length;
       
-      console.log('✅ Loaded', data.transfers.length, 'transfer(s) for authenticated user');
-      console.log('🔒 Security: Only transfers for THIS user\'s CNIC are shown');
-      console.log('========================================\n');
+      // Start countdown timers
+      startCountdowns();
     } else {
       container.innerHTML = `
-        <div class="bg-white rounded p-5 text-center shadow">
+        <div class="text-center bg-white rounded p-5">
           <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-          <h5>No Transfer Requests Found</h5>
-          <p class="text-muted">You don't have any pending property transfer requests</p>
-          <div class="alert alert-info mt-3">
-            <i class="fas fa-shield-check me-2"></i>
-            <small><strong>Secure Access:</strong> Only transfers specifically created for your verified CNIC will appear here.</small>
-          </div>
+          <h4>No Pending Transfers</h4>
+          <p class="text-muted">You don't have any pending property transfer applications.</p>
         </div>
       `;
-      console.log('ℹ️ No pending transfers found for this user');
-      console.log('========================================\n');
+      document.getElementById('pendingCount').textContent = '0';
     }
+
   } catch (err) {
-    console.error('❌ Load transfers error:', err);
+    console.error('❌ Error loading transfers:', err);
     container.innerHTML = `
       <div class="alert alert-danger">
-        <i class="fas fa-times-circle me-2"></i>Failed to load transfers: ${err.message}
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Error loading transfers</strong><br>
+        <small>${err.message}</small><br>
+        <button class="btn btn-sm btn-primary mt-2" onclick="loadTransfers()">
+          <i class="fas fa-sync me-1"></i>Retry
+        </button>
       </div>
     `;
   }
@@ -269,206 +363,238 @@ function renderTransfers(transfers) {
   const container = document.getElementById('transfersList');
   
   container.innerHTML = transfers.map(t => {
-    const expired = new Date(t.expires_at) < new Date();
-    const timeRemaining = calculateTimeRemaining(t.expires_at);
+    const expiresAt = new Date(t.expires_at);
+    const now = new Date();
+    const timeLeft = expiresAt - now;
+    const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     
-    let statusBadge = "";
-    let actionBtn = "";
-
-    if (expired) {
-      statusBadge = `<span class="badge bg-danger">Expired</span>`;
-      actionBtn = `<button class="btn btn-secondary btn-sm" disabled>
-                     <i class="fas fa-times me-2"></i>Transfer Expired
-                   </button>`;
-    } else if (t.status === 'PAYMENT_VERIFIED' || t.status === 'COMPLETED') {
-      statusBadge = `<span class="badge bg-success">Payment Verified</span>`;
-      actionBtn = `<button class="btn btn-success btn-sm" disabled>
-                     <i class="fas fa-check me-2"></i>Awaiting Officer Approval
-                   </button>`;
-    } else if (t.status === 'PAYMENT_UPLOADED') {
-      statusBadge = `<span class="badge bg-info">Payment Under Review</span>`;
-      actionBtn = `<button class="btn btn-info btn-sm" disabled>
-                     <i class="fas fa-clock me-2"></i>Under Verification
-                   </button>`;
-    } else {
-      statusBadge = `<span class="badge bg-warning text-dark">Payment Pending</span>`;
-      actionBtn = `<button class="btn btn-warning btn-sm" 
-                     onclick="openPaymentModal('${t.transfer_id}', ${t.total_amount})">
-                     <i class="fas fa-dollar-sign me-2"></i>Enter Payment Amount
-                   </button>`;
-    }
-
     return `
-      <div class="transfer-card ${expired ? 'expired' : t.status === 'PAYMENT_VERIFIED' ? 'verified' : 'pending'}">
-        <div class="row">
-          <div class="col-md-8">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="mb-0">${t.property_id}</h5>
-              ${statusBadge}
+      <div class="transfer-card" data-transfer-id="${t.transfer_id}">
+        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+          <div>
+            <h4 class="mb-1">${t.property_id}</h4>
+            <small class="text-muted">Transfer ID: ${t.transfer_id}</small>
+          </div>
+          <div class="text-end">
+            <span class="status-badge ${t.status === 'PAYMENT_UPLOADED' ? 'badge-uploaded' : 'badge-pending'}">
+              <i class="fas fa-${t.status === 'PAYMENT_UPLOADED' ? 'check-circle' : 'clock'}"></i>
+              ${t.status === 'PAYMENT_UPLOADED' ? 'Payment Submitted' : 'Payment Pending'}
+            </span>
+            <div class="countdown mt-2" data-expires="${t.expires_at}">
+              <i class="fas fa-hourglass-half me-1"></i>
+              <span id="countdown-${t.transfer_id}">${daysLeft}d ${hoursLeft}h left</span>
             </div>
+          </div>
+        </div>
 
-            <p class="mb-1">
-              <i class="fas fa-map-marker-alt text-primary me-1"></i>
-              <strong>Location:</strong> ${t.district}, ${t.tehsil}
-            </p>
-            <p class="mb-1">
-              <i class="fas fa-ruler-combined text-info me-1"></i>
-              <strong>Area:</strong> ${t.area_marla} Marla
-            </p>
-            <p class="mb-1">
-              <i class="fas fa-user text-success me-1"></i>
-              <strong>Seller:</strong> ${t.seller_name} (${formatCNIC(t.seller_cnic)})
-            </p>
+        <!-- Basic Property Info (Available to Buyer) -->
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Location</div>
+            <div class="detail-value">${t.district}, ${t.tehsil}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Property Type</div>
+            <div class="detail-value">${t.property_type || 'N/A'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Area</div>
+            <div class="detail-value">${t.area_marla || 'N/A'} Marla</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Seller</div>
+            <div class="detail-value">${t.seller_name}</div>
+          </div>
+        </div>
 
-            <hr>
-
-            <div class="row">
-              <div class="col-md-6">
-                <strong>Transfer Amount:</strong>
-                <div class="fs-5 text-primary">PKR ${t.transfer_amount.toLocaleString()}</div>
+        <!-- Restricted Property Details (Blurred) -->
+        <div style="position: relative;">
+          <div class="blurred-section">
+            <div class="detail-grid">
+              <div class="detail-item">
+                <div class="detail-label">Fard No</div>
+                <div class="detail-value">XXXX-XXXX</div>
               </div>
-              <div class="col-md-6">
-                <strong>Your Tax (2%):</strong>
-                <div class="fs-6 text-warning">PKR ${t.property_tax_buyer.toLocaleString()}</div>
+              <div class="detail-item">
+                <div class="detail-label">Khasra No</div>
+                <div class="detail-value">XXXX-XXXX</div>
               </div>
-              <div class="col-md-12 mt-2">
-                <strong>Total Payable:</strong>
-                <div class="fs-4 text-success fw-bold">PKR ${t.total_amount.toLocaleString()}</div>
+              <div class="detail-item">
+                <div class="detail-label">Khatooni No</div>
+                <div class="detail-value">XXXX-XXXX</div>
               </div>
             </div>
           </div>
-
-          <div class="col-md-4 text-center border-start">
-            ${expired ? '' : `
-              <div class="mb-3">
-                <strong>Time Remaining:</strong>
-                <div class="countdown" id="countdown-${t.transfer_id}">
-                  ${timeRemaining}
-                </div>
-              </div>
-            `}
-            
-            <div>
-              <strong>Expires:</strong>
-              <p class="text-muted">${new Date(t.expires_at).toLocaleString()}</p>
+          <div class="blur-overlay">
+            <div class="blur-message">
+              <i class="fas fa-lock me-2"></i>
+              Full details available after transfer approval
             </div>
-
-            ${actionBtn}
           </div>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="mt-3 p-3 rounded" style="background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.1));">
+          <h6 class="fw-bold mb-3">Payment Breakdown</h6>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="detail-label">Transfer Amount</div>
+              <div class="detail-value">PKR ${parseFloat(t.transfer_amount).toLocaleString()}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Property Tax (2%)</div>
+              <div class="detail-value">PKR ${parseFloat(t.property_tax_buyer).toLocaleString()}</div>
+            </div>
+            <div class="detail-item" style="grid-column: span 2;">
+              <div class="detail-label">Total Amount</div>
+              <div class="detail-value text-success fs-4">PKR ${parseFloat(t.total_amount).toLocaleString()}</div>
+            </div>
+          </div>
+          
+          ${t.paid_amount ? `
+            <div class="alert alert-success mt-3 mb-0">
+              <i class="fas fa-check-circle me-2"></i>
+              <strong>Payment Submitted:</strong> PKR ${parseFloat(t.paid_amount).toLocaleString()}
+              <br>
+              <small>Challan: <a href="${t.payment_challan_url}" target="_blank">View Challan</a></small>
+              <br>
+              <small class="text-muted">Awaiting LRO verification...</small>
+            </div>
+          ` : `
+            <button class="btn btn-upload w-100 mt-3" onclick="openPaymentModal('${t.transfer_id}', '${t.property_id}', ${t.transfer_amount}, ${t.property_tax_buyer}, ${t.total_amount})">
+              <i class="fas fa-upload me-2"></i>Upload Payment Challan
+            </button>
+          `}
+        </div>
+
+        <div class="alert alert-info mt-3 mb-0">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Next Steps:</strong>
+          ${!t.paid_amount ? 
+            'Pay the total amount at any 1-Link/Bank branch and upload the payment challan.' : 
+            'Your payment is being verified by the Land Record Officer. You will be notified once approved.'
+          }
         </div>
       </div>
     `;
   }).join('');
-
-  // Start countdowns
-  transfers.forEach(t => {
-    if (new Date(t.expires_at) > new Date()) {
-      startCountdown(t.transfer_id, t.expires_at);
-    }
-  });
 }
 
 // =====================================================
-// COUNTDOWN TIMER
+// PAYMENT MODAL
 // =====================================================
-function calculateTimeRemaining(expiresAt) {
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diff = expiry - now;
-
-  if (diff <= 0) return "Expired";
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((diff / (1000 * 60)) % 60);
-
-  return `${days}d ${hours}h ${minutes}m`;
-}
-
-function startCountdown(transferId, expiresAt) {
-  const element = document.getElementById(`countdown-${transferId}`);
-  if (!element) return;
-
-  setInterval(() => {
-    const remaining = calculateTimeRemaining(expiresAt);
-    element.textContent = remaining;
-    
-    if (remaining === "Expired") {
-      location.reload();
-    }
-  }, 60000); // Update every minute
-}
-
-// =====================================================
-// PAYMENT SUBMISSION
-// =====================================================
-function openPaymentModal(transferId, totalAmount) {
-  document.getElementById('currentTransferId').value = transferId;
-  document.getElementById('paymentAmount').textContent = `PKR ${totalAmount.toLocaleString()}`;
-  document.getElementById('paidAmount').value = '';
-  document.getElementById('paidAmount').setAttribute('data-required', totalAmount);
+function openPaymentModal(transferId, propertyId, transferAmount, propertyTax, totalAmount) {
+  currentTransfer = { transferId, propertyId, transferAmount, propertyTax, totalAmount };
+  
+  document.getElementById('modalTransferId').textContent = transferId;
+  document.getElementById('modalPropertyId').textContent = propertyId;
+  document.getElementById('modalTransferAmount').textContent = 'PKR ' + parseFloat(transferAmount).toLocaleString();
+  document.getElementById('modalPropertyTax').textContent = 'PKR ' + parseFloat(propertyTax).toLocaleString();
+  document.getElementById('modalTotalAmount').textContent = 'PKR ' + parseFloat(totalAmount).toLocaleString();
+  
+  document.getElementById('paidAmount').value = totalAmount;
+  document.getElementById('challanUrl').value = '';
+  
   new bootstrap.Modal(document.getElementById('paymentModal')).show();
 }
 
+// =====================================================
+// SUBMIT PAYMENT
+// =====================================================
 async function submitPayment() {
-  const transferId = document.getElementById('currentTransferId').value;
+  if (!currentTransfer) return;
+  
   const paidAmount = parseFloat(document.getElementById('paidAmount').value);
-  const requiredAmount = parseFloat(document.getElementById('paidAmount').getAttribute('data-required'));
-
-  if (!paidAmount || paidAmount <= 0) {
-    alert('❌ Please enter a valid payment amount');
+  const challanUrl = document.getElementById('challanUrl').value.trim();
+  
+  // Validation
+  if (!paidAmount || !challanUrl) {
+    alert('Please fill all required fields');
     return;
   }
-
-  if (paidAmount !== requiredAmount) {
-    alert(`❌ Payment amount must be exactly PKR ${requiredAmount.toLocaleString()}\n\nYou entered: PKR ${paidAmount.toLocaleString()}`);
+  
+  if (Math.abs(paidAmount - currentTransfer.totalAmount) > 0.01) {
+    alert(`Amount mismatch! Please enter exactly PKR ${currentTransfer.totalAmount}`);
     return;
   }
-
+  
+  if (!challanUrl.startsWith('http')) {
+    alert('Please enter a valid URL starting with http:// or https://');
+    return;
+  }
+  
   try {
-    console.log('💰 Submitting payment:', { transferId, paidAmount });
-
-    const response = await fetch(`${API_URL}/transfers/enter-payment`, {
+    console.log('💳 Submitting payment...');
+    
+    const response = await fetch(`${API_URL}/transfers/upload-payment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        transferId,
-        paidAmount
+        transferId: currentTransfer.transferId,
+        paidAmount: paidAmount,
+        challanUrl: challanUrl
       })
     });
 
     const result = await response.json();
-    console.log('Payment result:', result);
+    console.log('Payment response:', result);
 
     if (result.success) {
-      alert('✅ Payment submitted successfully!\n\nYour payment is being verified. An officer will approve the transfer soon.');
+      alert('✅ Payment challan uploaded successfully!\n\nYour payment is now being verified by the Land Record Officer. You will be notified once approved.');
       bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-      loadTransfers();
+      loadTransfers(); // Reload the list
     } else {
       alert('❌ Error: ' + result.message);
     }
+
   } catch (err) {
-    console.error('❌ Submit payment error:', err);
-    alert('❌ Error submitting payment: ' + err.message);
+    console.error('❌ Error submitting payment:', err);
+    alert('Error submitting payment. Please try again.');
   }
 }
 
 // =====================================================
-// UTILITY FUNCTIONS
+// COUNTDOWN TIMER
 // =====================================================
-function formatCNIC(cnic) {
-  if (!cnic || cnic.length !== 13) return cnic;
-  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
+function startCountdowns() {
+  const countdownElements = document.querySelectorAll('.countdown');
+  
+  setInterval(() => {
+    countdownElements.forEach(elem => {
+      const expiresAt = new Date(elem.dataset.expires);
+      const now = new Date();
+      const timeLeft = expiresAt - now;
+      
+      if (timeLeft <= 0) {
+        elem.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Expired';
+        return;
+      }
+      
+      const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      
+      elem.innerHTML = `<i class="fas fa-hourglass-half me-1"></i>${days}d ${hours}h ${minutes}m left`;
+    });
+  }, 60000); // Update every minute
+}
+
+// =====================================================
+// UTILITY
+// =====================================================
+function logout() {
+  sessionStorage.removeItem('authToken');
+  window.location.href = '../auth/login.html';
 }
 
 // =====================================================
 // INITIALIZE
 // =====================================================
 document.addEventListener('DOMContentLoaded', function() {
-  loadUserInfo();
   loadTransfers();
 });
 </script>

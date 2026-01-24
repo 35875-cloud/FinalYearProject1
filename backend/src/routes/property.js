@@ -125,26 +125,7 @@ async function getLatestBlockHash() {
   }
 }
 
-// Create blockchain record
-async function createBlockchainRecord(propertyId, transactionType, data, userId) {
-  try {
-    const blockchainHash = generateBlockchainHash({ propertyId, transactionType, data, timestamp: new Date() });
-    const previousHash = await getLatestBlockHash();
-    
-    await pool.query(
-      `INSERT INTO blockchain_ledger 
-      (property_id, transaction_type, transaction_data, blockchain_hash, previous_hash, creator_user_id) 
-      VALUES ($1, $2, $3, $4, $5, $6)`,
-      [propertyId, transactionType, JSON.stringify(data), blockchainHash, previousHash, userId]
-    );
-    
-    console.log("✅ Blockchain record created:", blockchainHash);
-    return blockchainHash;
-  } catch (err) {
-    console.error("❌ Error creating blockchain record:", err);
-    throw err;
-  }
-}
+
 
 // =====================================================
 // TEST ROUTE
@@ -180,23 +161,22 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
       areaMarla, propertyType, district, tehsil, mauza, address, year
     } = req.body;
 
-    console.log("📋 Form Data:", { ownerName, ownerCnic, fatherName, khewatNo, khatooniNo, khasraNo, areaMarla, district, tehsil, mauza });
+    console.log("📋 Form Data:", {
+      ownerName, ownerCnic, fatherName, khewatNo, khatooniNo, khasraNo,
+      areaMarla, district, tehsil, mauza
+    });
 
-    // Validate mandatory fields
-    const missingFields = [];
-    if (!ownerName?.trim()) missingFields.push('Owner Name');
-    if (!ownerCnic?.trim()) missingFields.push('CNIC');
-    if (!fatherName?.trim()) missingFields.push('Father Name');
-    if (!khewatNo?.trim()) missingFields.push('Khewat No');
-    if (!khatooniNo?.trim()) missingFields.push('Khatooni No');
-    if (!khasraNo?.trim()) missingFields.push('Khasra No');
-    if (!areaMarla) missingFields.push('Area (Marla)');
-    if (!district?.trim()) missingFields.push('District');
-    if (!tehsil?.trim()) missingFields.push('Tehsil');
-    if (!mauza?.trim()) missingFields.push('Mauza');
-    
+    // Validate required fields
+    const requiredFields = {
+      ownerName, ownerCnic, fatherName, khewatNo, khatooniNo, khasraNo,
+      areaMarla, district, tehsil, mauza
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
     if (missingFields.length > 0) {
-      console.log("❌ Validation failed - Missing fields:", missingFields.join(', '));
       return res.status(400).json({ 
         success: false, 
         message: `Please provide all mandatory fields. Missing: ${missingFields.join(', ')}` 
@@ -279,18 +259,7 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
 
     console.log("✅ Property inserted into database with status PENDING");
 
-    // Create blockchain record
-    try {
-      const blockchainHash = await createBlockchainRecord(
-        propertyId,
-        'PROPERTY_ADDED',
-        { ownerName, district, tehsil },
-        req.user.userId
-      );
-      console.log("✅ Blockchain record created:", blockchainHash);
-    } catch (blockchainError) {
-      console.error("⚠️ Blockchain error (non-critical):", blockchainError.message);
-    }
+    
 
     // Create audit log
     await pool.query(
@@ -1188,81 +1157,210 @@ router.get("/dc-pending", authenticateToken, async (req, res) => {
 // =====================================================
 // DC FINAL APPROVAL
 // =====================================================
+// =====================================================
+// DC APPROVAL ENDPOINT - WITH BLOCKCHAIN REQUIREMENT
+// Location: backend/src/routes/property.js (REPLACE dc-approve endpoint)
+// =====================================================
+
+// =====================================================
+// DC APPROVAL ENDPOINT - CORRECTED VERSION
+// Location: backend/src/routes/property.js
+// REPLACE the existing /dc-approve endpoint with this
+// =====================================================
+
 router.post("/dc-approve", authenticateToken, async (req, res) => {
+  // Start a database transaction
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     const { propertyId, comments } = req.body;
     const userRole = req.user.role.toUpperCase();
     
     if (userRole !== 'DC') {
+      await client.query('ROLLBACK');
       return res.status(403).json({ 
         success: false, 
-        message: "Access denied" 
+        message: "Access denied. Only DC can approve." 
       });
     }
 
     if (!propertyId) {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         message: "Property ID required"
       });
     }
 
-    // Update property to APPROVED
-    await pool.query(
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ DC FINAL APPROVAL - AUTO MINING INITIATED");
+    console.log("=".repeat(60));
+    console.log("Property ID:", propertyId);
+    console.log("Approved by:", req.user.userId);
+
+    // ✅ CORRECTED QUERY - Uses owner_id instead of user_id
+    const propertyDataResult = await client.query(
+      `SELECT 
+        p.*,
+        p.owner_name,
+        p.owner_cnic
+       FROM properties p
+       WHERE p.property_id = $1 AND p.assigned_dc_id = $2`,
+      [propertyId, req.user.userId]
+    );
+
+    if (propertyDataResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: "Property not found or not assigned to you"
+      });
+    }
+
+    const property = propertyDataResult.rows[0];
+
+    // Check if already mined
+    const existingBlock = await client.query(
+      "SELECT * FROM blockchain_ledger WHERE property_id = $1",
+      [propertyId]
+    );
+
+    if (existingBlock.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.json({
+        success: false,
+        message: "Property already exists on blockchain",
+        blockHash: existingBlock.rows[0].blockchain_hash
+      });
+    }
+
+    // ✅ STEP 1: MINE TO BLOCKCHAIN FIRST (Proof of Authority)
+    console.log("⛏️  Mining property to blockchain using Proof of Authority...");
+    
+    let newBlock;
+    try {
+      newBlock = await blockchainService.mineBlock(property, req.user.userId);
+      
+      console.log("✅ Property mined to blockchain successfully!");
+      console.log("   Block Index:", newBlock.block_index);
+      console.log("   Block Hash:", newBlock.blockchain_hash.substring(0, 20) + "...");
+      console.log("   Nonce:", newBlock.nonce);
+      console.log("   Validator:", req.user.userId, "(DC - Authority)");
+      
+    } catch (blockchainError) {
+      await client.query('ROLLBACK');
+      console.error("❌ Blockchain mining failed:", blockchainError.message);
+      console.log("=".repeat(60));
+      console.log("❌ APPROVAL ABORTED - BLOCKCHAIN MINING FAILED");
+      console.log("=".repeat(60) + "\n");
+      
+      // Log the failure
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          req.user.userId,
+          'BLOCKCHAIN_MINING_FAILED',
+          propertyId,
+          JSON.stringify({ 
+            error: blockchainError.message,
+            reason: 'Property NOT approved due to blockchain failure'
+          }),
+          req.ip || 'unknown'
+        ]
+      );
+      
+      return res.status(500).json({
+        success: false,
+        message: "❌ Property approval failed. Blockchain mining error: " + blockchainError.message,
+        error: "BLOCKCHAIN_MINING_FAILED",
+        details: "Property cannot be approved without successful blockchain registration."
+      });
+    }
+
+    // ✅ STEP 2: UPDATE PROPERTY STATUS (Only after successful mining)
+    await client.query(
       `UPDATE properties 
        SET status = 'APPROVED', 
            current_approver_role = NULL,
            updated_at = NOW()
-       WHERE property_id = $1 AND assigned_dc_id = $2`,
-      [propertyId, req.user.userId]
+       WHERE property_id = $1`,
+      [propertyId]
     );
 
-    // Create approval chain record
-    await pool.query(
+    // ✅ STEP 3: CREATE APPROVAL CHAIN RECORD
+    await client.query(
       `INSERT INTO approval_chain 
        (property_id, approver_user_id, approver_role, action, comments)
        VALUES ($1, $2, $3, $4, $5)`,
       [propertyId, req.user.userId, 'DC', 'APPROVED', comments]
     );
 
-    // Create blockchain record
-    try {
-      await createBlockchainRecord(
-        propertyId,
-        'PROPERTY_APPROVED_BY_DC',
-        { propertyId, comments },
-        req.user.userId
-      );
-    } catch (blockchainError) {
-      console.error("⚠️ Blockchain error (non-critical):", blockchainError.message);
-    }
-
-    // Create audit log
-    await pool.query(
+    // ✅ STEP 4: CREATE AUDIT LOG
+    await client.query(
       `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
        VALUES ($1, $2, $3, $4, $5)`,
       [
         req.user.userId,
         'PROPERTY_APPROVED_BY_DC',
         propertyId,
-        JSON.stringify({ propertyId, comments }),
+        JSON.stringify({ 
+          propertyId, 
+          comments,
+          blockchainMined: true,
+          blockHash: newBlock.blockchain_hash,
+          blockIndex: newBlock.block_index,
+          consensusMechanism: "Proof of Authority (PoA)"
+        }),
         req.ip || 'unknown'
       ]
     );
 
+    // Commit transaction
+    await client.query('COMMIT');
+
+    console.log("=".repeat(60));
+    console.log("✅ APPROVAL SUCCESSFUL - PROPERTY REGISTERED ON BLOCKCHAIN");
+    console.log("=".repeat(60) + "\n");
+
+    // Return success with blockchain info
     return res.json({
       success: true,
-      message: "Property approved successfully. Now visible to citizen.",
+      message: "✅ Property approved and successfully mined to blockchain!",
       propertyId,
-      status: 'APPROVED'
+      status: 'APPROVED',
+      blockchain: {
+        blockIndex: newBlock.block_index,
+        blockHash: newBlock.blockchain_hash,
+        previousHash: newBlock.previous_hash,
+        nonce: newBlock.nonce,
+        minedAt: newBlock.mined_at,
+        minedBy: req.user.userId,
+        validatorRole: 'DC'
+      },
+      consensusMechanism: "Proof of Authority (PoA)",
+      validator: {
+        userId: req.user.userId,
+        role: 'DC',
+        approvedAt: new Date().toISOString()
+      }
     });
 
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Error approving property:", err);
+    console.log("=".repeat(60));
+    console.log("❌ APPROVAL FAILED - TRANSACTION ROLLED BACK");
+    console.log("=".repeat(60) + "\n");
+    
     return res.status(500).json({
       success: false,
       message: "Server error: " + err.message
     });
+  } finally {
+    client.release();
   }
 });
 
@@ -1465,6 +1563,372 @@ router.get("/history/:propertyId", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Get property history error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+// =====================================================
+// ADMIN: GET ALL PROPERTIES (Including Blockchain Status)
+// Add this route to property.js for admin dashboard
+// =====================================================
+
+router.get("/admin/all-properties", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        bl.block_index,
+        bl.blockchain_hash,
+        bl.nonce,
+        bl.mined_at,
+        bl.mined_by,
+        miner.name as miner_name,
+        CASE 
+          WHEN bl.blockchain_hash IS NOT NULL THEN true
+          ELSE false
+        END as is_mined
+      FROM properties p
+      LEFT JOIN blockchain_ledger bl ON p.property_id = bl.property_id
+      LEFT JOIN users miner ON bl.mined_by = miner.user_id
+      ORDER BY 
+        CASE 
+          WHEN p.status = 'APPROVED' AND bl.blockchain_hash IS NOT NULL THEN 1
+          WHEN p.status = 'APPROVED' THEN 2
+          WHEN p.status = 'PENDING' THEN 3
+          ELSE 4
+        END,
+        p.created_at DESC
+    `);
+
+    return res.json({
+      success: true,
+      totalProperties: result.rows.length,
+      minedProperties: result.rows.filter(p => p.is_mined).length,
+      properties: result.rows
+    });
+
+  } catch (err) {
+    console.error("❌ Get all properties error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+// =====================================================
+// ADMIN: GET PROPERTY STATS (Including Blockchain)
+// =====================================================
+
+router.get("/admin/property-stats", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
+      });
+    }
+
+    const pendingCount = await pool.query(
+      "SELECT COUNT(*) as count FROM properties WHERE status = 'PENDING'"
+    );
+
+    const approvedCount = await pool.query(
+      "SELECT COUNT(*) as count FROM properties WHERE status = 'APPROVED'"
+    );
+
+    const rejectedCount = await pool.query(
+      "SELECT COUNT(*) as count FROM properties WHERE status = 'REJECTED'"
+    );
+
+    const minedCount = await pool.query(
+      "SELECT COUNT(*) as count FROM blockchain_ledger"
+    );
+
+    const unminedApproved = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM properties p
+      LEFT JOIN blockchain_ledger bl ON p.property_id = bl.property_id
+      WHERE p.status = 'APPROVED' AND bl.blockchain_hash IS NULL
+    `);
+
+    return res.json({
+      success: true,
+      stats: {
+        pending: parseInt(pendingCount.rows[0].count),
+        approved: parseInt(approvedCount.rows[0].count),
+        rejected: parseInt(rejectedCount.rows[0].count),
+        minedToBlockchain: parseInt(minedCount.rows[0].count),
+        approvedButUnmined: parseInt(unminedApproved.rows[0].count)
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Get stats error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+// =====================================================
+// ADMIN: GET PENDING PROPERTIES
+// =====================================================
+
+router.get("/admin/pending-properties", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        officer.name as added_by_officer_name
+      FROM properties p
+      LEFT JOIN users officer ON p.added_by_officer_id = officer.user_id
+      WHERE p.status = 'PENDING'
+      ORDER BY p.created_at DESC
+    `);
+
+    return res.json({
+      success: true,
+      totalPending: result.rows.length,
+      properties: result.rows
+    });
+
+  } catch (err) {
+    console.error("❌ Get pending properties error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+// =====================================================
+// ADMIN: APPROVE PROPERTY
+// =====================================================
+
+router.post("/admin/approve-property", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
+      });
+    }
+
+    const { propertyId } = req.body;
+
+    await pool.query(
+      `UPDATE properties 
+       SET status = 'APPROVED', 
+           updated_at = NOW()
+       WHERE property_id = $1`,
+      [propertyId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Property approved successfully"
+    });
+
+  } catch (err) {
+    console.error("❌ Approve property error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+// =====================================================
+// ADMIN: REJECT PROPERTY
+// =====================================================
+
+router.post("/admin/reject-property", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
+      });
+    }
+
+    const { propertyId, reason } = req.body;
+
+    await pool.query(
+      `UPDATE properties 
+       SET status = 'REJECTED',
+           rejection_reason = $1,
+           updated_at = NOW()
+       WHERE property_id = $2`,
+      [reason, propertyId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Property rejected successfully"
+    });
+
+  } catch (err) {
+    console.error("❌ Reject property error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+router.post("/dc-approve", authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, comments } = req.body;
+    const userRole = req.user.role.toUpperCase();
+    
+    if (userRole !== 'DC') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied" 
+      });
+    }
+
+    if (!propertyId) {
+      return res.status(400).json({
+        success: false,
+        message: "Property ID required"
+      });
+    }
+
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ DC FINAL APPROVAL - AUTO MINING INITIATED");
+    console.log("=".repeat(60));
+    console.log("Property ID:", propertyId);
+    console.log("Approved by:", req.user.userId);
+
+    // Update property to APPROVED
+    await pool.query(
+      `UPDATE properties 
+       SET status = 'APPROVED', 
+           current_approver_role = NULL,
+           updated_at = NOW()
+       WHERE property_id = $1 AND assigned_dc_id = $2`,
+      [propertyId, req.user.userId]
+    );
+
+    // Create approval chain record
+    await pool.query(
+      `INSERT INTO approval_chain 
+       (property_id, approver_user_id, approver_role, action, comments)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [propertyId, req.user.userId, 'DC', 'APPROVED', comments]
+    );
+
+    // ✅ AUTO-MINE TO BLOCKCHAIN (Proof of Authority Consensus)
+    let blockchainResult = null;
+    try {
+      console.log("⛏️  Mining property to blockchain using Proof of Authority...");
+      
+      // Get property data for mining
+      const propertyData = await pool.query(
+        "SELECT * FROM properties WHERE property_id = $1",
+        [propertyId]
+      );
+
+      if (propertyData.rows.length > 0) {
+        const property = propertyData.rows[0];
+        
+        // Mine the block - DC is the authority validator
+        const newBlock = await blockchainService.mineBlock(property, req.user.userId);
+        
+        blockchainResult = {
+          blockIndex: newBlock.block_index,
+          blockHash: newBlock.blockchain_hash,
+          previousHash: newBlock.previous_hash,
+          nonce: newBlock.nonce,
+          minedAt: newBlock.mined_at,
+          minedBy: req.user.userId,
+          validatorRole: 'DC' // Proof of Authority - DC is the validator
+        };
+
+        console.log("✅ Property mined to blockchain successfully!");
+        console.log("   Block Index:", newBlock.block_index);
+        console.log("   Block Hash:", newBlock.blockchain_hash.substring(0, 20) + "...");
+        console.log("   Nonce:", newBlock.nonce);
+        console.log("   Validator:", req.user.userId, "(DC - Authority)");
+        console.log("   Mining Time:", new Date(newBlock.mined_at).toLocaleString());
+      }
+    } catch (blockchainError) {
+      console.error("❌ Blockchain mining error:", blockchainError.message);
+      // Property is still approved even if mining fails
+      // We log this for admin review
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          req.user.userId,
+          'BLOCKCHAIN_MINING_FAILED',
+          propertyId,
+          JSON.stringify({ error: blockchainError.message }),
+          req.ip || 'unknown'
+        ]
+      );
+    }
+
+    // Create audit log for approval
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        req.user.userId,
+        'PROPERTY_APPROVED_BY_DC',
+        propertyId,
+        JSON.stringify({ 
+          propertyId, 
+          comments,
+          blockchainMined: blockchainResult !== null,
+          blockHash: blockchainResult?.blockHash,
+          blockIndex: blockchainResult?.blockIndex
+        }),
+        req.ip || 'unknown'
+      ]
+    );
+
+    console.log("=".repeat(60) + "\n");
+
+    // Return success with blockchain info
+    return res.json({
+      success: true,
+      message: blockchainResult 
+        ? "Property approved and successfully mined to blockchain!" 
+        : "Property approved. Blockchain mining pending.",
+      propertyId,
+      status: 'APPROVED',
+      blockchain: blockchainResult,
+      consensusMechanism: "Proof of Authority (PoA)",
+      validator: {
+        userId: req.user.userId,
+        role: 'DC',
+        approvedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error approving property:", err);
     return res.status(500).json({
       success: false,
       message: "Server error: " + err.message

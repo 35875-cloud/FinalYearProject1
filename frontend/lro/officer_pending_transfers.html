@@ -165,6 +165,12 @@
     border-radius: 20px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.08);
   }
+  .challan-preview {
+    background: #e3f2fd;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
 </style>
 </head>
 <body>
@@ -187,15 +193,15 @@
     <h1 class="page-title">
       <i class="fas fa-exchange-alt me-2"></i>Pending Property Transfers
     </h1>
-    <p class="text-muted mb-0">Review and approve property ownership transfers</p>
+    <p class="text-muted mb-0">Review payment challans and approve property ownership transfers</p>
   </div>
 
   <div class="info-box">
     <h6 style="color: var(--secondary); font-weight: 700;">
-      <i class="fas fa-info-circle me-2"></i>How Transfer Approval Works
+      <i class="fas fa-info-circle me-2"></i>Transfer Approval Process
     </h6>
     <p class="mb-0">
-      <strong>For LRO, TEHSILDAR & ADMIN:</strong> Buyers enter the exact payment amount instead of uploading challans. Once you approve a transfer, the property ownership will be transferred from the seller to the buyer. The buyer will see the property in their "My Properties" page, and the seller will no longer have access to it.
+      <strong>As LRO/Tehsildar:</strong> Buyers have uploaded their payment challans. Review each challan carefully to verify the payment. Once you approve a transfer, the property ownership will be immediately transferred from the seller to the buyer. The buyer will see the full property details in their "My Properties" page, and the seller will no longer have access to it.
     </p>
   </div>
 
@@ -301,6 +307,10 @@ function renderTransfers(transfers) {
             <div class="detail-label">CNIC</div>
             <div class="detail-value">${formatCNIC(t.seller_cnic)}</div>
           </div>
+          <div class="detail-item">
+            <div class="detail-label">Father Name</div>
+            <div class="detail-value">${t.seller_father_name || 'N/A'}</div>
+          </div>
         </div>
       </div>
 
@@ -317,6 +327,10 @@ function renderTransfers(transfers) {
           <div class="detail-item">
             <div class="detail-label">CNIC</div>
             <div class="detail-value">${formatCNIC(t.buyer_cnic)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Father Name</div>
+            <div class="detail-value">${t.buyer_father_name || 'N/A'}</div>
           </div>
         </div>
       </div>
@@ -335,12 +349,28 @@ function renderTransfers(transfers) {
           <div class="detail-value">${t.district}, ${t.tehsil}</div>
         </div>
         <div class="detail-item">
+          <div class="detail-label">Fard No</div>
+          <div class="detail-value">${t.fard_no || t.khewat_no || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Khasra No</div>
+          <div class="detail-value">${t.khasra_no || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Khatooni No</div>
+          <div class="detail-value">${t.khatooni_no || 'N/A'}</div>
+        </div>
+        <div class="detail-item">
           <div class="detail-label">Transfer Amount</div>
           <div class="detail-value">PKR ${(t.transfer_amount || 0).toLocaleString()}</div>
         </div>
         <div class="detail-item">
+          <div class="detail-label">Property Tax (Buyer)</div>
+          <div class="detail-value">PKR ${(t.property_tax_buyer || 0).toLocaleString()}</div>
+        </div>
+        <div class="detail-item">
           <div class="detail-label">Total Amount</div>
-          <div class="detail-value">PKR ${(t.total_amount || 0).toLocaleString()}</div>
+          <div class="detail-value text-success">PKR ${(t.total_amount || 0).toLocaleString()}</div>
         </div>
         <div class="detail-item">
           <div class="detail-label">Initiated On</div>
@@ -348,15 +378,41 @@ function renderTransfers(transfers) {
         </div>
       </div>
 
-      ${t.paid_amount ? `
-        <div class="alert alert-success">
-          <i class="fas fa-check-circle me-2"></i>
-          <strong>Payment Completed:</strong> PKR ${parseFloat(t.paid_amount).toLocaleString()}
-          <small class="d-block mt-1">Buyer has entered the exact payment amount</small>
+      ${t.paid_amount && t.payment_challan_url ? `
+        <div class="challan-preview">
+          <h6 class="fw-bold mb-3">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Payment Challan Details
+          </h6>
+          <div class="alert alert-success mb-3">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Payment Amount:</strong> PKR ${parseFloat(t.paid_amount).toLocaleString()}
+            <br>
+            <small class="d-block mt-1">
+              <i class="fas fa-clock me-1"></i>Submitted on: ${t.payment_uploaded_at ? formatDate(t.payment_uploaded_at) : 'N/A'}
+            </small>
+          </div>
+          <a href="${t.payment_challan_url}" target="_blank" class="btn btn-primary">
+            <i class="fas fa-external-link-alt me-2"></i>View Payment Challan in New Tab
+          </a>
+          <small class="d-block text-muted mt-2">
+            <i class="fas fa-info-circle me-1"></i>Click to verify the payment details before approving
+          </small>
         </div>
-      ` : ''}
+      ` : t.paid_amount ? `
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Payment Recorded:</strong> PKR ${parseFloat(t.paid_amount).toLocaleString()}
+          <br>
+          <small class="d-block mt-1">No challan URL available</small>
+        </div>
+      ` : `
+        <div class="alert alert-info">
+          <i class="fas fa-clock me-2"></i>
+          Waiting for buyer to upload payment challan
+        </div>
+      `}
 
-      <div class="d-flex gap-2 flex-wrap">
+      <div class="d-flex gap-2 flex-wrap mt-3">
         <button class="btn-approve" onclick="approveTransfer('${t.transfer_id}', '${t.property_id}', '${t.buyer_name}')">
           <i class="fas fa-check me-2"></i>Approve Transfer
         </button>
@@ -374,6 +430,8 @@ async function approveTransfer(transferId, propertyId, buyerName) {
     return;
   }
 
+  const approvalNotes = prompt('Optional: Enter approval notes or comments:');
+
   try {
     console.log('✅ Approving transfer:', transferId);
     
@@ -383,14 +441,17 @@ async function approveTransfer(transferId, propertyId, buyerName) {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ transferId })
+      body: JSON.stringify({ 
+        transferId,
+        approvalNotes: approvalNotes || 'Transfer approved by officer'
+      })
     });
 
     const result = await response.json();
     console.log('Approval result:', result);
 
     if (result.success) {
-      alert(`✅ Transfer Approved Successfully!\n\nProperty: ${propertyId}\nNew Owner: ${buyerName}\nNew Owner ID: ${result.newOwnerId}\n\nOwnership has been transferred. The buyer can now see this property in their "My Properties" page.`);
+      alert(`✅ Transfer Approved Successfully!\n\nProperty: ${propertyId}\nNew Owner: ${buyerName}\nNew Owner ID: ${result.newOwnerId}\n\n🎉 Ownership has been transferred. The buyer can now see this property in their "My Properties" page with full details.`);
       loadPendingTransfers(); // Reload the list
     } else {
       alert('❌ Error: ' + result.message);

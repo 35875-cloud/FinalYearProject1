@@ -1,9 +1,7 @@
 // =====================================================
-// ENHANCED TRANSFER ROUTES - With Buyer Validation
+// ENHANCED TRANSFER ROUTES - Complete Property Transfer Workflow
 // Location: backend/src/routes/transfer.js
-// FIXED: Uses property_transactions table instead of blockchain_ledger
 // =====================================================
-
 import express from "express";
 const router = express.Router();
 import pool from "../config/db.js";
@@ -31,7 +29,15 @@ function authenticateToken(req, res, next) {
 }
 
 // =====================================================
-// 🆕 VERIFY BUYER - Check if buyer exists and validate info
+// UTILITY FUNCTIONS
+// =====================================================
+function formatCNIC(cnic) {
+  if (!cnic || cnic.length !== 13) return cnic;
+  return `${cnic.slice(0, 5)}-${cnic.slice(5, 12)}-${cnic.slice(12)}`;
+}
+
+// =====================================================
+// 1️⃣ VERIFY BUYER - Check if buyer exists
 // =====================================================
 router.post("/verify-buyer", authenticateToken, async (req, res) => {
   try {
@@ -44,7 +50,6 @@ router.post("/verify-buyer", authenticateToken, async (req, res) => {
       });
     }
 
-    // Clean CNIC
     const cleanedCnic = buyerCnic.replace(/\D/g, "");
 
     if (cleanedCnic.length !== 13) {
@@ -58,7 +63,6 @@ router.post("/verify-buyer", authenticateToken, async (req, res) => {
     console.log("🔍 VERIFYING BUYER");
     console.log("CNIC:", cleanedCnic);
 
-    // Check if buyer exists in the system
     const buyerResult = await pool.query(
       `SELECT user_id, name, cnic, father_name, email, mobile, role 
        FROM users 
@@ -82,7 +86,6 @@ router.post("/verify-buyer", authenticateToken, async (req, res) => {
     console.log("✅ Buyer found:");
     console.log("   User ID:", buyer.user_id);
     console.log("   Name:", buyer.name);
-    console.log("   Father Name:", buyer.father_name);
     console.log("========================================\n");
 
     return res.json({
@@ -109,7 +112,7 @@ router.post("/verify-buyer", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
-// 1️⃣ GET SELLER'S PROPERTIES (for dropdown)
+// 2️⃣ GET SELLER'S PROPERTIES (for dropdown)
 // =====================================================
 router.get("/seller-properties", authenticateToken, async (req, res) => {
   try {
@@ -150,10 +153,14 @@ router.get("/seller-properties", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
-// 2️⃣ INITIATE TRANSFER - WITH BUYER VALIDATION
+// 3️⃣ INITIATE TRANSFER - Create transfer application
 // =====================================================
 router.post("/initiate", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+
     console.log("\n========================================");
     console.log("📄 INITIATE TRANSFER REQUEST");
     console.log("========================================");
@@ -168,17 +175,13 @@ router.post("/initiate", authenticateToken, async (req, res) => {
 
     // Validation
     if (!propertyId || !buyerCnic || !buyerName || !transferAmount || !durationDays) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields required: propertyId, buyerCnic, buyerName, transferAmount, durationDays"
-      });
+      throw new Error("All fields required: propertyId, buyerCnic, buyerName, transferAmount, durationDays");
     }
 
-    // Clean CNIC
     const cleanedCnic = buyerCnic.replace(/\D/g, "");
 
-    // ✅ CRITICAL VALIDATION: Check if buyer exists and info matches
-    const buyerCheck = await pool.query(
+    // Verify buyer exists
+    const buyerCheck = await client.query(
       `SELECT user_id, name, father_name, cnic 
        FROM users 
        WHERE cnic = $1 AND role = 'CITIZEN' AND is_active = TRUE`,
@@ -186,57 +189,36 @@ router.post("/initiate", authenticateToken, async (req, res) => {
     );
 
     if (buyerCheck.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "❌ Buyer with CNIC " + formatCNIC(cleanedCnic) + " is not registered as a citizen. Please ask the buyer to register first."
-      });
+      throw new Error(`Buyer with CNIC ${formatCNIC(cleanedCnic)} is not registered. Please ask the buyer to register first.`);
     }
 
     const registeredBuyer = buyerCheck.rows[0];
 
-    // ✅ VALIDATE NAME MATCH (case-insensitive)
+    // Validate name match
     const normalizedInputName = buyerName.trim().toLowerCase();
     const normalizedRegisteredName = registeredBuyer.name.trim().toLowerCase();
 
     if (normalizedInputName !== normalizedRegisteredName) {
-      return res.status(400).json({
-        success: false,
-        message: `❌ Name mismatch! The name you entered "${buyerName}" does not match the registered name "${registeredBuyer.name}" for CNIC ${formatCNIC(cleanedCnic)}. Please verify the buyer's information.`
-      });
+      throw new Error(`Name mismatch! Entered "${buyerName}" does not match registered name "${registeredBuyer.name}"`);
     }
 
-    console.log("✅ Buyer validated:");
-    console.log("   User ID:", registeredBuyer.user_id);
-    console.log("   Name:", registeredBuyer.name);
-    console.log("   Father Name:", registeredBuyer.father_name);
-    console.log("   CNIC:", cleanedCnic);
+    console.log("✅ Buyer validated:", registeredBuyer.name);
 
-    // Verify seller owns the property
-    const propertyCheck = await pool.query(
+    // Verify seller owns property
+    const propertyCheck = await client.query(
       `SELECT * FROM properties 
-       WHERE property_id = $1 AND owner_id = $2`,
+       WHERE property_id = $1 AND owner_id = $2 AND status = 'APPROVED'`,
       [propertyId, req.user.userId]
     );
 
     if (propertyCheck.rows.length === 0) {
-      return res.status(403).json({
-        success: false,
-        message: "Property not found or you don't own it"
-      });
+      throw new Error("Property not found or you don't own it");
     }
 
     const property = propertyCheck.rows[0];
 
-    // Check property status
-    if (property.status !== 'APPROVED') {
-      return res.status(400).json({
-        success: false,
-        message: "Only approved properties can be transferred"
-      });
-    }
-
-    // Check if property already has pending transfer
-    const existingTransfer = await pool.query(
+    // Check for pending transfers
+    const existingTransfer = await client.query(
       `SELECT * FROM transfer_requests 
        WHERE property_id = $1 
        AND status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')`,
@@ -244,39 +226,37 @@ router.post("/initiate", authenticateToken, async (req, res) => {
     );
 
     if (existingTransfer.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "This property already has a pending transfer request"
-      });
+      throw new Error("This property already has a pending transfer request");
     }
 
-    // Calculate taxes (2% of transfer amount)
+    // Calculate taxes (2% each)
     const propertyTaxBuyer = parseFloat((transferAmount * 0.02).toFixed(2));
     const propertyTaxSeller = parseFloat((transferAmount * 0.02).toFixed(2));
-    const totalAmount = parseFloat((parseFloat(transferAmount) + propertyTaxBuyer + propertyTaxSeller).toFixed(2));
+    const totalAmount = parseFloat(transferAmount) + propertyTaxBuyer;
 
-    // Set expiration date
+    // Calculate expiry date
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + parseInt(durationDays));
 
     // Generate transfer ID
-    const transferId = `TRF-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const transferId = `TR-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-    // Insert transfer request
-    await pool.query(
-      `INSERT INTO transfer_requests 
-       (transfer_id, property_id, seller_id, buyer_id, buyer_name, buyer_cnic, buyer_father_name,
-        transfer_amount, property_tax_buyer, property_tax_seller, total_amount, 
-        status, expires_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PAYMENT_PENDING', $12, NOW(), NOW())`,
+    // Create transfer request
+    const transferResult = await client.query(
+      `INSERT INTO transfer_requests (
+        transfer_id, property_id, seller_id, buyer_id, buyer_name, buyer_cnic, buyer_father_name,
+        transfer_amount, property_tax_buyer, property_tax_seller, total_amount,
+        status, expires_at, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PAYMENT_PENDING', $12, NOW())
+      RETURNING *`,
       [
         transferId,
         propertyId,
         req.user.userId,
-        registeredBuyer.user_id, // ✅ Store buyer's user_id
+        registeredBuyer.user_id,
         registeredBuyer.name,
         cleanedCnic,
-        registeredBuyer.father_name || '',
+        registeredBuyer.father_name,
         transferAmount,
         propertyTaxBuyer,
         propertyTaxSeller,
@@ -285,94 +265,83 @@ router.post("/initiate", authenticateToken, async (req, res) => {
       ]
     );
 
-    console.log("✅ Transfer request created:", transferId);
-    console.log("   Buyer User ID:", registeredBuyer.user_id);
+    // Audit log
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+       VALUES ($1, 'TRANSFER_INITIATED', $2, $3, $4)`,
+      [
+        req.user.userId,
+        transferId,
+        JSON.stringify({ propertyId, buyerId: registeredBuyer.user_id, amount: transferAmount }),
+        req.ip || 'unknown'
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    console.log("✅ Transfer initiated successfully");
+    console.log("Transfer ID:", transferId);
+    console.log("Expires at:", expiresAt);
     console.log("========================================\n");
 
     return res.json({
       success: true,
       message: "Transfer request created successfully",
-      transferId,
-      expiresAt,
-      totalAmount,
-      propertyTaxBuyer,
-      propertyTaxSeller,
-      buyerUserId: registeredBuyer.user_id
+      transfer: transferResult.rows[0]
     });
 
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Initiate transfer error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
+  } finally {
+    client.release();
   }
 });
 
 // =====================================================
-// 3️⃣ GET SELLER'S PENDING TRANSFERS
-// =====================================================
-router.get("/seller-pending", authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        tr.*,
-        p.fard_no,
-        p.khasra_no,
-        p.khatooni_no,
-        p.district,
-        p.tehsil,
-        p.area_marla,
-        p.property_type
-       FROM transfer_requests tr
-       LEFT JOIN properties p ON tr.property_id = p.property_id
-       WHERE tr.seller_id = $1
-       ORDER BY tr.created_at DESC`,
-      [req.user.userId]
-    );
-
-    return res.json({
-      success: true,
-      transfers: result.rows,
-      total: result.rows.length
-    });
-
-  } catch (err) {
-    console.error("❌ Error fetching seller transfers:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message
-    });
-  }
-});
-
-// =====================================================
-// 4️⃣ GET BUYER'S PENDING TRANSFERS
+// 4️⃣ BUYER: Get Pending Transfer Applications (Limited View)
 // =====================================================
 router.get("/buyer-pending", authenticateToken, async (req, res) => {
   try {
     console.log("\n========================================");
-    console.log("🔍 FETCHING BUYER'S PENDING TRANSFERS");
-    console.log("User ID:", req.user.userId);
+    console.log("👤 FETCHING BUYER'S PENDING TRANSFERS");
+    console.log("Buyer ID:", req.user.userId);
 
     const result = await pool.query(
       `SELECT 
-        tr.*,
-        p.fard_no,
-        p.khasra_no,
-        p.khatooni_no,
+        tr.transfer_id,
+        tr.property_id,
+        tr.buyer_name,
+        tr.buyer_cnic,
+        tr.transfer_amount,
+        tr.property_tax_buyer,
+        tr.total_amount,
+        tr.status,
+        tr.expires_at,
+        tr.created_at,
+        tr.paid_amount,
+        tr.payment_challan_url,
+        
+        -- Limited property info (buyer can see basic details only)
         p.district,
         p.tehsil,
         p.area_marla,
         p.property_type,
+        
         seller.name as seller_name,
         seller.cnic as seller_cnic,
         seller.mobile as seller_mobile
+        
        FROM transfer_requests tr
        LEFT JOIN properties p ON tr.property_id = p.property_id
        LEFT JOIN users seller ON tr.seller_id = seller.user_id
        WHERE tr.buyer_id = $1 
        AND tr.status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
+       AND tr.expires_at > NOW()
        ORDER BY tr.created_at DESC`,
       [req.user.userId]
     );
@@ -383,7 +352,8 @@ router.get("/buyer-pending", authenticateToken, async (req, res) => {
     return res.json({
       success: true,
       transfers: result.rows,
-      total: result.rows.length
+      total: result.rows.length,
+      message: "Note: You can see limited property details until transfer is approved"
     });
 
   } catch (err) {
@@ -396,114 +366,153 @@ router.get("/buyer-pending", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
-// 5️⃣ BUYER ENTERS PAYMENT (Simplified - No Upload)
+// 5️⃣ BUYER: Upload Payment Challan
 // =====================================================
-router.post("/enter-payment", authenticateToken, async (req, res) => {
+router.post("/upload-payment", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
   try {
-    const { transferId, paidAmount } = req.body;
-
-    if (!transferId || !paidAmount) {
-      return res.status(400).json({
-        success: false,
-        message: "Transfer ID and paid amount required"
-      });
-    }
+    await client.query('BEGIN');
 
     console.log("\n========================================");
-    console.log("💰 BUYER ENTERING PAYMENT");
-    console.log("Transfer ID:", transferId);
-    console.log("Paid Amount:", paidAmount);
-    console.log("User ID:", req.user.userId);
+    console.log("💳 BUYER UPLOADING PAYMENT CHALLAN");
+    console.log("========================================");
 
-    // Verify transfer exists and belongs to this buyer
-    const transferCheck = await pool.query(
-      `SELECT * FROM transfer_requests WHERE transfer_id = $1 AND buyer_id = $2`,
+    const { transferId, paidAmount, challanUrl } = req.body;
+
+    if (!transferId || !paidAmount || !challanUrl) {
+      throw new Error("Transfer ID, paid amount, and challan URL required");
+    }
+
+    // Verify transfer belongs to this buyer
+    const transferCheck = await client.query(
+      `SELECT * FROM transfer_requests 
+       WHERE transfer_id = $1 AND buyer_id = $2 AND status = 'PAYMENT_PENDING'`,
       [transferId, req.user.userId]
     );
 
     if (transferCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Transfer not found or you're not the buyer"
-      });
+      throw new Error("Transfer not found or payment already uploaded");
     }
 
     const transfer = transferCheck.rows[0];
 
-    // Check if payment matches total amount
-    if (parseFloat(paidAmount) !== parseFloat(transfer.total_amount)) {
-      return res.status(400).json({
-        success: false,
-        message: `Payment amount (${paidAmount}) must match total amount (${transfer.total_amount})`
-      });
+    // Verify amount matches (with small tolerance for rounding)
+    const amountDifference = Math.abs(parseFloat(paidAmount) - parseFloat(transfer.total_amount));
+    if (amountDifference > 0.01) {
+      throw new Error(`Payment amount mismatch. Expected: ${transfer.total_amount}, Received: ${paidAmount}`);
     }
 
-    // Update transfer status
-    await pool.query(
+    // Update transfer with payment details
+    await client.query(
       `UPDATE transfer_requests 
-       SET status = 'PAYMENT_VERIFIED',
+       SET status = 'PAYMENT_UPLOADED',
            paid_amount = $1,
+           payment_challan_url = $2,
            payment_uploaded_at = NOW(),
-           payment_verified_at = NOW(),
            updated_at = NOW()
-       WHERE transfer_id = $2`,
-      [paidAmount, transferId]
+       WHERE transfer_id = $3`,
+      [paidAmount, challanUrl, transferId]
     );
 
-    console.log("✅ Payment recorded successfully");
+    // Audit log
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+       VALUES ($1, 'PAYMENT_UPLOADED', $2, $3, $4)`,
+      [
+        req.user.userId,
+        transferId,
+        JSON.stringify({ paidAmount, challanUrl }),
+        req.ip || 'unknown'
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    console.log("✅ Payment challan uploaded successfully");
+    console.log("Amount:", paidAmount);
     console.log("========================================\n");
 
     return res.json({
       success: true,
-      message: "Payment recorded. Waiting for officer approval."
+      message: "Payment challan uploaded successfully. Awaiting LRO verification.",
+      transferId: transferId
     });
 
   } catch (err) {
-    console.error("❌ Enter payment error:", err);
+    await client.query('ROLLBACK');
+    console.error("❌ Upload payment error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
+  } finally {
+    client.release();
   }
 });
 
 // =====================================================
-// 6️⃣ GET OFFICER'S PENDING TRANSFERS
+// 6️⃣ LRO: Get Pending Transfers for Approval
 // =====================================================
 router.get("/officer-pending", authenticateToken, async (req, res) => {
   try {
     const userRole = req.user.role.toUpperCase();
 
     if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Officer access required."
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Only LRO/Tehsildar/Admin can view pending transfers." 
       });
     }
 
     console.log("\n========================================");
-    console.log("🏛️ FETCHING OFFICER'S PENDING TRANSFERS");
-    console.log("Officer:", req.user.userId, "(", userRole, ")");
+    console.log("👮 FETCHING PENDING TRANSFERS FOR OFFICER");
+    console.log("Officer ID:", req.user.userId);
+    console.log("Officer Role:", userRole);
 
     const result = await pool.query(
       `SELECT 
-        tr.*,
+        tr.transfer_id,
+        tr.property_id,
+        tr.buyer_name,
+        tr.buyer_cnic,
+        tr.buyer_father_name,
+        tr.transfer_amount,
+        tr.property_tax_buyer,
+        tr.property_tax_seller,
+        tr.total_amount,
+        tr.status,
+        tr.expires_at,
+        tr.created_at,
+        tr.paid_amount,
+        tr.payment_challan_url,
+        tr.payment_uploaded_at,
+        
+        -- Full property details
         p.fard_no,
+        p.khewat_no,
         p.khasra_no,
         p.khatooni_no,
         p.district,
         p.tehsil,
+        p.mauza,
         p.area_marla,
         p.property_type,
-        p.owner_id as current_owner_id,
         p.owner_name as current_owner_name,
+        p.owner_cnic as current_owner_cnic,
+        
         seller.name as seller_name,
-        seller.cnic as seller_cnic
+        seller.cnic as seller_cnic,
+        seller.mobile as seller_mobile,
+        seller.father_name as seller_father_name
+        
        FROM transfer_requests tr
        LEFT JOIN properties p ON tr.property_id = p.property_id
        LEFT JOIN users seller ON tr.seller_id = seller.user_id
        WHERE tr.status IN ('PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
-       ORDER BY tr.created_at DESC`
+       AND tr.expires_at > NOW()
+       ORDER BY tr.payment_uploaded_at ASC`,
+      []
     );
 
     console.log("✅ Found", result.rows.length, "pending transfer(s)");
@@ -525,283 +534,214 @@ router.get("/officer-pending", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
-// 7️⃣ APPROVE TRANSFER - FIXED TO USE property_transactions
+// 7️⃣ LRO: APPROVE TRANSFER - Transfer Property Ownership
 // =====================================================
 router.post("/approve", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
   try {
-    const { transferId } = req.body;
-    const userRole = req.user.role.toUpperCase();
+    await client.query('BEGIN');
 
+    const userRole = req.user.role.toUpperCase();
     if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Only officers can approve transfers."
-      });
+      throw new Error("Access denied. Only LRO/Tehsildar/Admin can approve transfers.");
     }
 
     console.log("\n========================================");
-    console.log("✅ APPROVING TRANSFER:", transferId, "by", req.user.userId);
+    console.log("✅ APPROVING PROPERTY TRANSFER");
+    console.log("========================================");
+
+    const { transferId, approvalNotes } = req.body;
 
     if (!transferId) {
-      return res.status(400).json({
-        success: false,
-        message: "Transfer ID is required"
-      });
+      throw new Error("Transfer ID required");
     }
 
-    // Get transfer details with full info
-    const transferResult = await pool.query(
-      `SELECT 
-        tr.*,
-        p.owner_id as current_owner_id,
-        p.owner_name as current_owner_name,
-        p.owner_cnic as current_owner_cnic
+    // Get transfer details
+    const transferResult = await client.query(
+      `SELECT tr.*, p.*, u.name as buyer_full_name, u.father_name as buyer_father_name
        FROM transfer_requests tr
        LEFT JOIN properties p ON tr.property_id = p.property_id
-       WHERE tr.transfer_id = $1`,
+       LEFT JOIN users u ON tr.buyer_id = u.user_id
+       WHERE tr.transfer_id = $1 
+       AND tr.status IN ('PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')`,
       [transferId]
     );
 
     if (transferResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Transfer not found"
-      });
+      throw new Error("Transfer not found or not ready for approval");
     }
 
     const transfer = transferResult.rows[0];
+    const property = transfer;
 
-    // Verify status
-    if (transfer.status !== 'PAYMENT_VERIFIED' && transfer.status !== 'PAYMENT_UPLOADED') {
-      return res.status(400).json({
-        success: false,
-        message: `Transfer cannot be approved. Current status: ${transfer.status}`
-      });
-    }
+    console.log("Property ID:", transfer.property_id);
+    console.log("Current Owner ID:", transfer.owner_id);
+    console.log("New Owner ID:", transfer.buyer_id);
+    console.log("Current Owner Name:", transfer.owner_name);
+    console.log("New Owner Name:", transfer.buyer_full_name);
 
-    // ✅ CRITICAL: Verify buyer_id exists in transfer (should always exist now)
-    if (!transfer.buyer_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid transfer: Buyer information is incomplete"
-      });
-    }
-
-    // ✅ DOUBLE CHECK: Verify buyer still exists and info matches
-    const buyerVerification = await pool.query(
-      `SELECT user_id, name, cnic, father_name 
-       FROM users 
-       WHERE user_id = $1 AND cnic = $2 AND is_active = TRUE`,
-      [transfer.buyer_id, transfer.buyer_cnic]
+    // Update property ownership (keep same property_id but change owner details)
+    await client.query(
+      `UPDATE properties 
+       SET owner_id = $1,
+           owner_name = $2,
+           owner_cnic = $3,
+           father_name = $4,
+           updated_at = NOW()
+       WHERE property_id = $5`,
+      [
+        transfer.buyer_id,
+        transfer.buyer_full_name,
+        transfer.buyer_cnic,
+        transfer.buyer_father_name,
+        transfer.property_id
+      ]
     );
 
-    if (buyerVerification.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "❌ Buyer account validation failed. The buyer may have been deactivated or deleted."
-      });
-    }
+    // Create ownership history record
+    await client.query(
+      `INSERT INTO property_ownership_history (
+        property_id, previous_owner_id, new_owner_id, 
+        transfer_type, transfer_amount, transfer_date, 
+        remarks, created_at
+      ) VALUES ($1, $2, $3, 'SALE', $4, NOW(), $5, NOW())`,
+      [
+        transfer.property_id,
+        transfer.owner_id, // Previous owner (seller)
+        transfer.buyer_id,  // New owner (buyer)
+        transfer.transfer_amount,
+        `Transfer approved by ${req.user.name || 'Officer'}. ${approvalNotes || ''}`
+      ]
+    );
 
-    const verifiedBuyer = buyerVerification.rows[0];
+    // Update transfer status to APPROVED
+    await client.query(
+      `UPDATE transfer_requests 
+       SET status = 'APPROVED',
+           approved_by = $1,
+           approved_at = NOW(),
+           approval_notes = $2,
+           updated_at = NOW()
+       WHERE transfer_id = $3`,
+      [req.user.userId, approvalNotes || 'Transfer approved', transferId]
+    );
 
-    // ✅ VALIDATE NAME MATCH AGAIN
-    if (verifiedBuyer.name.trim().toLowerCase() !== transfer.buyer_name.trim().toLowerCase()) {
-      return res.status(400).json({
-        success: false,
-        message: `❌ Critical validation error: Buyer name in transfer "${transfer.buyer_name}" does not match registered name "${verifiedBuyer.name}"`
-      });
-    }
+    // Create transaction record
+    await client.query(
+      `INSERT INTO property_transactions (
+        transaction_id, property_id, transaction_type, 
+        from_user_id, to_user_id, amount, status, 
+        transaction_date, created_at
+      ) VALUES (
+        $1, $2, 'TRANSFER', $3, $4, $5, 'COMPLETED', NOW(), NOW()
+      )`,
+      [
+        `TXN-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+        transfer.property_id,
+        transfer.owner_id,
+        transfer.buyer_id,
+        transfer.transfer_amount
+      ]
+    );
 
-    console.log("✅ Buyer validated:");
-    console.log("   User ID:", verifiedBuyer.user_id);
-    console.log("   Name:", verifiedBuyer.name);
-    console.log("   Father Name:", verifiedBuyer.father_name);
-    console.log("   CNIC:", verifiedBuyer.cnic);
-
-    // Start transaction
-    await pool.query('BEGIN');
-
-    try {
-      // STEP 1: Record ownership history
-      console.log("📝 Recording ownership history...");
-      console.log("   Previous Owner:", transfer.current_owner_name, "(", transfer.current_owner_id, ")");
-      console.log("   New Owner:", verifiedBuyer.name, "(", verifiedBuyer.user_id, ")");
-
-      await pool.query(
-        `INSERT INTO ownership_history 
-         (id, property_id, previous_owner_id, new_owner_id, transfer_type, 
-          transfer_amount, transfer_date, transfer_id)
-         VALUES ($1, $2, $3, $4, 'SALE', $5, NOW(), $6)`,
-        [
-          crypto.randomUUID(),
-          transfer.property_id,
-          transfer.current_owner_id,
-          verifiedBuyer.user_id,
-          transfer.transfer_amount,
-          transferId
-        ]
-      );
-
-      console.log("✅ Ownership history recorded");
-
-      // STEP 2: Transfer property ownership
-      await pool.query(
-        `UPDATE properties 
-         SET owner_id = $1, 
-             owner_name = $2, 
-             owner_cnic = $3, 
-             father_name = $4, 
-             updated_at = NOW()
-         WHERE property_id = $5`,
-        [
-          verifiedBuyer.user_id, 
-          verifiedBuyer.name, 
-          verifiedBuyer.cnic, 
-          verifiedBuyer.father_name || '', 
-          transfer.property_id
-        ]
-      );
-
-      console.log("✅ Property ownership transferred");
-
-      // STEP 3: Complete transfer request
-      await pool.query(
-        `UPDATE transfer_requests 
-         SET status = 'COMPLETED', 
-             completed_at = NOW(), 
-             updated_at = NOW() 
-         WHERE transfer_id = $1`,
-        [transferId]
-      );
-
-      // STEP 4: Create property transaction record (NEW - FIXED)
-      console.log("📝 Creating property transaction record...");
-      
-      const transactionData = {
+    // Audit log
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+       VALUES ($1, 'TRANSFER_APPROVED', $2, $3, $4)`,
+      [
+        req.user.userId,
         transferId,
-        previousOwner: {
-          userId: transfer.current_owner_id,
-          name: transfer.current_owner_name,
-          cnic: transfer.current_owner_cnic
-        },
-        newOwner: {
-          userId: verifiedBuyer.user_id,
-          name: verifiedBuyer.name,
-          cnic: verifiedBuyer.cnic,
-          fatherName: verifiedBuyer.father_name
-        },
-        transferAmount: transfer.transfer_amount,
-        propertyTaxBuyer: transfer.property_tax_buyer,
-        propertyTaxSeller: transfer.property_tax_seller,
-        totalAmount: transfer.total_amount,
-        approvedBy: req.user.userId,
-        approvedAt: new Date().toISOString()
-      };
+        JSON.stringify({ 
+          propertyId: transfer.property_id,
+          oldOwnerId: transfer.owner_id,
+          newOwnerId: transfer.buyer_id,
+          amount: transfer.transfer_amount
+        }),
+        req.ip || 'unknown'
+      ]
+    );
 
-      const transactionHash = crypto.createHash('sha256')
-        .update(JSON.stringify(transactionData))
-        .digest('hex');
+    await client.query('COMMIT');
 
-      const previousTransactionHash = await getLatestTransactionHash(transfer.property_id);
+    console.log("✅ Property ownership transferred successfully");
+    console.log("Property:", transfer.property_id);
+    console.log("From:", transfer.owner_name, "→ To:", transfer.buyer_full_name);
+    console.log("========================================\n");
 
-      await pool.query(
-        `INSERT INTO property_transactions 
-         (id, property_id, transaction_type, transaction_data, transaction_hash, 
-          previous_transaction_hash, creator_user_id, verified) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          crypto.randomUUID(),
-          transfer.property_id,
-          'TRANSFER',
-          JSON.stringify(transactionData),
-          transactionHash,
-          previousTransactionHash,
-          req.user.userId,
-          true
-        ]
-      );
-
-      console.log("✅ Property transaction record created");
-      console.log("   Transaction Hash:", transactionHash);
-
-      // STEP 5: Create audit log
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
-         VALUES ($1, 'TRANSFER_APPROVED', $2, $3, $4)`,
-        [
-          req.user.userId,
-          transferId,
-          JSON.stringify({ 
-            transferId, 
-            propertyId: transfer.property_id, 
-            previousOwner: transfer.current_owner_id,
-            newOwner: verifiedBuyer.user_id,
-            newOwnerName: verifiedBuyer.name,
-            transactionHash
-          }),
-          req.ip || 'unknown'
-        ]
-      );
-
-      // Commit transaction
-      await pool.query('COMMIT');
-
-      console.log("✅ TRANSFER COMPLETED - Property", transfer.property_id, "now owned by", verifiedBuyer.user_id);
-      console.log("========================================\n");
-
-      return res.json({ 
-        success: true, 
-        message: "Transfer approved and ownership changed successfully", 
-        newOwnerId: verifiedBuyer.user_id,
-        newOwnerName: verifiedBuyer.name,
-        newOwnerCnic: verifiedBuyer.cnic,
-        previousOwnerId: transfer.current_owner_id,
-        transactionHash
-      });
-
-    } catch (error) {
-      // Rollback on error
-      await pool.query('ROLLBACK');
-      throw error;
-    }
+    return res.json({
+      success: true,
+      message: "Transfer approved successfully. Property ownership has been transferred.",
+      propertyId: transfer.property_id,
+      newOwnerId: transfer.buyer_id,
+      newOwnerName: transfer.buyer_full_name
+    });
 
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Approve transfer error:", err);
-    return res.status(500).json({ success: false, message: "Server error: " + err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  } finally {
+    client.release();
   }
 });
 
 // =====================================================
-// 8️⃣ REJECT TRANSFER
+// 8️⃣ LRO: REJECT TRANSFER
 // =====================================================
 router.post("/reject", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
   try {
-    const { transferId, reason } = req.body;
-    const userRole = req.user.role.toUpperCase();
+    await client.query('BEGIN');
 
+    const userRole = req.user.role.toUpperCase();
     if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied" 
-      });
+      throw new Error("Access denied");
     }
+
+    console.log("\n========================================");
+    console.log("❌ REJECTING PROPERTY TRANSFER");
+    console.log("========================================");
+
+    const { transferId, reason } = req.body;
 
     if (!transferId || !reason) {
-      return res.status(400).json({
-        success: false,
-        message: "Transfer ID and rejection reason required"
-      });
+      throw new Error("Transfer ID and rejection reason required");
     }
 
-    await pool.query(
+    // Update transfer status
+    await client.query(
       `UPDATE transfer_requests 
        SET status = 'REJECTED',
            rejection_reason = $1,
            rejected_by = $2,
-           rejected_at = NOW()
+           rejected_at = NOW(),
+           updated_at = NOW()
        WHERE transfer_id = $3`,
       [reason, req.user.userId, transferId]
     );
+
+    // Audit log
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+       VALUES ($1, 'TRANSFER_REJECTED', $2, $3, $4)`,
+      [
+        req.user.userId,
+        transferId,
+        JSON.stringify({ reason }),
+        req.ip || 'unknown'
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    console.log("✅ Transfer rejected");
+    console.log("Reason:", reason);
+    console.log("========================================\n");
 
     return res.json({
       success: true,
@@ -809,124 +749,35 @@ router.post("/reject", authenticateToken, async (req, res) => {
     });
 
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Reject transfer error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
+  } finally {
+    client.release();
   }
 });
 
 // =====================================================
-// HELPER FUNCTIONS
+// 9️⃣ GET SELLER'S TRANSFERS
 // =====================================================
-
-// Helper function to get latest transaction hash for a property
-async function getLatestTransactionHash(propertyId) {
+router.get("/seller-transfers", authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT transaction_hash 
-       FROM property_transactions 
-       WHERE property_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT 1`,
-      [propertyId]
-    );
-    return result.rows.length > 0 ? result.rows[0].transaction_hash : null;
-  } catch (err) {
-    console.error("Error getting latest transaction hash:", err);
-    return null;
-  }
-}
-
-// Helper function to format CNIC
-function formatCNIC(cnic) {
-  if (!cnic || cnic.length !== 13) return cnic;
-  return `${cnic.slice(0,5)}-${cnic.slice(5,12)}-${cnic.slice(12)}`;
-}
-
-// =====================================================
-// 🆕 GET BUYER'S PENDING TRANSFERS BY CNIC
-// Add this route to your transfer.js file
-// =====================================================
-router.get("/pending/:cnic", authenticateToken, async (req, res) => {
-  try {
-    const { cnic } = req.params;
-    
-    console.log("\n========================================");
-    console.log("🔍 FETCHING BUYER'S PENDING TRANSFERS BY CNIC");
-    console.log("CNIC:", cnic);
-
-    // Clean CNIC
-    const cleanedCnic = cnic.replace(/\D/g, "");
-
-    if (cleanedCnic.length !== 13) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid CNIC format. Must be 13 digits."
-      });
-    }
-
-    // First, find the buyer's user_id from the CNIC
-    const buyerCheck = await pool.query(
-      `SELECT user_id FROM users WHERE cnic = $1 AND is_active = TRUE`,
-      [cleanedCnic]
-    );
-
-    if (buyerCheck.rows.length === 0) {
-      console.log("❌ No user found with CNIC:", cleanedCnic);
-      return res.json({
-        success: true,
-        transfers: [],
-        total: 0,
-        message: "No transfers found for this CNIC"
-      });
-    }
-
-    const buyerId = buyerCheck.rows[0].user_id;
-    console.log("✅ Found buyer user_id:", buyerId);
-
-    // Get all transfers for this buyer
     const result = await pool.query(
       `SELECT 
-        tr.transfer_id,
-        tr.property_id,
-        tr.buyer_name,
-        tr.buyer_cnic,
-        tr.buyer_father_name,
-        tr.transfer_amount,
-        tr.property_tax_buyer,
-        tr.property_tax_seller,
-        tr.total_amount,
-        tr.status,
-        tr.expires_at,
-        tr.created_at,
-        tr.paid_amount,
-        
-        p.fard_no,
-        p.khasra_no,
-        p.khatooni_no,
+        tr.*,
         p.district,
         p.tehsil,
         p.area_marla,
-        p.property_type,
-        
-        seller.name as seller_name,
-        seller.cnic as seller_cnic,
-        seller.mobile as seller_mobile
-        
+        p.property_type
        FROM transfer_requests tr
        LEFT JOIN properties p ON tr.property_id = p.property_id
-       LEFT JOIN users seller ON tr.seller_id = seller.user_id
-       WHERE tr.buyer_id = $1 
-       AND tr.status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
-       AND tr.expires_at > NOW()
+       WHERE tr.seller_id = $1
        ORDER BY tr.created_at DESC`,
-      [buyerId]
+      [req.user.userId]
     );
-
-    console.log("✅ Found", result.rows.length, "pending transfer(s)");
-    console.log("========================================\n");
 
     return res.json({
       success: true,
@@ -935,176 +786,44 @@ router.get("/pending/:cnic", authenticateToken, async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Error fetching buyer transfers by CNIC:", err);
+    console.error("❌ Error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
   }
 });
 
-
-// 🆕 GET OFFICER'S REJECTED TRANSFERS
 // =====================================================
-router.get("/officer-rejected", authenticateToken, async (req, res) => {
+// 🔟 CHECK TRANSFER EXPIRY (Cleanup Job)
+// =====================================================
+router.post("/cleanup-expired", authenticateToken, async (req, res) => {
   try {
     const userRole = req.user.role.toUpperCase();
-
-    // Check if user has officer privileges
-    if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Only officers can view rejected transfers." 
-      });
+    if (!['ADMIN', 'LRO'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: "Admin access required" });
     }
 
-    console.log("\n========================================");
-    console.log("📋 FETCHING REJECTED TRANSFERS FOR OFFICER");
-    console.log("User ID:", req.user.userId);
-    console.log("User Role:", userRole);
-
-    // Get all rejected transfers with property and user details
     const result = await pool.query(
-      `SELECT 
-        tr.transfer_id,
-        tr.property_id,
-        tr.buyer_name,
-        tr.buyer_cnic,
-        tr.buyer_father_name,
-        tr.transfer_amount,
-        tr.property_tax_buyer,
-        tr.property_tax_seller,
-        tr.total_amount,
-        tr.status,
-        tr.rejection_reason,
-        tr.rejected_at,
-        tr.created_at,
-        tr.paid_amount,
-        
-        p.fard_no,
-        p.khasra_no,
-        p.khatooni_no,
-        p.district,
-        p.tehsil,
-        p.area_marla,
-        p.property_type,
-        
-        seller.name as seller_name,
-        seller.cnic as seller_cnic,
-        seller.mobile as seller_mobile,
-        
-        rejected_by_user.name as rejected_by_name
-        
-       FROM transfer_requests tr
-       LEFT JOIN properties p ON tr.property_id = p.property_id
-       LEFT JOIN users seller ON tr.seller_id = seller.user_id
-       LEFT JOIN users rejected_by_user ON tr.rejected_by = rejected_by_user.user_id
-       WHERE tr.status = 'REJECTED'
-       ORDER BY tr.rejected_at DESC`,
-      []
-    );
-
-    console.log("✅ Found", result.rows.length, "rejected transfer(s)");
-    console.log("========================================\n");
-
-    return res.json({
-      success: true,
-      transfers: result.rows,
-      total: result.rows.length
-    });
-
-  } catch (err) {
-    console.error("❌ Error fetching rejected transfers:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message
-    });
-  }
-});
-
-// =====================================================
-// 🆕 RECONSIDER REJECTED TRANSFER
-// =====================================================
-router.post("/reconsider", authenticateToken, async (req, res) => {
-  try {
-    const { transferId, notes } = req.body;
-    const userRole = req.user.role.toUpperCase();
-
-    // Check if user has officer privileges
-    if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied" 
-      });
-    }
-
-    if (!transferId || !notes) {
-      return res.status(400).json({
-        success: false,
-        message: "Transfer ID and reconsideration notes required"
-      });
-    }
-
-    console.log("\n========================================");
-    console.log("🔄 RECONSIDERING REJECTED TRANSFER");
-    console.log("Transfer ID:", transferId);
-    console.log("Officer:", req.user.userId);
-    console.log("Notes:", notes);
-
-    // Check if transfer exists and is rejected
-    const transferCheck = await pool.query(
-      `SELECT * FROM transfer_requests WHERE transfer_id = $1 AND status = 'REJECTED'`,
-      [transferId]
-    );
-
-    if (transferCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Rejected transfer not found"
-      });
-    }
-
-    // Move back to PAYMENT_PENDING status
-    await pool.query(
       `UPDATE transfer_requests 
-       SET status = 'PAYMENT_PENDING',
-           rejection_reason = NULL,
-           rejected_by = NULL,
-           rejected_at = NULL,
+       SET status = 'EXPIRED',
            updated_at = NOW()
-       WHERE transfer_id = $1`,
-      [transferId]
+       WHERE status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED')
+       AND expires_at < NOW()
+       RETURNING transfer_id`
     );
-
-    // Create audit log
-    await pool.query(
-      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
-       VALUES ($1, 'TRANSFER_RECONSIDERED', $2, $3, $4)`,
-      [
-        req.user.userId,
-        transferId,
-        JSON.stringify({ 
-          transferId, 
-          notes,
-          reconsideredBy: req.user.userId
-        }),
-        req.ip || 'unknown'
-      ]
-    );
-
-    console.log("✅ Transfer moved back to PAYMENT_PENDING");
-    console.log("========================================\n");
 
     return res.json({
       success: true,
-      message: "Transfer moved back to pending for re-review"
+      message: `${result.rows.length} expired transfers updated`,
+      expiredTransfers: result.rows
     });
 
   } catch (err) {
-    console.error("❌ Reconsider transfer error:", err);
+    console.error("❌ Error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
   }
 });

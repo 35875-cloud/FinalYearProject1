@@ -3,319 +3,941 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blockchain Tampering Tester</title>
+    <title>Admin Dashboard - Blockchain Land Records</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #11998e;
+            --warning: #f093fb;
+            --danger: #f5576c;
+            --info: #4facfe;
+            --dark: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
         }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></svg>');
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
+            position: relative;
+            z-index: 1;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-header h2 {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+        }
+
+        .stats-card.pending {
+            border-color: rgba(255, 193, 7, 0.3);
+        }
+
+        .stats-card.approved {
+            border-color: rgba(40, 167, 69, 0.3);
+        }
+
+        .stats-card.rejected {
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+
+        .stats-card .icon {
+            width: 60px;
+            height: 60px;
             border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
         }
-        h1 {
-            color: #667eea;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .button-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        button {
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+
+        .stats-card.pending .icon {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
             color: white;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+
+        .stats-card.approved .icon {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
         }
-        .btn-detect { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .btn-tamper { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .btn-restore { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .btn-compare { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .result {
-            margin-top: 20px;
-            padding: 20px;
-            background: #fff;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-            display: none;
-            max-height: 500px;
-            overflow-y: auto;
+
+        .stats-card.rejected .icon {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
         }
-        .result.show { display: block; }
-        .result pre {
-            margin: 0;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            color: #333;
+
+        .stats-card h3 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
         }
-        .status {
-            padding: 10px 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
+
+        .stats-card p {
+            color: #6c757d;
+            margin-bottom: 0;
             font-weight: 600;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 20px 20px 0 0 !important;
+            padding: 1.5rem;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: none;
+        }
+
+        .nav-tabs {
+            border-bottom: 3px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background: transparent;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .table thead {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        .table thead th {
+            font-weight: 700;
+            color: var(--dark);
+            border: none;
+            padding: 1rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: scale(1.01);
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-color: #f1f3f5;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .badge-pending {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            color: white;
+        }
+
+        .badge-approved {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .badge-rejected {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
+        }
+
+        .btn {
+            border-radius: 50px;
+            padding: 0.5rem 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
             text-align: center;
+            padding: 3rem;
+            color: #6c757d;
         }
-        .status.valid {
-            background: #d4edda;
-            color: #155724;
-            border: 2px solid #28a745;
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
         }
-        .status.invalid {
-            background: #f8d7da;
-            color: #721c24;
-            border: 2px solid #dc3545;
+
+        .modal-content {
+            border-radius: 20px;
+            border: none;
         }
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 2px solid #17a2b8;
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 20px 20px 0 0;
+            border: none;
         }
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
+
+        .modal-footer {
+            border: none;
+            padding: 1.5rem;
         }
-        .loading.active { display: block; }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+
+        .form-control, .form-select {
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
-        .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
         }
-        .info-box ul {
-            margin-left: 20px;
-            margin-top: 10px;
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--danger), #e74c3c);
+            color: white;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--info), #00f2fe);
+            color: white;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
         }
     </style>
 </head>
 <body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light">
     <div class="container">
-        <h1>🔐 Blockchain Tampering Detector</h1>
-
-        <div class="info-box">
-            <strong>🎯 Quick Start:</strong>
-            <ul>
-                <li>Enter your admin token below</li>
-                <li>Click "Detect Tampering" to check blockchain status</li>
-                <li>Click "Simulate Tampering" to test detection</li>
-                <li>Click "Restore Block" to fix any tampering</li>
-            </ul>
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-shield-alt me-2"></i>Admin Dashboard
+        </a>
+        <div class="d-flex align-items-center">
+            <span class="me-3" id="adminName">
+                <i class="fas fa-user-shield me-2"></i>
+                <strong id="adminEmail"></strong>
+            </span>
+            <button class="btn btn-sm logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
         </div>
+    </div>
+</nav>
 
-        <div class="section">
-            <label>🔑 Admin Token (Required):</label>
-            <input type="text" id="token" placeholder="Paste your admin token here..." />
-            
-            <label>📍 Block Index (for operations on specific block):</label>
-            <input type="number" id="blockIndex" value="1" min="0" />
-            
-            <label>⚠️ Tampering Type:</label>
-            <select id="tamperingType">
-                <option value="MODIFY_DATA">MODIFY_DATA - Change transaction data</option>
-                <option value="CHANGE_HASH">CHANGE_HASH - Modify blockchain hash</option>
-                <option value="BREAK_CHAIN">BREAK_CHAIN - Break chain linkage</option>
-                <option value="MODIFY_NONCE">MODIFY_NONCE - Change nonce value</option>
-            </select>
-        </div>
-
-        <div class="button-grid">
-            <button class="btn-detect" onclick="detectTampering()">🔍 Detect Tampering</button>
-            <button class="btn-tamper" onclick="simulateTampering()">⚠️ Simulate Tampering</button>
-            <button class="btn-restore" onclick="restoreBlock()">🔧 Restore Block</button>
-            <button class="btn-compare" onclick="compareHashes()">🔎 Compare Hashes</button>
-        </div>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Processing...</p>
-        </div>
-
-        <div id="result" class="result"></div>
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header fade-in">
+        <h2><i class="fas fa-tachometer-alt me-2"></i>Registration Management</h2>
+        <p class="text-muted mb-3">Manage and approve user registrations for the Blockchain Land Records System</p>
+        <button class="btn refresh-btn btn-sm" onclick="loadAllRegistrations()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+        </button>
     </div>
 
-    <script>
-        const API_URL = 'http://localhost:5000/api/blockchain';
+    <!-- Statistics Cards -->
+    <div class="row mb-4 fade-in">
+        <div class="col-md-4">
+            <div class="stats-card pending">
+                <div class="icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 id="pendingCount">0</h3>
+                <p>Pending Approvals</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card approved">
+                <div class="icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3 id="approvedCount">0</h3>
+                <p>Approved Users</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card rejected">
+                <div class="icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <h3 id="rejectedCount">0</h3>
+                <p>Rejected Users</p>
+            </div>
+        </div>
+    </div>
 
-        function getToken() {
-            const token = document.getElementById('token').value.trim();
-            if (!token) {
-                alert('⚠️ Please enter your admin token first!');
-                return null;
-            }
-            return token;
-        }
+    <!-- Registrations Card -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <i class="fas fa-users me-2"></i>User Registrations
+        </div>
+        <div class="card-body">
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#pending">
+                        <i class="fas fa-clock me-2"></i>Pending (<span id="pendingTabCount">0</span>)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#approved">
+                        <i class="fas fa-check-circle me-2"></i>Approved (<span id="approvedTabCount">0</span>)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#rejected">
+                        <i class="fas fa-times-circle me-2"></i>Rejected (<span id="rejectedTabCount">0</span>)
+                    </a>
+                </li>
+            </ul>
 
-        function getBlockIndex() {
-            return parseInt(document.getElementById('blockIndex').value);
-        }
+            <!-- Tab Content -->
+            <div class="tab-content mt-3">
+                <!-- Pending Tab -->
+                <div class="tab-pane fade show active" id="pending">
+                    <div id="pendingContent"></div>
+                </div>
 
-        function getTamperingType() {
-            return document.getElementById('tamperingType').value;
-        }
+                <!-- Approved Tab -->
+                <div class="tab-pane fade" id="approved">
+                    <div id="approvedContent"></div>
+                </div>
 
-        function showLoading(show) {
-            document.getElementById('loading').classList.toggle('active', show);
-        }
+                <!-- Rejected Tab -->
+                <div class="tab-pane fade" id="rejected">
+                    <div id="rejectedContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        function showResult(data, type = 'info') {
-            const resultDiv = document.getElementById('result');
-            resultDiv.className = 'result show';
-            
-            let statusHtml = '';
-            if (data.isValid !== undefined) {
-                statusHtml = `<div class="status ${data.isValid ? 'valid' : 'invalid'}">
-                    ${data.isValid ? '✅ Blockchain is VALID' : '❌ Blockchain is COMPROMISED'}
-                </div>`;
-            }
-            
-            resultDiv.innerHTML = statusHtml + '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-        }
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Approve Registration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to approve this user?</p>
+                <div class="mb-3">
+                    <strong>Name:</strong> <span id="approveUserName"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Email:</strong> <span id="approveUserEmail"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Role:</strong> <span id="approveUserRole"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes (Optional)</label>
+                    <textarea class="form-control" id="approvalNotes" rows="2" placeholder="Add any notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmApprove()">
+                    <i class="fas fa-check me-2"></i>Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        function showError(message) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.className = 'result show';
-            resultDiv.innerHTML = `<div class="status invalid">❌ Error: ${message}</div>`;
-        }
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle me-2"></i>Reject Registration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Please provide a reason for rejecting this registration.</p>
+                <div class="mb-3">
+                    <strong>Name:</strong> <span id="rejectUserName"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Email:</strong> <span id="rejectUserEmail"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Role:</strong> <span id="rejectUserRole"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Provide a clear reason for rejection..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                    <i class="fas fa-times me-2"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        async function apiCall(endpoint, method = 'GET', body = null) {
-            const token = getToken();
-            if (!token) return;
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-            try {
-                showLoading(true);
-                
-                const options = {
-                    method,
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                };
+<script>
+// API Configuration
+const API_URL = "http://localhost:5000/api/auth";
 
-                if (body) {
-                    options.body = JSON.stringify(body);
-                }
+// Global variables
+let currentUserId = null;
+let authToken = null;
+let approveModalInstance = null;
+let rejectModalInstance = null;
 
-                const response = await fetch(`${API_URL}${endpoint}`, options);
-                const data = await response.json();
+// Check authentication on page load
+window.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    
+    // Initialize modals
+    approveModalInstance = new bootstrap.Modal(document.getElementById('approveModal'));
+    rejectModalInstance = new bootstrap.Modal(document.getElementById('rejectModal'));
+});
 
-                showLoading(false);
-
-                if (!response.ok) {
-                    showError(data.message || 'Request failed');
-                    return;
-                }
-
-                showResult(data);
-
-            } catch (err) {
-                showLoading(false);
-                showError(err.message);
-            }
-        }
-
-        async function detectTampering() {
-            await apiCall('/tampering/detect');
-        }
-
-        async function simulateTampering() {
-            const blockIndex = getBlockIndex();
-            const tamperingType = getTamperingType();
-            
-            if (confirm(`⚠️ This will tamper with Block ${blockIndex}. Continue?`)) {
-                await apiCall('/tampering/simulate', 'POST', { blockIndex, tamperingType });
-            }
-        }
-
-        async function restoreBlock() {
-            const blockIndex = getBlockIndex();
-            
-            if (confirm(`🔧 This will restore Block ${blockIndex}. Continue?`)) {
-                await apiCall(`/tampering/restore/${blockIndex}`, 'POST');
-            }
-        }
-
-        async function compareHashes() {
-            const blockIndex = getBlockIndex();
-            await apiCall(`/tampering/compare/${blockIndex}`);
-        }
-
-        // Auto-load token from localStorage if available
-        window.addEventListener('load', () => {
-            const savedToken = localStorage.getItem('adminToken');
-            if (savedToken) {
-                document.getElementById('token').value = savedToken;
+// Check if user is authenticated and is admin
+async function checkAuth() {
+    authToken = localStorage.getItem('token');
+    const userRole = localStorage.getItem('role');
+    
+    if (!authToken || userRole !== 'ADMIN') {
+        alert('Access denied. Admin authentication required.');
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/profile`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
             }
         });
-
-        // Save token to localStorage when changed
-        document.getElementById('token').addEventListener('change', (e) => {
-            localStorage.setItem('adminToken', e.target.value);
-        });
-
-        // Show instructions on first load
-        if (!localStorage.getItem('hasVisited')) {
-            localStorage.setItem('hasVisited', 'true');
-            alert('👋 Welcome! Please:\n\n1. Login to your admin account first\n2. Copy your token\n3. Paste it in the token field\n4. Click "Detect Tampering" to start');
+        
+        const result = await response.json();
+        
+        if (result.success && result.user.role === 'ADMIN') {
+            document.getElementById('adminEmail').textContent = result.user.email;
+            loadAllRegistrations();
+        } else {
+            throw new Error('Not authorized');
         }
-    </script>
+    } catch (error) {
+        console.error('Auth error:', error);
+        alert('Authentication failed. Please login again.');
+        window.location.href = 'login.html';
+    }
+}
+
+// Load all registrations
+async function loadAllRegistrations() {
+    try {
+        const response = await fetch(`${API_URL}/all-registrations`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update counts
+            document.getElementById('pendingCount').textContent = result.pending.length;
+            document.getElementById('approvedCount').textContent = result.approved.length;
+            document.getElementById('rejectedCount').textContent = result.rejected.length;
+            
+            document.getElementById('pendingTabCount').textContent = result.pending.length;
+            document.getElementById('approvedTabCount').textContent = result.approved.length;
+            document.getElementById('rejectedTabCount').textContent = result.rejected.length;
+            
+            // Display tables
+            displayPendingUsers(result.pending);
+            displayApprovedUsers(result.approved);
+            displayRejectedUsers(result.rejected);
+        } else {
+            showError('Failed to load registrations');
+        }
+    } catch (error) {
+        console.error('Error loading registrations:', error);
+        showError('Failed to connect to server');
+    }
+}
+
+// Display pending users
+function displayPendingUsers(users) {
+    const container = document.getElementById('pendingContent');
+    
+    if (users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h5>No Pending Registrations</h5>
+                <p class="text-muted">All registrations have been processed</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>CNIC</th>
+                        <th>Mobile</th>
+                        <th>Role</th>
+                        <th>Registered On</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    users.forEach(user => {
+        html += `
+            <tr>
+                <td><strong>${user.user_id}</strong></td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${formatCNIC(user.cnic)}</td>
+                <td>${user.mobile}</td>
+                <td><span class="badge badge-pending">${user.role}</span></td>
+                <td>${formatDate(user.created_at)}</td>
+                <td>
+                    <button class="btn btn-success btn-sm me-1" onclick="showApproveModal('${user.user_id}', '${user.name}', '${user.email}', '${user.role}')">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="showRejectModal('${user.user_id}', '${user.name}', '${user.email}', '${user.role}')">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Display approved users
+function displayApprovedUsers(users) {
+    const container = document.getElementById('approvedContent');
+    
+    if (users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-check"></i>
+                <h5>No Approved Users Yet</h5>
+                <p class="text-muted">Approved users will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>CNIC</th>
+                        <th>Mobile</th>
+                        <th>Role</th>
+                        <th>Approved On</th>
+                        <th>Approved By</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    users.forEach(user => {
+        html += `
+            <tr>
+                <td><strong>${user.user_id}</strong></td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${formatCNIC(user.cnic)}</td>
+                <td>${user.mobile}</td>
+                <td><span class="badge badge-approved">${user.role}</span></td>
+                <td>${formatDate(user.approved_at)}</td>
+                <td>${user.approved_by || 'System'}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Display rejected users
+function displayRejectedUsers(users) {
+    const container = document.getElementById('rejectedContent');
+    
+    if (users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-times"></i>
+                <h5>No Rejected Users</h5>
+                <p class="text-muted">Rejected users will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>CNIC</th>
+                        <th>Mobile</th>
+                        <th>Role</th>
+                        <th>Rejected On</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    users.forEach(user => {
+        html += `
+            <tr>
+                <td><strong>${user.user_id}</strong></td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${formatCNIC(user.cnic)}</td>
+                <td>${user.mobile}</td>
+                <td><span class="badge badge-rejected">${user.role}</span></td>
+                <td>${formatDate(user.approved_at)}</td>
+                <td><small>${user.rejection_reason || 'No reason provided'}</small></td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Show approve modal
+function showApproveModal(userId, name, email, role) {
+    currentUserId = userId;
+    document.getElementById('approveUserName').textContent = name;
+    document.getElementById('approveUserEmail').textContent = email;
+    document.getElementById('approveUserRole').textContent = role;
+    document.getElementById('approvalNotes').value = '';
+    approveModalInstance.show();
+}
+
+// Show reject modal
+function showRejectModal(userId, name, email, role) {
+    currentUserId = userId;
+    document.getElementById('rejectUserName').textContent = name;
+    document.getElementById('rejectUserEmail').textContent = email;
+    document.getElementById('rejectUserRole').textContent = role;
+    document.getElementById('rejectionReason').value = '';
+    rejectModalInstance.show();
+}
+
+// Confirm approve
+async function confirmApprove() {
+    const notes = document.getElementById('approvalNotes').value.trim();
+    
+    try {
+        const response = await fetch(`${API_URL}/approve-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                userId: currentUserId,
+                notes: notes || 'Approved by admin'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            approveModalInstance.hide();
+            showSuccess('User approved successfully!');
+            loadAllRegistrations();
+        } else {
+            showError(result.message || 'Failed to approve user');
+        }
+    } catch (error) {
+        console.error('Error approving user:', error);
+        showError('Failed to connect to server');
+    }
+}
+
+// Confirm reject
+async function confirmReject() {
+    const reason = document.getElementById('rejectionReason').value.trim();
+    
+    if (!reason) {
+        showError('Please provide a rejection reason');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/reject-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                userId: currentUserId,
+                reason: reason
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            rejectModalInstance.hide();
+            showSuccess('User registration rejected');
+            loadAllRegistrations();
+        } else {
+            showError(result.message || 'Failed to reject user');
+        }
+    } catch (error) {
+        console.error('Error rejecting user:', error);
+        showError('Failed to connect to server');
+    }
+}
+
+// Utility functions
+function formatCNIC(cnic) {
+    if (!cnic) return 'N/A';
+    return cnic.replace(/(\d{5})(\d{7})(\d{1})/, '$1-$2-$3');
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function showSuccess(message) {
+    alert('✓ ' + message);
+}
+
+function showError(message) {
+    alert('✗ ' + message);
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        window.location.href = 'login.html';
+    }
+}
+</script>
+
 </body>
 </html>
