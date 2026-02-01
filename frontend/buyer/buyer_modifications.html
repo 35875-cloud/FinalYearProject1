@@ -1,0 +1,297 @@
+<!-- 
+  BUYER.HTML MODIFICATIONS
+  
+  This file shows the changes you need to make to your existing buyer.html
+  
+  Location: frontend/buyer/buyer.html
+-->
+
+<!-- ========================================
+     ADD THIS TO YOUR EXISTING TRANSFER REQUESTS TABLE
+     ======================================== -->
+
+<!-- Example: Inside your transfers table, modify the row template -->
+
+<table id="transfersTable" class="data-table">
+    <thead>
+        <tr>
+            <th>Transfer ID</th>
+            <th>Property ID</th>
+            <th>Seller</th>
+            <th>Status</th>
+            <th>Date</th>
+            <!-- NEW COLUMN -->
+            <th>Negotiation</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Your existing transfer rows -->
+        <tr>
+            <td>TR-001</td>
+            <td>PROP-123</td>
+            <td>John Doe</td>
+            <td><span class="status-badge status-pending">Pending</span></td>
+            <td>2026-01-31</td>
+            
+            <!-- NEW: Negotiation Column -->
+            <td class="negotiation-cell">
+                <!-- Channel Status Badge -->
+                <span class="channel-status-badge" data-status="ACTIVE">
+                    🟢 Active
+                </span>
+                
+                <!-- Unread Messages Count -->
+                <span class="unread-badge" data-count="3">
+                    3 new
+                </span>
+            </td>
+            
+            <!-- Modified Actions Column -->
+            <td class="actions-cell">
+                <!-- Existing action buttons -->
+                <button class="btn-view" onclick="viewTransfer('TR-001')">View</button>
+                
+                <!-- NEW: Open Chat Button -->
+                <button class="btn-chat" onclick="openNegotiation('ch-uuid-here')">
+                    💬 Open Chat
+                </button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ========================================
+     ADD THIS CSS TO YOUR EXISTING STYLES
+     ======================================== -->
+
+<style>
+/* Channel Status Badge */
+.channel-status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.channel-status-badge[data-status="INACTIVE"] {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.channel-status-badge[data-status="ACTIVE"] {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.channel-status-badge[data-status="NEGOTIATING"] {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.channel-status-badge[data-status="AGREED"] {
+    background: #d1fae5;
+    color: #059669;
+}
+
+/* Unread Messages Badge */
+.unread-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.unread-badge[data-count="0"] {
+    display: none;
+}
+
+/* Chat Button */
+.btn-chat {
+    padding: 8px 16px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-chat:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.negotiation-cell {
+    text-align: center;
+}
+
+.actions-cell {
+    display: flex;
+    gap: 8px;
+}
+</style>
+
+<!-- ========================================
+     ADD THIS JAVASCRIPT TO YOUR EXISTING SCRIPT
+     ======================================== -->
+
+<script>
+/**
+ * Open negotiation page
+ */
+function openNegotiation(channelId) {
+    if (!channelId) {
+        alert('Channel not found');
+        return;
+    }
+    
+    // Open negotiation page in same window
+    window.location.href = `transfer_negotiation.html?channelId=${channelId}`;
+    
+    // OR open in new tab:
+    // window.open(`transfer_negotiation.html?channelId=${channelId}`, '_blank');
+}
+
+/**
+ * Fetch user's transfers with channel info
+ * MODIFY YOUR EXISTING loadTransfers() FUNCTION
+ */
+async function loadTransfers() {
+    try {
+        const userId = getUserId(); // Your existing function
+        const token = getToken(); // Your existing function
+        
+        // Fetch transfers
+        const response = await fetch(`/api/transfers/buyer/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        const tbody = document.querySelector('#transfersTable tbody');
+        tbody.innerHTML = '';
+        
+        data.transfers.forEach(transfer => {
+            const row = document.createElement('tr');
+            
+            // Determine channel status display
+            let channelStatusHtml = '';
+            if (transfer.channel_id) {
+                const statusEmoji = {
+                    'INACTIVE': '⚪',
+                    'ACTIVE': '🟢',
+                    'NEGOTIATING': '🟡',
+                    'AGREED': '✅',
+                    'CLOSED': '⚫'
+                };
+                
+                channelStatusHtml = `
+                    <span class="channel-status-badge" data-status="${transfer.channel_status}">
+                        ${statusEmoji[transfer.channel_status] || '⚪'} ${transfer.channel_status}
+                    </span>
+                `;
+                
+                // Show unread count if available
+                if (transfer.unread_count > 0) {
+                    channelStatusHtml += `
+                        <span class="unread-badge" data-count="${transfer.unread_count}">
+                            ${transfer.unread_count} new
+                        </span>
+                    `;
+                }
+            } else {
+                channelStatusHtml = '<span class="text-muted">No channel</span>';
+            }
+            
+            row.innerHTML = `
+                <td>${transfer.transfer_id}</td>
+                <td>${transfer.property_id}</td>
+                <td>${transfer.seller_name || 'Unknown'}</td>
+                <td><span class="status-badge status-${transfer.status.toLowerCase()}">${transfer.status}</span></td>
+                <td>${formatDate(transfer.created_at)}</td>
+                <td class="negotiation-cell">${channelStatusHtml}</td>
+                <td class="actions-cell">
+                    <button class="btn-view" onclick="viewTransfer('${transfer.transfer_id}')">View</button>
+                    ${transfer.channel_id && transfer.channel_status !== 'CLOSED' ? 
+                        `<button class="btn-chat" onclick="openNegotiation('${transfer.channel_id}')">💬 Open Chat</button>` : 
+                        ''}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Error loading transfers:', error);
+        alert('Failed to load transfers');
+    }
+}
+
+/**
+ * Helper: Format date
+ */
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Call loadTransfers on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTransfers();
+    
+    // Optional: Refresh every 30 seconds to show new messages
+    setInterval(loadTransfers, 30000);
+});
+</script>
+
+<!-- ========================================
+     INTEGRATION NOTES
+     ======================================== -->
+
+<!--
+1. The above code assumes your transfer object from the API includes:
+   - channel_id
+   - channel_status
+   - unread_count (optional)
+
+2. You'll need to modify your backend transfer endpoint to join with
+   transfer_requests table and include channel information:
+   
+   SELECT 
+     t.*,
+     tr.channel_id,
+     tr.channel_status,
+     COUNT(cm.message_id) FILTER (WHERE cm.read_by_other = false AND cm.sender_id != $1) as unread_count
+   FROM transfers t
+   LEFT JOIN transfer_requests tr ON t.transfer_id = tr.transfer_id
+   LEFT JOIN channel_messages cm ON tr.channel_id = cm.channel_id
+   WHERE t.buyer_id = $1
+   GROUP BY t.transfer_id, tr.channel_id, tr.channel_status
+
+3. Make sure to create the channel when a new transfer is created.
+   In your transfer creation endpoint, add:
+   
+   const channelResult = await channelService.createChannel(
+     transferId, 
+     sellerId, 
+     buyerId
+   );
+-->
