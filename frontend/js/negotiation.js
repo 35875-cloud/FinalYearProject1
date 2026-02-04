@@ -9,6 +9,7 @@
  * - Screenshot upload
  */
 
+
 // Global variables
 let socket = null;
 let channelId = null;
@@ -43,12 +44,12 @@ async function initializePage() {
         }
         
         // Get user info from localStorage
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-            alert('Please login first');
-            window.location.href = '../login.html';
-            return;
-        }
+        // const userStr = localStorage.getItem('user');
+        // if (!userStr) {
+        //     alert('Please login first');
+        //     window.location.href = '../auth/login.html';
+        //     return;
+        // }
         
         const user = JSON.parse(userStr);
         userId = user.userId || user.user_id;
