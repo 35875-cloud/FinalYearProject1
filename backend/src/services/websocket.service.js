@@ -8,9 +8,11 @@
  * - Online status tracking
  */
 
+
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import pkg from 'pg';
+
 
 const { Pool } = pkg;
 
@@ -142,63 +144,37 @@ function handleConnection(socket) {
   // ================================================================
   // EVENT: SEND MESSAGE
   // ================================================================
-  socket.on('send_message', async (data) => {
-    try {
-      const { channelId, message, messageType = 'TEXT' } = data;
-      
-      // Verify participant
-      const client = await pool.connect();
-      const participant = await client.query(
-        'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
-        [channelId, userId]
-      );
-      
-      if (participant.rows.length === 0) {
-        socket.emit('error', { message: 'Unauthorized' });
-        client.release();
-        return;
-      }
-      
-      const senderRole = participant.rows[0].role;
-      
-      // Get transfer_id
-      const transfer = await client.query(
-        'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1',
-        [channelId]
-      );
-      const transferId = transfer.rows[0]?.transfer_id;
-      
-      // Save message to database
-      const result = await client.query(`
-        INSERT INTO channel_messages 
-          (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-      `, [channelId, transferId, userId, senderRole, messageType, message]);
-      
-      client.release();
-      
-      const savedMessage = result.rows[0];
-      
-      // Broadcast message to all in channel
-      io.to(channelId).emit('new_message', {
-        messageId: savedMessage.message_id,
-        senderId: userId,
-        senderRole,
-        messageType,
-        messageContent: message,
-        timestamp: savedMessage.timestamp,
-        isSystemMessage: false
-      });
-      
-      console.log(`Message sent in channel ${channelId} by ${userId}`);
-      
-    } catch (error) {
-      console.error('Error sending message:', error);
-      socket.emit('error', { message: 'Failed to send message' });
-    }
-  });
-  
+  // In websocket.service.js, modify the send_message handler:
+
+socket.on('send_message', async (data) => {
+  try {
+    const { channelId, message, messageType = 'TEXT' } = data;
+    
+    // ... existing code ...
+    
+    const savedMessage = result.rows[0];
+    
+    // Broadcast to all in channel (online users get it immediately)
+    io.to(channelId).emit('new_message', {
+      messageId: savedMessage.message_id,
+      senderId: userId,
+      senderRole,
+      messageType,
+      messageContent: message,
+      timestamp: savedMessage.timestamp,
+      isSystemMessage: false
+    });
+    
+    // If recipient is offline, they'll see it when they connect
+    // because transfer_negotiation.html loads all messages on init
+    
+    console.log(`Message sent in channel ${channelId} by ${userId}`);
+    
+  } catch (error) {
+    console.error('Error sending message:', error);
+    socket.emit('error', { message: 'Failed to send message' });
+  }
+});
   // ================================================================
   // EVENT: SEND PRICE OFFER
   // ================================================================
