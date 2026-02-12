@@ -702,6 +702,7 @@ html {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 
 <script>
 // =====================================================
@@ -963,6 +964,7 @@ async function submitTransfer() {
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
   try {
+    // Step 1: Create the transfer (which now auto-creates P2P channel)
     const response = await fetch(`${API_URL}/transfers/initiate`, {
       method: 'POST',
       headers: {
@@ -973,7 +975,7 @@ async function submitTransfer() {
         propertyId: selectedProperty.property_id,
         buyerCnic,
         buyerName,
-        buyerFatherName: '', // Empty string since we removed the field
+        buyerFatherName: '',
         transferAmount: parseFloat(transferAmount),
         durationDays: parseInt(durationDays)
       })
@@ -982,16 +984,26 @@ async function submitTransfer() {
     const result = await response.json();
 
     if (result.success) {
-      alert(`✅ Transfer Initiated Successfully!\n\n` +
-            `Transfer ID: ${result.transferId}\n` +
-            `Amount: PKR ${result.amount.toLocaleString()}\n` +
-            `Buyer Tax: PKR ${result.buyerTax.toLocaleString()}\n` +
-            `Seller Tax: PKR ${result.sellerTax.toLocaleString()}\n` +
-            `Total: PKR ${result.totalAmount.toLocaleString()}\n\n` +
-            `Expires: ${new Date(result.expiresAt).toLocaleString()}\n\n` +
-            `Buyer with CNIC ${buyerCnic} will be notified and must complete payment within ${durationDays} days.`);
-      
-      window.location.href = 'citizen_dashboard.html';
+      // Step 2: Channel was created automatically, now confirm with seller
+      const openChat = confirm(
+        `✅ Transfer Initiated Successfully!\n\n` +
+        `Transfer ID: ${result.transfer.transfer_id}\n` +
+        `Amount: PKR ${result.transfer.transfer_amount.toLocaleString()}\n` +
+        `Buyer Tax: PKR ${result.transfer.property_tax_buyer.toLocaleString()}\n` +
+        `Seller Tax: PKR ${result.transfer.property_tax_seller.toLocaleString()}\n` +
+        `Total: PKR ${result.transfer.total_amount.toLocaleString()}\n\n` +
+        `Expires: ${new Date(result.transfer.expires_at).toLocaleString()}\n\n` +
+        `💬 A negotiation channel has been created.\n\n` +
+        `📱 Would you like to confirm payment and open the chat now to negotiate with the buyer?`
+      );
+
+      if (openChat) {
+        // Step 3: Activate channel and open chat
+        activateChannelAndOpenChat(result.transfer.transfer_id, result.channelId);
+      } else {
+        // Just go back to dashboard
+        window.location.href = 'citizen_dashboard.html';
+      }
     } else {
       alert('❌ Error: ' + result.message);
       submitBtn.disabled = false;
@@ -1005,6 +1017,238 @@ async function submitTransfer() {
     submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Initiate Transfer';
   }
 }
+// =====================================================
+// ADD THIS NEW FUNCTION (after submitTransfer)
+// =====================================================
+
+async function activateChannelAndOpenChat(transferId, channelId) {
+  try {
+    console.log('💬 Activating channel:', channelId);
+
+    // Activate the channel
+    const response = await fetch(`${API_URL}/transfers/activate-channel/${transferId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ Channel activated');
+      
+      // Open negotiation page
+      window.location.href = `transfer_negotiation.html?channelId=${channelId}&transferId=${transferId}`;
+    } else {
+      alert('❌ Failed to activate channel: ' + result.message);
+      window.location.href = 'citizen_dashboard.html';
+    }
+
+  } catch (err) {
+    console.error('❌ Activate channel error:', err);
+    alert('Failed to open chat. You can access it later from your dashboard.');
+    window.location.href = 'citizen_dashboard.html';
+  }
+}
+
+// ============================================
+// OPTIONAL: Add "View My Transfers" page
+// Shows all transfers with "Open Chat" buttons
+// ============================================
+
+async function loadMyTransfers() {
+  try {
+    const response = await fetch(`${API_URL}/transfers/my-transfers`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success && result.transfers) {
+      const container = document.getElementById('transfersList');
+      
+      container.innerHTML = result.transfers.map(transfer => `
+        <div class="transfer-card mb-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5>${transfer.property_id}</h5>
+              <p>Buyer: ${transfer.buyer_name} (${transfer.buyer_cnic})</p>
+              <p>Amount: PKR ${transfer.transfer_amount.toLocaleString()}</p>
+              <span class="badge bg-${getStatusColor(transfer.status)}">
+                ${transfer.status}
+              </span>
+            </div>
+            <div>
+              ${transfer.channel_id && transfer.channel_status !== 'CLOSED' ? `
+                <button class="btn btn-primary btn-sm" 
+                        onclick="openChat('${transfer.transfer_id}', '${transfer.channel_id}')">
+                  <i class="fas fa-comments me-1"></i>
+                  Open Chat
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Error loading transfers:', error);
+  }
+}
+
+function openChat(transferId, channelId) {
+  window.location.href = `transfer_negotiation.html?transferId=${transferId}&channelId=${channelId}`;
+}
+
+function getStatusColor(status) {
+  switch(status) {
+    case 'PENDING': return 'warning';
+    case 'PAYMENT_UPLOADED': return 'info';
+    case 'APPROVED': return 'success';
+    case 'REJECTED': return 'danger';
+    default: return 'secondary';
+  }
+}
+
+
+/**
+ * Accept transfer and open negotiation
+ */
+async function acceptAndStartChat(transferId, channelId) {
+    if (!confirm('Accept this transfer request and start negotiation?')) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        
+        // Accept the transfer (backend will also activate channel)
+        const response = await fetch(`/api/transfers/${transferId}/accept`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to accept transfer');
+        }
+        
+        // Redirect to negotiation page
+        // Use the channelId from response if available, otherwise use the one passed
+        const finalChannelId = data.channelId || channelId;
+        
+        if (finalChannelId) {
+            window.location.href = `../citizen/transfer_negotiation.html?channelId=${finalChannelId}`;
+        } else {
+            alert('Transfer accepted successfully!');
+            location.reload();
+        }
+        
+    } catch (error) {
+        console.error('Error accepting transfer:', error);
+        alert('Failed to accept transfer: ' + error.message);
+    }
+}
+
+/**
+ * Open existing negotiation (for already accepted transfers)
+ */
+async function openExistingNegotiation(channelId) {
+    if (!channelId) {
+        alert('Channel not found');
+        return;
+    }
+    
+    window.location.href = `../citizen/transfer_negotiation.html?channelId=${channelId}`;
+}
+
+
+
+/**
+ * Load accepted transfers with active channels
+ */
+async function loadAcceptedTransfers() {
+    try {
+        const userId = getUserId();
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`/api/transfers/seller/${userId}/accepted`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        
+        const tbody = document.querySelector('#acceptedTransfersTable tbody');
+        tbody.innerHTML = '';
+        
+        data.transfers.forEach(transfer => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${transfer.transfer_id}</td>
+                <td>${transfer.property_id}</td>
+                <td>${transfer.buyer_name}</td>
+                <td>
+                    <span class="channel-status-badge status-${transfer.channel_status?.toLowerCase()}">
+                        ${transfer.channel_status || 'N/A'}
+                    </span>
+                </td>
+                <td>
+                    ${transfer.unread_count > 0 ? 
+                        `<span class="unread-badge">${transfer.unread_count} new</span>` : 
+                        '-'}
+                </td>
+                <td>
+                    ${transfer.channel_id ? 
+                        `<button class="btn-chat" onclick="openExistingNegotiation('${transfer.channel_id}')">
+                            💬 Open Chat
+                        </button>` : 
+                        '<span class="text-muted">No channel</span>'}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Error loading accepted transfers:', error);
+    }
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadPendingTransfers();
+    loadAcceptedTransfers();
+    
+    // Refresh every 30 seconds
+    setInterval(() => {
+        loadPendingTransfers();
+        loadAcceptedTransfers();
+    }, 30000);
+});
+
+
+
+
+
+
+
+
+
 
 // =====================================================
 // CNIC FORMATTING
