@@ -7,6 +7,7 @@ const router = express.Router();
 import pool from "../config/db.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import channelService from '../services/channel.service.js';
 
 // =====================================================
 // MIDDLEWARE - JWT Authentication
@@ -241,13 +242,96 @@ router.post("/initiate", authenticateToken, async (req, res) => {
     // Generate transfer ID
     const transferId = `TR-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
+
+
+    // ADD THIS NEW ENDPOINT FOR ACTIVATING CHANNEL
+// Add this after the /initiate endpoint
+// =====================================================
+
+router.post("/activate-channel/:transferId", authenticateToken, async (req, res) => {
+  try {
+    const { transferId } = req.params;
+
+    console.log("\n========================================");
+    console.log("💬 ACTIVATING P2P CHANNEL");
+    console.log("Transfer ID:", transferId);
+    console.log("========================================");
+
+    // Get transfer and channel info
+    const transferResult = await pool.query(
+      `SELECT channel_id, seller_id, buyer_id, channel_status
+       FROM transfer_requests
+       WHERE transfer_id = $1`,
+      [transferId]
+    );
+
+    if (transferResult.rows.length === 0) {
+      throw new Error("Transfer not found");
+    }
+
+    const transfer = transferResult.rows[0];
+
+    // Verify user is seller
+    if (transfer.seller_id !== req.user.userId) {
+      throw new Error("Only the seller can activate the channel");
+    }
+
+    if (transfer.channel_status !== 'INACTIVE') {
+      throw new Error(`Channel is already ${transfer.channel_status}`);
+    }
+
+    // Activate the channel
+    await pool.query(
+      `UPDATE transfer_requests
+       SET channel_status = 'ACTIVE',
+           channel_activated_at = NOW()
+       WHERE transfer_id = $1`,
+      [transferId]
+    );
+
+    // Add system message
+    await pool.query(
+      `INSERT INTO channel_messages (
+        channel_id, sender_role, message_type, message_content, is_system_message
+      ) VALUES ($1, 'SYSTEM', 'TEXT', $2, true)`,
+      [
+        transfer.channel_id,
+        '✅ Channel activated! Both parties can now negotiate. Please be respectful and professional.'
+      ]
+    );
+
+    console.log("✅ Channel activated:", transfer.channel_id);
+    console.log("========================================\n");
+
+    res.json({
+      success: true,
+      message: "Channel activated successfully",
+      channelId: transfer.channel_id
+    });
+
+  } catch (err) {
+    console.error("❌ Activate channel error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
     // Create transfer request
+    // =====================================================
+    // NEW: Generate Channel ID for P2P Negotiation
+    // =====================================================
+    const channelId = `CH-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    console.log("💬 Creating P2P channel:", channelId);
+
+    // Create transfer request WITH channel info
     const transferResult = await client.query(
       `INSERT INTO transfer_requests (
         transfer_id, property_id, seller_id, buyer_id, buyer_name, buyer_cnic, buyer_father_name,
         transfer_amount, property_tax_buyer, property_tax_seller, total_amount,
-        status, expires_at, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PAYMENT_PENDING', $12, NOW())
+        status, expires_at, created_at,
+        channel_id, channel_status, channel_created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PAYMENT_PENDING', $12, NOW(), $13, 'INACTIVE', NOW())
       RETURNING *`,
       [
         transferId,
@@ -261,9 +345,35 @@ router.post("/initiate", authenticateToken, async (req, res) => {
         propertyTaxBuyer,
         propertyTaxSeller,
         totalAmount,
-        expiresAt
+        expiresAt,
+        channelId  // NEW: Store channel ID
       ]
     );
+
+    // =====================================================
+    // NEW: Create channel participants
+    // =====================================================
+    await client.query(
+      `INSERT INTO channel_participants (channel_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'SELLER', NOW()),
+              ($1, $3, 'BUYER', NOW())`,
+      [channelId, req.user.userId, registeredBuyer.user_id]
+    );
+
+    // =====================================================
+    // NEW: Create initial system message
+    // =====================================================
+    await client.query(
+      `INSERT INTO channel_messages (
+        channel_id, sender_role, message_type, message_content, is_system_message
+      ) VALUES ($1, 'SYSTEM', 'TEXT', $2, true)`,
+      [
+        channelId,
+        `🔔 Negotiation channel created for ${propertyId}. Seller can now start the conversation.`
+      ]
+    );
+
+    console.log("✅ P2P channel created successfully");
 
     // Audit log
     await client.query(
@@ -272,7 +382,12 @@ router.post("/initiate", authenticateToken, async (req, res) => {
       [
         req.user.userId,
         transferId,
-        JSON.stringify({ propertyId, buyerId: registeredBuyer.user_id, amount: transferAmount }),
+        JSON.stringify({ 
+          propertyId, 
+          buyerId: registeredBuyer.user_id, 
+          amount: transferAmount,
+          channelId: channelId  // NEW
+        }),
         req.ip || 'unknown'
       ]
     );
@@ -281,13 +396,15 @@ router.post("/initiate", authenticateToken, async (req, res) => {
 
     console.log("✅ Transfer initiated successfully");
     console.log("Transfer ID:", transferId);
+    console.log("Channel ID:", channelId);
     console.log("Expires at:", expiresAt);
     console.log("========================================\n");
 
     return res.json({
       success: true,
       message: "Transfer request created successfully",
-      transfer: transferResult.rows[0]
+      transfer: transferResult.rows[0],
+      channelId: channelId  // NEW: Return channel ID to frontend
     });
 
   } catch (err) {
@@ -302,68 +419,262 @@ router.post("/initiate", authenticateToken, async (req, res) => {
   }
 });
 
+
+// Accept transfer request and activate channel
+router.post('/transfers/:transferId/accept', authenticateToken, async (req, res) => {
+  const { transferId } = req.params;
+  const sellerId = req.user.userId;
+  
+  try {
+    // Your existing accept logic
+    await pool.query(`
+      UPDATE transfer_requests 
+      SET status = 'ACCEPTED', 
+          accepted_at = NOW(),
+          accepted_by = $1
+      WHERE transfer_id = $2 AND seller_id = $1
+    `, [sellerId, transferId]);
+    
+    // **NEW: Activate the channel**
+    const channelResult = await pool.query(
+      'SELECT channel_id FROM transfer_requests WHERE transfer_id = $1',
+      [transferId]
+    );
+    
+    if (channelResult.rows.length > 0 && channelResult.rows[0].channel_id) {
+      const channelId = channelResult.rows[0].channel_id;
+      
+      // Activate the channel
+      await channelService.activateChannel(channelId);
+      
+      res.json({
+        success: true,
+        message: 'Transfer accepted and chat activated',
+        channelId: channelId,  // Send this to frontend
+        redirectUrl: `/buyer/transfer_negotiation.html?channelId=${channelId}`
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Transfer accepted'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error accepting transfer:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+
+// Get seller's accepted transfers with channel info
+router.get('/transfers/seller/:sellerId/accepted', authenticateToken, async (req, res) => {
+  const { sellerId } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        tr.transfer_id,
+        tr.property_id,
+        tr.channel_id,
+        tr.channel_status,
+        tr.buyer_id,
+        u.username as buyer_name,
+        u.name as buyer_full_name,
+        tr.created_at,
+        tr.accepted_at,
+        p.location as property_location,
+        COUNT(cm.message_id) FILTER (
+          WHERE cm.read_by_other = false AND cm.sender_id != $1
+        ) as unread_count
+      FROM transfer_requests tr
+      LEFT JOIN users u ON tr.buyer_id = u.user_id
+      LEFT JOIN properties p ON tr.property_id = p.property_id
+      LEFT JOIN channel_messages cm ON tr.channel_id = cm.channel_id
+      WHERE tr.seller_id = $1 
+        AND tr.status = 'ACCEPTED'
+        AND tr.channel_id IS NOT NULL
+      GROUP BY tr.transfer_id, tr.property_id, tr.channel_id, 
+               tr.channel_status, tr.buyer_id, u.username, u.name,
+               tr.created_at, tr.accepted_at, p.location
+      ORDER BY tr.accepted_at DESC
+    `, [sellerId]);
+    
+    res.json({
+      success: true,
+      transfers: result.rows
+    });
+    
+  } catch (error) {
+    console.error('Error fetching accepted transfers:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+// Get transfers pending LRO approval (with screenshots)
+router.get('/transfers/lro/pending-approval', authenticateToken, requireLRO, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        tr.transfer_id,
+        tr.property_id,
+        tr.channel_id,
+        tr.buyer_id,
+        tr.seller_id,
+        tr.agreed_price,
+        tr.agreement_text,
+        tr.agreement_screenshot_url,
+        tr.agreement_timestamp,
+        tr.seller_agreed,
+        tr.buyer_agreed,
+        tr.seller_agreed_at,
+        tr.buyer_agreed_at,
+        seller.name as seller_name,
+        seller.cnic as seller_cnic,
+        buyer.name as buyer_name,
+        buyer.cnic as buyer_cnic,
+        p.location as property_location,
+        p.size as property_size,
+        p.owner_name as current_owner
+      FROM transfer_requests tr
+      JOIN users seller ON tr.seller_id = seller.user_id
+      JOIN users buyer ON tr.buyer_id = buyer.user_id
+      JOIN properties p ON tr.property_id = p.property_id
+      WHERE tr.channel_status = 'AGREED'
+        AND tr.seller_agreed = true
+        AND tr.buyer_agreed = true
+        AND tr.agreement_screenshot_url IS NOT NULL
+        AND tr.status != 'APPROVED'
+        AND tr.status != 'REJECTED'
+      ORDER BY tr.agreement_timestamp DESC
+    `);
+    
+    res.json({
+      success: true,
+      pendingTransfers: result.rows,
+      count: result.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching pending approvals:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// LRO approve transfer
+router.post('/transfers/:transferId/lro-approve', authenticateToken, requireLRO, async (req, res) => {
+  const { transferId } = req.params;
+  const { approvalNotes } = req.body;
+  const lroId = req.user.userId;
+  
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Update transfer status
+    await client.query(`
+      UPDATE transfer_requests 
+      SET status = 'APPROVED',
+          approved_by = $1,
+          approved_at = NOW(),
+          approval_notes = $2
+      WHERE transfer_id = $3
+    `, [lroId, approvalNotes, transferId]);
+    
+    // Close the channel
+    const channelResult = await client.query(
+      'SELECT channel_id FROM transfer_requests WHERE transfer_id = $1',
+      [transferId]
+    );
+    
+    if (channelResult.rows.length > 0 && channelResult.rows[0].channel_id) {
+      await channelService.closeChannel(channelResult.rows[0].channel_id);
+    }
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Transfer approved successfully'
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error approving transfer:', error);
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// LRO reject transfer
+router.post('/transfers/:transferId/lro-reject', authenticateToken, requireLRO, async (req, res) => {
+  const { transferId } = req.params;
+  const { rejectionReason } = req.body;
+  const lroId = req.user.userId;
+  
+  try {
+    await pool.query(`
+      UPDATE transfer_requests 
+      SET status = 'REJECTED',
+          approved_by = $1,
+          approved_at = NOW(),
+          approval_notes = $2
+      WHERE transfer_id = $3
+    `, [lroId, rejectionReason, transferId]);
+    
+    res.json({
+      success: true,
+      message: 'Transfer rejected'
+    });
+    
+  } catch (error) {
+    console.error('Error rejecting transfer:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 // =====================================================
 // 4️⃣ BUYER: Get Pending Transfer Applications (Limited View)
 // =====================================================
 router.get("/buyer-pending", authenticateToken, async (req, res) => {
   try {
-    console.log("\n========================================");
-    console.log("👤 FETCHING BUYER'S PENDING TRANSFERS");
-    console.log("Buyer ID:", req.user.userId);
+    const buyerId = req.user.userId;
 
     const result = await pool.query(
       `SELECT 
-        tr.transfer_id,
-        tr.property_id,
-        tr.buyer_name,
-        tr.buyer_cnic,
-        tr.transfer_amount,
-        tr.property_tax_buyer,
-        tr.total_amount,
-        tr.status,
-        tr.expires_at,
-        tr.created_at,
-        tr.paid_amount,
-        tr.payment_challan_url,
-        
-        -- Limited property info (buyer can see basic details only)
+        tr.*,
+        p.property_id,
         p.district,
         p.tehsil,
-        p.area_marla,
-        p.property_type,
-        
+        p.mauza,
         seller.name as seller_name,
-        seller.cnic as seller_cnic,
-        seller.mobile as seller_mobile
-        
+        (SELECT COUNT(*) FROM channel_messages cm 
+         WHERE cm.channel_id = tr.channel_id 
+         AND cm.sender_id != $1 
+         AND cm.read_by_other = false) as unread_count
        FROM transfer_requests tr
        LEFT JOIN properties p ON tr.property_id = p.property_id
        LEFT JOIN users seller ON tr.seller_id = seller.user_id
-       WHERE tr.buyer_id = $1 
-       AND tr.status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
-       AND tr.expires_at > NOW()
+       WHERE tr.buyer_id = $1
        ORDER BY tr.created_at DESC`,
-      [req.user.userId]
+      [buyerId]
     );
 
-    console.log("✅ Found", result.rows.length, "pending transfer(s)");
-    console.log("========================================\n");
-
-    return res.json({
+    res.json({
       success: true,
-      transfers: result.rows,
-      total: result.rows.length,
-      message: "Note: You can see limited property details until transfer is approved"
+      transfers: result.rows
     });
 
   } catch (err) {
-    console.error("❌ Error fetching buyer transfers:", err);
-    return res.status(500).json({
+    console.error("❌ Get buyer transfers error:", err);
+    res.status(500).json({
       success: false,
-      message: "Server error: " + err.message
+      message: err.message
     });
   }
 });
+
 
 // =====================================================
 // 5️⃣ BUYER: Upload Payment Challan
@@ -375,54 +686,103 @@ router.post("/upload-payment", authenticateToken, async (req, res) => {
     await client.query('BEGIN');
 
     console.log("\n========================================");
-    console.log("💳 BUYER UPLOADING PAYMENT CHALLAN");
+    console.log("💳 UPLOAD PAYMENT CHALLAN");
     console.log("========================================");
 
-    const { transferId, paidAmount, challanUrl } = req.body;
+    const {
+      transferId,
+      paidAmount,
+      challanUrl,
+      agreementScreenshot  // NEW: Screenshot URL from P2P chat
+    } = req.body;
 
     if (!transferId || !paidAmount || !challanUrl) {
-      throw new Error("Transfer ID, paid amount, and challan URL required");
+      throw new Error("Transfer ID, paid amount, and challan URL are required");
     }
 
-    // Verify transfer belongs to this buyer
+    // Get transfer details
     const transferCheck = await client.query(
-      `SELECT * FROM transfer_requests 
-       WHERE transfer_id = $1 AND buyer_id = $2 AND status = 'PAYMENT_PENDING'`,
-      [transferId, req.user.userId]
+      `SELECT * FROM transfer_requests WHERE transfer_id = $1`,
+      [transferId]
     );
 
     if (transferCheck.rows.length === 0) {
-      throw new Error("Transfer not found or payment already uploaded");
+      throw new Error("Transfer request not found");
     }
 
     const transfer = transferCheck.rows[0];
 
-    // Verify amount matches (with small tolerance for rounding)
-    const amountDifference = Math.abs(parseFloat(paidAmount) - parseFloat(transfer.total_amount));
-    if (amountDifference > 0.01) {
-      throw new Error(`Payment amount mismatch. Expected: ${transfer.total_amount}, Received: ${paidAmount}`);
+    // Verify user is the buyer
+    if (transfer.buyer_id !== req.user.userId) {
+      throw new Error("Only the buyer can upload payment challan");
     }
 
-    // Update transfer with payment details
-    await client.query(
+    // Verify status
+    if (transfer.status !== 'PAYMENT_PENDING') {
+      throw new Error(`Cannot upload payment. Current status: ${transfer.status}`);
+    }
+
+    // Verify amount matches
+    const expectedAmount = parseFloat(transfer.total_amount);
+    const actualAmount = parseFloat(paidAmount);
+    
+    if (Math.abs(expectedAmount - actualAmount) > 0.01) {
+      throw new Error(`Amount mismatch. Expected: ${expectedAmount}, Received: ${actualAmount}`);
+    }
+
+    // Update transfer request
+    const updateResult = await client.query(
       `UPDATE transfer_requests 
        SET status = 'PAYMENT_UPLOADED',
            paid_amount = $1,
            payment_challan_url = $2,
            payment_uploaded_at = NOW(),
-           updated_at = NOW()
-       WHERE transfer_id = $3`,
-      [paidAmount, challanUrl, transferId]
+           agreement_screenshot_url = $3
+       WHERE transfer_id = $4
+       RETURNING *`,
+      [paidAmount, challanUrl, agreementScreenshot || null, transferId]
     );
+
+    // =====================================================
+    // NEW: Update channel status if screenshot uploaded
+    // =====================================================
+    if (agreementScreenshot) {
+      await client.query(
+        `UPDATE transfer_requests
+         SET channel_status = 'CLOSED',
+             screenshot_uploaded_at = NOW()
+         WHERE transfer_id = $1`,
+        [transferId]
+      );
+
+      // Add system message to channel
+      if (transfer.channel_id) {
+        await client.query(
+          `INSERT INTO channel_messages (
+            channel_id, sender_role, message_type, message_content, is_system_message
+          ) VALUES ($1, 'SYSTEM', 'TEXT', $2, true)`,
+          [
+            transfer.channel_id,
+            '📸 Agreement screenshot uploaded by buyer. Awaiting LRO approval...'
+          ]
+        );
+      }
+
+      console.log("✅ Agreement screenshot URL stored:", agreementScreenshot);
+    }
 
     // Audit log
     await client.query(
-      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
        VALUES ($1, 'PAYMENT_UPLOADED', $2, $3, $4)`,
       [
         req.user.userId,
         transferId,
-        JSON.stringify({ paidAmount, challanUrl }),
+        JSON.stringify({ 
+          paidAmount, 
+          challanUrl,
+          hasScreenshot: !!agreementScreenshot 
+        }),
         req.ip || 'unknown'
       ]
     );
@@ -430,19 +790,21 @@ router.post("/upload-payment", authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     console.log("✅ Payment challan uploaded successfully");
+    console.log("Transfer ID:", transferId);
     console.log("Amount:", paidAmount);
+    console.log("Status:", updateResult.rows[0].status);
     console.log("========================================\n");
 
-    return res.json({
+    res.json({
       success: true,
-      message: "Payment challan uploaded successfully. Awaiting LRO verification.",
-      transferId: transferId
+      message: "Payment challan uploaded successfully",
+      transfer: updateResult.rows[0]
     });
 
   } catch (err) {
     await client.query('ROLLBACK');
     console.error("❌ Upload payment error:", err);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: err.message
     });
@@ -688,7 +1050,18 @@ router.post("/approve", authenticateToken, async (req, res) => {
     client.release();
   }
 });
-
+// =====================================================
+// MIDDLEWARE - LRO Role Check
+// =====================================================
+function requireLRO(req, res, next) {
+  if (req.user.role !== 'LRO' && req.user.role !== 'ADMIN') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'LRO access required' 
+    });
+  }
+  next();
+}
 // =====================================================
 // 8️⃣ LRO: REJECT TRANSFER
 // =====================================================
@@ -825,6 +1198,305 @@ router.post("/cleanup-expired", authenticateToken, async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+});
+/**
+ * ADD THESE ROUTES TO transfer.js (routes/transfer.js)
+ * 
+ * These endpoints handle pending transfers for sellers and buyers
+ */
+
+// GET /api/transfers/seller/:sellerId/pending
+// Get all pending transfers for a seller
+router.get('/seller/:sellerId/pending', authenticateToken, async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    // Verify the user is the seller
+    if (req.user.userId !== sellerId && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access'
+      });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        tr.*,
+        p.owner_name,
+        p.district,
+        p.tehsil,
+        p.mauza,
+        p.area_marla,
+        p.khewat_no,
+        p.khasra_no,
+        buyer.name as buyer_name,
+        buyer.cnic as buyer_cnic,
+        buyer.email as buyer_email
+      FROM transfer_requests tr
+      JOIN properties p ON tr.property_id = p.property_id
+      LEFT JOIN users buyer ON tr.buyer_id = buyer.user_id
+      WHERE tr.seller_id = $1
+        AND tr.status IN ('PENDING', 'PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'CHANNEL_ACTIVE')
+        AND (tr.expires_at IS NULL OR tr.expires_at > NOW())
+      ORDER BY tr.requested_at DESC
+    `, [sellerId]);
+    
+    res.json({
+      success: true,
+      transfers: result.rows,
+      total: result.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching seller pending transfers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending transfers',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/transfers/buyer/:buyerId/pending
+// Get all pending transfers for a buyer
+router.get('/buyer/:buyerId/pending', authenticateToken, async (req, res) => {
+  try {
+    const { buyerId } = req.params;
+    
+    // Verify the user is the buyer
+    if (req.user.userId !== buyerId && req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access'
+      });
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        tr.*,
+        p.district,
+        p.tehsil,
+        p.mauza,
+        p.area_marla,
+        seller.name as seller_name,
+        seller.cnic as seller_cnic,
+        seller.email as seller_email
+      FROM transfer_requests tr
+      JOIN properties p ON tr.property_id = p.property_id
+      LEFT JOIN users seller ON tr.seller_id = seller.user_id
+      WHERE tr.buyer_id = $1
+        AND tr.status IN ('PENDING', 'PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'CHANNEL_ACTIVE')
+        AND (tr.expires_at IS NULL OR tr.expires_at > NOW())
+      ORDER BY tr.requested_at DESC
+    `, [buyerId]);
+    
+    res.json({
+      success: true,
+      transfers: result.rows,
+      total: result.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching buyer pending transfers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending transfers',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/transfers/:transferId/seller-confirm
+// Seller confirms transfer and creates/activates channel
+router.post('/:transferId/seller-confirm', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { transferId } = req.params;
+    const sellerId = req.user.userId;
+    
+    await client.query('BEGIN');
+    
+    // Verify seller owns this transfer
+    const transfer = await client.query(`
+      SELECT * FROM transfer_requests
+      WHERE transfer_id = $1 AND seller_id = $2
+    `, [transferId, sellerId]);
+    
+    if (transfer.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Transfer request not found'
+      });
+    }
+    
+    const transferData = transfer.rows[0];
+    
+    // Create channel if it doesn't exist
+    let channelId = transferData.channel_id;
+    
+    if (!channelId) {
+      // Import channelService
+      const channelService = (await import('../services/channel.service.js')).default;
+      
+      const channelResult = await channelService.createChannel(
+        transferId,
+        transferData.seller_id,
+        transferData.buyer_id
+      );
+      
+      channelId = channelResult.channelId;
+    }
+    
+    // Activate the channel
+    await client.query(`
+      UPDATE transfer_requests
+      SET 
+        status = 'CHANNEL_ACTIVE',
+        channel_status = 'ACTIVE',
+        channel_activated_at = NOW(),
+        expires_at = NOW() + INTERVAL '7 days'
+      WHERE transfer_id = $1
+    `, [transferId]);
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Transfer confirmed and channel activated',
+      channelId
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error confirming transfer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm transfer',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /api/transfers/:transferId/chat-status
+// Get chat/channel status for a transfer
+router.get('/:transferId/chat-status', authenticateToken, async (req, res) => {
+  try {
+    const { transferId } = req.params;
+    const userId = req.user.userId;
+    
+    const result = await pool.query(`
+      SELECT 
+        tr.channel_id,
+        tr.channel_status,
+        tr.seller_agreed,
+        tr.buyer_agreed,
+        tr.agreement_screenshot_url,
+        tr.agreed_price,
+        cp.role as my_role,
+        cp.is_online as other_party_online
+      FROM transfer_requests tr
+      LEFT JOIN channel_participants cp ON tr.channel_id = cp.channel_id
+      WHERE tr.transfer_id = $1
+        AND (tr.seller_id = $2 OR tr.buyer_id = $2)
+    `, [transferId, userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transfer not found or unauthorized'
+      });
+    }
+    
+    res.json({
+      success: true,
+      chatStatus: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Error fetching chat status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chat status',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/transfers/:transferId/cancel
+// Cancel a pending transfer
+router.post('/:transferId/cancel', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { transferId } = req.params;
+    const userId = req.user.userId;
+    const { reason } = req.body;
+    
+    await client.query('BEGIN');
+    
+    // Verify user is part of this transfer
+    const transfer = await client.query(`
+      SELECT * FROM transfer_requests
+      WHERE transfer_id = $1
+        AND (seller_id = $2 OR buyer_id = $2)
+        AND status NOT IN ('APPROVED', 'REJECTED', 'CANCELLED')
+    `, [transferId, userId]);
+    
+    if (transfer.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Transfer not found or cannot be cancelled'
+      });
+    }
+    
+    // Update transfer status
+    await client.query(`
+      UPDATE transfer_requests
+      SET 
+        status = 'CANCELLED',
+        channel_status = 'CLOSED',
+        rejection_reason = $2,
+        updated_at = NOW()
+      WHERE transfer_id = $1
+    `, [transferId, reason || 'Cancelled by user']);
+    
+    // Close channel if exists
+    if (transfer.rows[0].channel_id) {
+      await client.query(`
+        INSERT INTO channel_messages
+          (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        VALUES
+          ($1, $2, 'SYSTEM', 'SYSTEM', 'SYSTEM', $3, true)
+      `, [
+        transfer.rows[0].channel_id,
+        transferId,
+        '🚫 Transfer has been cancelled.'
+      ]);
+    }
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Transfer cancelled successfully'
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error cancelling transfer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel transfer',
+      error: error.message
+    });
+  } finally {
+    client.release();
   }
 });
 
