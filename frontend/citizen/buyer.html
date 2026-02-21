@@ -499,7 +499,7 @@ function renderTransfers(transfers) {
           <!-- NEW: Chat Button -->
           ${t.channel_id && t.channel_status !== 'CLOSED' ? `
             <button class="btn btn-sm btn-info me-2" 
-                    onclick="openChat('${t.transfer_id}', '${t.channel_id}')">
+                    onclick="openNegotiationChat('${t.channel_id}', '${t.transfer_id}')">
               <i class="fas fa-comments me-1"></i>
               ${t.channel_status === 'ACTIVE' ? 'Continue Chat' : 'Start Chat'}
             </button>
@@ -989,7 +989,7 @@ async function loadChatHistory(channelId) {
 
 function displayChatMessage(message) {
   const chatBox = document.getElementById('chatMessages');
-  const userId = localStorage.getItem('userId');
+  const userId = sessionStorage.getItem('userId');
   const isOwnMessage = message.sender_id === userId;
 
   const messageDiv = document.createElement('div');

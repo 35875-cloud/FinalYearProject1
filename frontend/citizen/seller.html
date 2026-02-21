@@ -526,7 +526,12 @@ body::before {
     width: 100%;
   }
 }
-
+/* Additional styles for pending transfers */
+.pending-transfer-item:hover {
+  border-color: var(--primary) !important;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
 /* Accessibility */
 .btn-nav:focus,
 .form-control:focus {
@@ -701,6 +706,24 @@ html {
 
 </div>
 
+<!-- ============================================
+     PENDING TRANSFERS SECTION
+     ============================================ -->
+<div class="card mb-4" id="pendingTransfersCard" style="display: none;">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-clock me-2"></i>
+      Pending Transfers
+    </h5>
+  </div>
+  <div class="card-body">
+    <div id="pendingTransfersList">
+      <!-- Pending transfers will be loaded here -->
+    </div>
+  </div>
+</div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 
@@ -710,7 +733,7 @@ html {
 // =====================================================
 const API_URL = 'http://localhost:5000/api';
 const authToken = sessionStorage.getItem('authToken');
-const userId = sessionStorage.getItem('userId');
+const userId    = sessionStorage.getItem('userId');
 
 if (!authToken || !userId) {
   alert('Please login first');
@@ -1058,188 +1081,11 @@ async function activateChannelAndOpenChat(transferId, channelId) {
 // Shows all transfers with "Open Chat" buttons
 // ============================================
 
-async function loadMyTransfers() {
-  try {
-    const response = await fetch(`${API_URL}/transfers/my-transfers`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-
-    const result = await response.json();
-
-    if (result.success && result.transfers) {
-      const container = document.getElementById('transfersList');
-      
-      container.innerHTML = result.transfers.map(transfer => `
-        <div class="transfer-card mb-3">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h5>${transfer.property_id}</h5>
-              <p>Buyer: ${transfer.buyer_name} (${transfer.buyer_cnic})</p>
-              <p>Amount: PKR ${transfer.transfer_amount.toLocaleString()}</p>
-              <span class="badge bg-${getStatusColor(transfer.status)}">
-                ${transfer.status}
-              </span>
-            </div>
-            <div>
-              ${transfer.channel_id && transfer.channel_status !== 'CLOSED' ? `
-                <button class="btn btn-primary btn-sm" 
-                        onclick="openChat('${transfer.transfer_id}', '${transfer.channel_id}')">
-                  <i class="fas fa-comments me-1"></i>
-                  Open Chat
-                </button>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-      `).join('');
-    }
-  } catch (error) {
-    console.error('Error loading transfers:', error);
-  }
-}
-
-function openChat(transferId, channelId) {
-  window.location.href = `transfer_negotiation.html?transferId=${transferId}&channelId=${channelId}`;
-}
-
-function getStatusColor(status) {
-  switch(status) {
-    case 'PENDING': return 'warning';
-    case 'PAYMENT_UPLOADED': return 'info';
-    case 'APPROVED': return 'success';
-    case 'REJECTED': return 'danger';
-    default: return 'secondary';
-  }
-}
-
-
-/**
- * Accept transfer and open negotiation
- */
-async function acceptAndStartChat(transferId, channelId) {
-    if (!confirm('Accept this transfer request and start negotiation?')) {
-        return;
-    }
-    
-    try {
-        const token = localStorage.getItem('token');
-        
-        // Accept the transfer (backend will also activate channel)
-        const response = await fetch(`/api/transfers/${transferId}/accept`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to accept transfer');
-        }
-        
-        // Redirect to negotiation page
-        // Use the channelId from response if available, otherwise use the one passed
-        const finalChannelId = data.channelId || channelId;
-        
-        if (finalChannelId) {
-            window.location.href = `../citizen/transfer_negotiation.html?channelId=${finalChannelId}`;
-        } else {
-            alert('Transfer accepted successfully!');
-            location.reload();
-        }
-        
-    } catch (error) {
-        console.error('Error accepting transfer:', error);
-        alert('Failed to accept transfer: ' + error.message);
-    }
-}
-
-/**
- * Open existing negotiation (for already accepted transfers)
- */
-async function openExistingNegotiation(channelId) {
-    if (!channelId) {
-        alert('Channel not found');
-        return;
-    }
-    
-    window.location.href = `../citizen/transfer_negotiation.html?channelId=${channelId}`;
-}
+// loadMyTransfers is now replaced by loadSellerPendingTransfers above
 
 
 
-/**
- * Load accepted transfers with active channels
- */
-async function loadAcceptedTransfers() {
-    try {
-        const userId = getUserId();
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch(`/api/transfers/seller/${userId}/accepted`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error);
-        }
-        
-        const tbody = document.querySelector('#acceptedTransfersTable tbody');
-        tbody.innerHTML = '';
-        
-        data.transfers.forEach(transfer => {
-            const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td>${transfer.transfer_id}</td>
-                <td>${transfer.property_id}</td>
-                <td>${transfer.buyer_name}</td>
-                <td>
-                    <span class="channel-status-badge status-${transfer.channel_status?.toLowerCase()}">
-                        ${transfer.channel_status || 'N/A'}
-                    </span>
-                </td>
-                <td>
-                    ${transfer.unread_count > 0 ? 
-                        `<span class="unread-badge">${transfer.unread_count} new</span>` : 
-                        '-'}
-                </td>
-                <td>
-                    ${transfer.channel_id ? 
-                        `<button class="btn-chat" onclick="openExistingNegotiation('${transfer.channel_id}')">
-                            💬 Open Chat
-                        </button>` : 
-                        '<span class="text-muted">No channel</span>'}
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-        
-    } catch (error) {
-        console.error('Error loading accepted transfers:', error);
-    }
-}
 
-// Call on page load
-document.addEventListener('DOMContentLoaded', () => {
-    loadPendingTransfers();
-    loadAcceptedTransfers();
-    
-    // Refresh every 30 seconds
-    setInterval(() => {
-        loadPendingTransfers();
-        loadAcceptedTransfers();
-    }, 30000);
-});
 
 
 
@@ -1272,7 +1118,118 @@ document.addEventListener('DOMContentLoaded', function() {
   setupAmountCalculation();
   setupDurationCalculation();
   updateUI();
+  loadSellerPendingTransfers();
+  setInterval(loadSellerPendingTransfers, 30000);
 });
+
+
+// =====================================================
+// PENDING SELLER TRANSFERS — FIXED VERSION
+// Uses sessionStorage (not localStorage), correct API path,
+// shows buyer name & "Open Chat" button
+// =====================================================
+async function loadSellerPendingTransfers() {
+  try {
+    const res = await fetch(`${API_URL}/transfers/seller/${userId}/pending`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.success && data.transfers && data.transfers.length > 0) {
+      document.getElementById('pendingTransfersCard').style.display = 'block';
+      renderSellerTransfers(data.transfers);
+    } else {
+      document.getElementById('pendingTransfersCard').style.display = 'block';
+      document.getElementById('pendingTransfersList').innerHTML = `
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+          <p class="mb-0">No pending transfer requests</p>
+        </div>`;
+    }
+  } catch (err) { console.error('Error loading seller transfers:', err); }
+}
+
+function renderSellerTransfers(transfers) {
+  const container = document.getElementById('pendingTransfersList');
+  container.innerHTML = transfers.map(t => {
+    const hasChannel = t.channel_id && t.channel_status !== 'INACTIVE' && t.channel_status !== 'CLOSED';
+    const loc = [t.district, t.tehsil, t.mauza].filter(Boolean).join(', ') || '—';
+    const statusColor = {
+      'PENDING':'warning','CHANNEL_ACTIVE':'info','NEGOTIATING':'primary',
+      'PAYMENT_PENDING':'warning','PAYMENT_UPLOADED':'secondary',
+      'AGREED':'success','APPROVED':'success','REJECTED':'danger'
+    }[t.status] || 'secondary';
+
+    return `
+      <div class="pending-transfer-item" style="
+        background:#fff; border:2px solid #e2e8f0; border-left:5px solid #667eea;
+        border-radius:14px; padding:1.25rem; margin-bottom:1rem;
+        transition:all 0.3s; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+        <div class="row align-items-center g-3">
+          <div class="col-md-8">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <span class="badge bg-${statusColor}">${t.status}</span>
+              ${t.channel_status ? `<span class="badge bg-info"><i class="fas fa-comments me-1"></i>${t.channel_status}</span>` : ''}
+              ${(t.seller_agreed && t.buyer_agreed) ? `<span class="badge bg-success"><i class="fas fa-handshake me-1"></i>Both Agreed!</span>` : ''}
+            </div>
+            <div class="fw-bold" style="font-size:1rem;color:#1e293b;margin-bottom:6px;">
+              <i class="fas fa-user me-1" style="color:#667eea;"></i>
+              Buyer: <span style="color:#667eea;">${t.buyer_name || t.buyer_cnic || '—'}</span>
+              <small class="text-muted ms-2" style="font-weight:400;">${t.buyer_cnic ? `(CNIC: ${t.buyer_cnic})` : ''}</small>
+            </div>
+            <div style="font-size:0.85rem;color:#64748b;">
+              <i class="fas fa-map-marker-alt me-1"></i>${loc}
+              &nbsp;·&nbsp;<strong>${t.area_marla || '—'} Marla</strong>
+              &nbsp;·&nbsp;PKR <strong style="color:#11998e;">${t.transfer_amount ? Number(t.transfer_amount).toLocaleString() : '—'}</strong>
+            </div>
+            ${t.expires_at ? `
+              <div style="font-size:0.78rem;color:#f59e0b;margin-top:4px;">
+                <i class="fas fa-clock me-1"></i>Expires: ${new Date(t.expires_at).toLocaleDateString()}
+              </div>` : ''}
+          </div>
+          <div class="col-md-4 d-flex flex-column gap-2">
+            ${hasChannel ? `
+              <button class="btn btn-primary btn-sm rounded-pill fw-bold"
+                      onclick="openNegotiationChat('${t.channel_id}', '${t.transfer_id}')">
+                <i class="fas fa-comments me-1"></i>Open Chat
+                ${(t.unread_count>0)?`<span class="badge bg-danger ms-1">${t.unread_count}</span>`:''}
+              </button>` : `
+              <button class="btn btn-success btn-sm rounded-pill fw-bold"
+                      onclick="startSellerChannel('${t.transfer_id}')">
+                <i class="fas fa-comments me-1"></i>Start Chat
+              </button>`}
+            <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="alert('Transfer ID: ${t.transfer_id}')">
+              <i class="fas fa-info-circle me-1"></i>Details
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function startSellerChannel(transferId) {
+  try {
+    const res = await fetch(`${API_URL}/transfers/${transferId}/seller-confirm`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (data.success && data.channelId) {
+      openNegotiationChat(data.channelId, transferId);
+    } else {
+      alert(data.message || 'Failed to start channel');
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function openNegotiationChat(channelId, transferId) {
+  window.location.href = `transfer_negotiation.html?channelId=${channelId}&transferId=${transferId}`;
+}
+
+function getStatusColor(status) {
+  const map = { PENDING:'warning', PAYMENT_UPLOADED:'info', APPROVED:'success', REJECTED:'danger', CHANNEL_ACTIVE:'primary', AGREED:'success' };
+  return map[status] || 'secondary';
+}
 </script>
 
 </body>
