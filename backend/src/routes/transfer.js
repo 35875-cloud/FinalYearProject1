@@ -1239,7 +1239,7 @@ router.get('/seller/:sellerId/pending', authenticateToken, async (req, res) => {
       WHERE tr.seller_id = $1
         AND tr.status IN ('PENDING', 'PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'CHANNEL_ACTIVE')
         AND (tr.expires_at IS NULL OR tr.expires_at > NOW())
-      ORDER BY tr.requested_at DESC
+      ORDER BY tr.created_at DESC
     `, [sellerId]);
     
     res.json({
@@ -1288,7 +1288,7 @@ router.get('/buyer/:buyerId/pending', authenticateToken, async (req, res) => {
       WHERE tr.buyer_id = $1
         AND tr.status IN ('PENDING', 'PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'CHANNEL_ACTIVE')
         AND (tr.expires_at IS NULL OR tr.expires_at > NOW())
-      ORDER BY tr.requested_at DESC
+      ORDER BY tr.created_at DESC
     `, [buyerId]);
     
     res.json({
