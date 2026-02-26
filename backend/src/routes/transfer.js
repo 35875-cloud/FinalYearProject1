@@ -648,6 +648,7 @@ router.get("/buyer-pending", authenticateToken, async (req, res) => {
         p.district,
         p.tehsil,
         p.mauza,
+        p.area_marla,
         seller.name as seller_name,
         (SELECT COUNT(*) FROM channel_messages cm 
          WHERE cm.channel_id = tr.channel_id 
