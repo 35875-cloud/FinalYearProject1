@@ -27,7 +27,7 @@ import blockchainRoutes from "./routes/blockchain.js";
 // NEW: Import P2P channel routes and WebSocket service
 import channelRoutes from "./routes/channel.js";
 import websocketService from "./services/websocket.service.js";
-
+import paymentRoutes from './routes/payment.js';
 // Import DB pool
 import pool from "./config/db.js";
 
@@ -78,6 +78,7 @@ app.get("/", (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+app.use('/api/payments', paymentRoutes);
 
 // Test Database Connection
 app.get("/api/health", async (req, res) => {

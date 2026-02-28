@@ -35,7 +35,7 @@ const storage = multer.diskStorage({
 
 // File filter - only allow images and PDFs
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|pdf|webp/;
+  const allowedTypes = /jpeg|jpg|png|gif|pdf|webp|mp3|mp4|wav|ogg|webm|m4a/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
   
@@ -50,13 +50,44 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: fileFilter
 });
 
 // Single file upload middleware
 export const uploadScreenshot = upload.single('screenshot');
+
+// ── Chat media upload (images + voice, 10MB) ──
+const chatMediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = './uploads/chat-media';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const channelId = req.params.channelId || 'ch';
+    const ext = path.extname(file.originalname);
+    cb(null, `media-${channelId}-${Date.now()}${ext}`);
+  }
+});
+
+const chatMediaFilter = (req, file, cb) => {
+  const allowed = /jpeg|jpg|png|gif|webp|mp3|mp4|wav|ogg|webm|m4a/;
+  if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only images and audio files are allowed for chat media'));
+  }
+};
+
+const chatMedia = multer({
+  storage: chatMediaStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: chatMediaFilter
+});
+
+export const uploadChatMedia = chatMedia.single('media');
 
 // Error handler for multer errors
 export function handleUploadError(err, req, res, next) {
