@@ -1,0 +1,17 @@
+/* CitizenLayout.css
+   Supplements Citizen.css for the sidebar layout.
+   Most styles live in Citizen.css — this file handles
+   the hamburger button visibility toggle only.
+   ─────────────────────────────────────────────────── */
+
+/* Desktop: hamburger hidden */
+.cit-hamburger {
+  display: none !important;
+}
+
+/* Tablet / mobile: show hamburger, sidebar slides */
+@media (max-width: 1024px) {
+  .cit-hamburger {
+    display: flex !important;
+  }
+}

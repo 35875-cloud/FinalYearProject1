@@ -1,0 +1,16 @@
+{
+    "livePreview.defaultPreviewPath": "/frontend/auth/register.html",
+    "solidity.packageDefaultDependenciesDirectory": "node_modules",
+    "solidity.packageDefaultDependenciesContractsDirectory": "node_modules/@openzeppelin/contracts",
+    "liveServer.settings.port": 5502,
+       "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "tailwindCSS.includeLanguages": {
+    "javascript": "javascript",
+    "html": "HTML"
+  }
+}

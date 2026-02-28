@@ -1,0 +1,111 @@
+.app-shell {
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at top right, rgba(13, 124, 124, 0.08), transparent 28%),
+    linear-gradient(180deg, #f7fbfb 0%, #edf5f5 100%);
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0D7C7C;
+  outline-offset: 2px;
+}
+
+.route-fade {
+  animation: routeFade 220ms ease;
+}
+
+.cit-soft-surface {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.cit-soft-divider {
+  border-color: rgba(214, 232, 232, 0.85);
+}
+
+.cit-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.cit-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.cit-muted-note {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.cit-mono-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cit-dialog-panel {
+  border-radius: 24px;
+  border: 1px solid rgba(214, 232, 232, 0.92);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+@keyframes routeFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    background:
+      radial-gradient(circle at top center, rgba(13, 124, 124, 0.08), transparent 35%),
+      linear-gradient(180deg, #f7fbfb 0%, #edf5f5 100%);
+  }
+}

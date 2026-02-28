@@ -1,0 +1,180 @@
+/* ============================================================
+   INDEX.CSS — Base layer for the Land Records Portal
+   Fonts: Outfit (display) · DM Sans (body) · JetBrains Mono
+   Design tokens: see Citizen.css for the full set.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 14px;   /* 1rem = 14px throughout the portal */
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: #0C1F1F;
+    background: #F0F6F6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: 2px solid #0B6E6E;
+    outline-offset: 2px;
+  }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #C8DEDE; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9BB8B8; }
+}
+
+@layer components {
+  /* ──── Status pills ──── */
+  .status-pill {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+
+  /* ──── Card base ──── */
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #E2EDED;
+    border-radius: 18px;
+    box-shadow: 0 1px 4px rgba(11,110,110,.06), 0 2px 8px rgba(0,0,0,.04);
+  }
+
+  /* ──── Button base ──── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 15px;
+    border-radius: 10px;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 160ms cubic-bezier(.4,0,.2,1);
+    border: none;
+    outline: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: #0B6E6E;
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(11,110,110,.22);
+  }
+  .btn-primary:hover { background: #095C5C; box-shadow: 0 3px 10px rgba(11,110,110,.30); transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: #FFFFFF;
+    color: #2E4E4E;
+    border: 1px solid #E2EDED;
+  }
+  .btn-ghost:hover { background: #F0F6F6; border-color: #C8DEDE; }
+
+  .btn-danger {
+    color: #DC2626;
+    border: 1px solid #FECACA;
+    background: #FEF2F2;
+  }
+  .btn-danger:hover { background: #FEE2E2; border-color: #DC2626; }
+
+  /* ──── Nav link ──── */
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #2E4E4E;
+    text-decoration: none;
+    transition: all 160ms cubic-bezier(.4,0,.2,1);
+  }
+  .nav-link:hover  { background: #F0F6F6; color: #0B6E6E; }
+  .nav-link.active {
+    background: #F0F6F6;
+    color: #0B6E6E;
+    font-weight: 600;
+    border-left: 3px solid #0B6E6E;
+    padding-left: 7px;
+  }
+
+  /* ──── Input ──── */
+  .input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #E2EDED;
+    background: #FFFFFF;
+    color: #0C1F1F;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    transition: all 160ms cubic-bezier(.4,0,.2,1);
+    outline: none;
+  }
+  .input::placeholder { color: #9BB8B8; }
+  .input:focus { border-color: #0B6E6E; box-shadow: 0 0 0 3px rgba(11,110,110,.10); }
+
+  /* ──── Section overline label ──── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #6B8F8F;
+    margin-bottom: 12px;
+  }
+
+  /* ──── Stat card ──── */
+  .stat-card {
+    background: #FFFFFF;
+    border: 1px solid #E2EDED;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 1px 4px rgba(11,110,110,.05);
+    transition: all 160ms cubic-bezier(.4,0,.2,1);
+  }
+  .stat-card:hover {
+    box-shadow: 0 4px 16px rgba(11,110,110,.08);
+    transform: translateY(-2px);
+  }
+}
+
+/* ──── Animations ──── */
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes modalIn { from { opacity: 0; transform: scale(.97) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.animate-fade-in  { animation: fadeIn  .20s ease both; }
+.animate-slide-up { animation: slideUp .22s cubic-bezier(.4,0,.2,1) both; }
+.animate-slide-in { animation: slideIn .26s cubic-bezier(.4,0,.2,1) both; }
+.animate-modal-in { animation: modalIn .20s cubic-bezier(.4,0,.2,1) both; }
+
+/* ──── Sidebar mobile override ──── */
+@media (max-width: 1024px) {
+  .cit-sidebar { transform: translateX(-100%); }
+  .cit-sidebar.is-open { transform: translateX(0); }
+}
