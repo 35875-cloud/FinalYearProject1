@@ -6,7 +6,7 @@
 
 import express from 'express';
 import channelService from '../services/channel.service.js';
-import { uploadScreenshot, handleUploadError } from '..//middleware/upload.js';
+import { uploadScreenshot, handleUploadError, uploadChatMedia } from '..//middleware/upload.js';
 import path from 'path';
 
 const router = express.Router();
@@ -307,5 +307,35 @@ router.get('/:channelId/validate-access', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/channels/:channelId/send-media
+ * Upload image or voice message for chat (10MB max)
+ */
+router.post(
+  '/:channelId/send-media',
+  uploadChatMedia,
+  handleUploadError,
+  async (req, res) => {
+    try {
+      const { channelId } = req.params;
+      if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+
+      const mediaType = req.file.mimetype.startsWith('audio/') ? 'VOICE_MESSAGE' : 'IMAGE_MESSAGE';
+      const mediaUrl  = `/uploads/chat-media/${req.file.filename}`;
+
+      res.status(200).json({
+        success: true,
+        mediaUrl,
+        mediaType,
+        fileName: req.file.originalname,
+        fileSize: req.file.size
+      });
+    } catch (error) {
+      console.error('Error uploading chat media:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
 
 export default router;

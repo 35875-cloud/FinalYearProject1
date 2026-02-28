@@ -13,9 +13,6 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import http from "http"; // NEW: For WebSocket support
-import path from "path";
-import { fileURLToPath } from 'url';
-
 // Import existing routes
 import authRoutes from "./routes/auth.js";
 import propertyRoutes from "./routes/property.js";
@@ -30,6 +27,8 @@ import websocketService from "./services/websocket.service.js";
 import paymentRoutes from './routes/payment.js';
 // Import DB pool
 import pool from "./config/db.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -43,8 +42,25 @@ const app = express();
 // MIDDLEWARE CONFIGURATION
 // =====================================================
 
-// Security Headers
-app.use(helmet());
+// ── Static file serving MUST come before helmet ──────────────
+// Helmet sets Cross-Origin-Resource-Policy: same-origin which silently
+// blocks the React app (port 3000) from loading audio/images from the
+// API server (port 5000). Serving uploads before helmet bypasses this.
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', (req, res, next) => {
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Accept-Ranges', 'bytes');
+  if (req.path.endsWith('.webm')) res.set('Content-Type', 'audio/webm; codecs=opus');
+  else if (req.path.endsWith('.ogg')) res.set('Content-Type', 'audio/ogg; codecs=opus');
+  next();
+}, express.static(uploadsPath));
+
+// Security Headers (after /uploads so helmet does not override CORP on media files)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false,
+}));
 
 // CORS Configuration
 app.use(cors({
@@ -63,8 +79,6 @@ if (process.env.NODE_ENV !== "production") {
     app.use(morgan("dev"));
 }
 
-// NEW: Serve uploaded files (for agreement screenshots)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // =====================================================
 // ROOT ROUTE - Health Check

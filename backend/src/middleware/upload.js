@@ -11,8 +11,14 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+// Resolve absolute upload base so it always matches express.static('../uploads')
+// upload.js is at backend/src/middleware/upload.js
+// so ../../uploads = backend/uploads/
+import { fileURLToPath } from 'url';
+const __uploadDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../uploads');
+
 // Create uploads directory if it doesn't exist
-const uploadsDir = './uploads/agreements';
+const uploadsDir = path.join(__uploadDir, 'agreements');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -61,7 +67,7 @@ export const uploadScreenshot = upload.single('screenshot');
 // ── Chat media upload (images + voice, 10MB) ──
 const chatMediaStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = './uploads/chat-media';
+    const dir = path.join(__uploadDir, 'chat-media');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
