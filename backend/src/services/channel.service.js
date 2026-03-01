@@ -8,8 +8,10 @@
  * - Screenshot uploads
  */
 
+
 import pkg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import websocketService from './websocket.service.js';
 
 const { Pool } = pkg;
 
@@ -65,7 +67,7 @@ async function createChannel(transferId, sellerId, buyerId) {
     // Create system message
     await client.query(`
       INSERT INTO channel_messages 
-        (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       VALUES 
         ($1, $2, $3, 'BUYER', 'SYSTEM', 'Channel created. Waiting for seller acceptance.', true)
     `, [channelId, transferId, buyerId]);
@@ -114,7 +116,7 @@ async function activateChannel(channelId) {
     // Add system message
     await client.query(`
       INSERT INTO channel_messages 
-        (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       SELECT $1, transfer_id, buyer_id, 'BUYER', 'SYSTEM', 'Channel activated. Both parties can now negotiate.', true
       FROM transfer_requests
       WHERE channel_id = $1
@@ -164,7 +166,7 @@ async function sendMessage(channelId, senderId, messageType, messageContent, pri
     // Insert message
     const result = await client.query(`
       INSERT INTO channel_messages 
-        (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, price_offer)
+        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, price_offer)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [channelId, transferId, senderId, senderRole, messageType, messageContent, priceOffer]);
@@ -243,7 +245,7 @@ async function recordAgreement(channelId, userId, agreedTerms) {
       // Add system message
       await client.query(`
         INSERT INTO channel_messages 
-          (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+          (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
         SELECT $1, transfer_id, buyer_id, 'BUYER', 'SYSTEM', 'Both parties have agreed! Please upload a screenshot of the agreement.', true
         FROM transfer_requests
         WHERE channel_id = $1
@@ -306,7 +308,7 @@ async function uploadScreenshot(channelId, screenshotUrl, agreedPrice, agreedTer
     // Add system message
     await client.query(`
       INSERT INTO channel_messages 
-        (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       SELECT $1, transfer_id, buyer_id, 'BUYER', 'SCREENSHOT', 'Agreement screenshot uploaded. Awaiting LRO approval.', true
       FROM transfer_requests
       WHERE channel_id = $1
@@ -355,7 +357,7 @@ async function getChannelHistory(channelId, userId, limit = 50, offset = 0) {
         m.price_offer,
         m.timestamp,
         m.is_system_message,
-        u.username as sender_name
+        u.name as sender_name
       FROM channel_messages m
       LEFT JOIN users u ON m.sender_id = u.user_id
       WHERE m.channel_id = $1
@@ -394,7 +396,7 @@ async function getChannelDetails(channelId, userId) {
       throw new Error('Unauthorized: User is not a participant in this channel');
     }
     
-    // Get channel details
+    // Get channel details — includes seller & buyer name + CNIC via user JOIN
     const channel = await client.query(`
       SELECT 
         tr.transfer_id,
@@ -412,10 +414,19 @@ async function getChannelDetails(channelId, userId) {
         tr.property_id,
         tr.seller_id,
         tr.buyer_id,
-        p.location as property_location,
-        p.size as property_size
+        seller.name  AS seller_name,
+        seller.cnic  AS seller_cnic,
+        buyer.name   AS buyer_name,
+        buyer.cnic   AS buyer_cnic,
+        CONCAT(p.district, ', ', p.tehsil, ', ', p.mauza) AS property_location,
+        p.area_marla AS property_size,
+        p.district,
+        p.tehsil,
+        p.mauza
       FROM transfer_requests tr
-      JOIN properties p ON tr.property_id = p.property_id
+      JOIN  properties p      ON tr.property_id = p.property_id
+      LEFT JOIN users  seller ON tr.seller_id   = seller.user_id
+      LEFT JOIN users  buyer  ON tr.buyer_id    = buyer.user_id
       WHERE tr.channel_id = $1
     `, [channelId]);
     
@@ -430,7 +441,7 @@ async function getChannelDetails(channelId, userId) {
         cp.role,
         cp.is_online,
         cp.last_seen,
-        u.username
+        u.name
       FROM channel_participants cp
       JOIN users u ON cp.user_id = u.user_id
       WHERE cp.channel_id = $1
@@ -473,7 +484,7 @@ async function closeChannel(channelId) {
     // Add system message
     await client.query(`
       INSERT INTO channel_messages 
-        (channel_id, transfer_request_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       SELECT $1, transfer_id, buyer_id, 'BUYER', 'SYSTEM', 'Channel closed. Transfer has been approved by LRO.', true
       FROM transfer_requests
       WHERE channel_id = $1
@@ -533,8 +544,9 @@ async function getUserChannels(userId) {
         tr.seller_agreed,
         tr.buyer_agreed,
         cp.role as user_role,
-        p.location as property_location,
-        COUNT(cm.message_id) FILTER (WHERE cm.read_by_other = false AND cm.sender_id != $1) as unread_count
+        CONCAT(p.district, ', ', p.tehsil, ', ', p.mauza) as property_location,
+        COUNT(cm.message_id) as total_messages,
+        MAX(cm.timestamp) as last_message_at
       FROM channel_participants cp
       JOIN transfer_requests tr ON cp.channel_id = tr.channel_id
       JOIN properties p ON tr.property_id = p.property_id
@@ -542,7 +554,7 @@ async function getUserChannels(userId) {
       WHERE cp.user_id = $1
       GROUP BY tr.channel_id, tr.channel_status, tr.channel_created_at, 
                tr.property_id, tr.seller_agreed, tr.buyer_agreed, 
-               cp.role, p.location
+               cp.role, p.district, p.tehsil, p.mauza
       ORDER BY tr.channel_created_at DESC
     `, [userId]);
     

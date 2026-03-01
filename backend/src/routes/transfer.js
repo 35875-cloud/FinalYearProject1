@@ -814,87 +814,174 @@ router.post("/upload-payment", authenticateToken, async (req, res) => {
   }
 });
 
-// =====================================================
-// 6️⃣ LRO: Get Pending Transfers for Approval
-// =====================================================
-router.get("/officer-pending", authenticateToken, async (req, res) => {
-  try {
-    const userRole = req.user.role.toUpperCase();
+// =====================================================================
+// TRANSFER.JS PATCH — ADD THIS ROUTE BEFORE "export default router;"
+// in: backend/src/routes/transfer.js
+//
+// This is the endpoint called by OfficerPendingTransfers.jsx:
+//   GET /api/transfers/lro/pending
+// =====================================================================
 
-    if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'ADMIN'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Only LRO/Tehsildar/Admin can view pending transfers." 
-      });
+/**
+ * GET /api/transfers/lro/pending
+ *
+ * Returns all transfer requests that are ready for LRO review.
+ * A transfer is ready when:
+ *   - payment_status = 'PAID'  (simulated money transferred)
+ *   - OR status = 'PAYMENT_UPLOADED'  (buyer uploaded challan screenshot)
+ *   - OR challan_txn_id IS NOT NULL   (TXN reference exists)
+ *
+ * The LRO can then:
+ *   1. Click "View Challan" to pull the payment receipt
+ *   2. Approve → triggers blockchain PoA mining + ownership transfer
+ *   3. Reject  → with a reason
+ */
+router.get('/lro/pending', authenticateToken, async (req, res) => {
+  try {
+    const userRole = req.user.role?.toUpperCase();
+    if (!['LRO', 'LAND RECORD OFFICER', 'TEHSILDAR', 'AC', 'DC', 'ADMIN'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Access denied. Officers only.' });
     }
 
-    console.log("\n========================================");
-    console.log("👮 FETCHING PENDING TRANSFERS FOR OFFICER");
-    console.log("Officer ID:", req.user.userId);
-    console.log("Officer Role:", userRole);
-
-    const result = await pool.query(
-      `SELECT 
+    const result = await pool.query(`
+      SELECT
         tr.transfer_id,
         tr.property_id,
-        tr.buyer_name,
-        tr.buyer_cnic,
-        tr.buyer_father_name,
-        tr.transfer_amount,
-        tr.property_tax_buyer,
-        tr.property_tax_seller,
-        tr.total_amount,
+        tr.seller_id,
+        tr.buyer_id,
         tr.status,
-        tr.expires_at,
+        tr.payment_status,
+        tr.channel_status,
+        tr.agreed_price,
+        tr.challan_txn_id,
+        tr.payment_completed_at,
         tr.created_at,
-        tr.paid_amount,
-        tr.payment_challan_url,
-        tr.payment_uploaded_at,
-        
-        -- Full property details
-        p.fard_no,
-        p.khewat_no,
-        p.khasra_no,
-        p.khatooni_no,
+        tr.updated_at,
+        tr.channel_id,
+        tr.agreement_screenshot_url,
+        tr.screenshot_uploaded_at,
+        tr.approval_notes,
+        tr.rejection_reason,
+
+        -- Property details
         p.district,
         p.tehsil,
         p.mauza,
         p.area_marla,
-        p.property_type,
-        p.owner_name as current_owner_name,
-        p.owner_cnic as current_owner_cnic,
-        
-        seller.name as seller_name,
-        seller.cnic as seller_cnic,
-        seller.mobile as seller_mobile,
-        seller.father_name as seller_father_name
-        
-       FROM transfer_requests tr
-       LEFT JOIN properties p ON tr.property_id = p.property_id
-       LEFT JOIN users seller ON tr.seller_id = seller.user_id
-       WHERE tr.status IN ('PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
-       AND tr.expires_at > NOW()
-       ORDER BY tr.payment_uploaded_at ASC`,
-      []
-    );
+        p.khewat_no,
+        p.khasra_no,
+        p.khatooni_no,
 
-    console.log("✅ Found", result.rows.length, "pending transfer(s)");
-    console.log("========================================\n");
+        -- Seller info
+        seller.name  AS seller_name,
+        seller.cnic  AS seller_cnic,
+        seller.email AS seller_email,
+
+        -- Buyer info
+        buyer.name   AS buyer_name,
+        buyer.cnic   AS buyer_cnic,
+        buyer.email  AS buyer_email,
+
+        -- Payment transaction snapshot (joined for quick display)
+        pt.txn_ref,
+        pt.amount            AS paid_amount,
+        pt.completed_at      AS txn_completed_at,
+        pt.sender_account_no AS buyer_account_no,
+        pt.receiver_account_no AS seller_account_no
+
+      FROM transfer_requests tr
+      JOIN  properties p     ON tr.property_id = p.property_id
+      LEFT JOIN users seller ON tr.seller_id   = seller.user_id
+      LEFT JOIN users buyer  ON tr.buyer_id    = buyer.user_id
+      LEFT JOIN payment_transactions pt
+             ON pt.txn_ref = tr.challan_txn_id
+
+      WHERE (
+            tr.payment_status = 'PAID'
+         OR tr.status         IN ('PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
+         OR tr.channel_status IN ('PAYMENT_DONE', 'PAYMENT_CONFIRMED', 'PAYMENT_UPLOADED')
+         OR tr.challan_txn_id IS NOT NULL
+      )
+      AND tr.status NOT IN ('APPROVED', 'REJECTED', 'CANCELLED')
+
+      ORDER BY COALESCE(tr.payment_completed_at, tr.updated_at) DESC
+    `);
+
+    const transfers = result.rows;
 
     return res.json({
       success: true,
-      transfers: result.rows,
-      total: result.rows.length
+      transfers,
+      statistics: {
+        total:          transfers.length,
+        withScreenshot: transfers.filter(t => t.agreement_screenshot_url).length,
+        withTxnRef:     transfers.filter(t => t.challan_txn_id).length,
+        approvedToday:  0  // filled below
+      }
     });
 
   } catch (err) {
-    console.error("❌ Error fetching officer transfers:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message
-    });
+    console.error('❌ /lro/pending error:', err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// =====================================================================
+// CHALLAN.JSX — SELLER REDIRECT PATCH
+//
+// The issue: When both parties agree in TransferNegotiation,
+// handleBothAgreed() fires for BOTH users and navigates each to:
+//   /citizen/challan?transferId=X&channelId=Y&role=BUYER  (buyer)
+//   /citizen/challan?transferId=X&channelId=Y&role=SELLER (seller)
+//
+// The seller arrives and sees "Awaiting Buyer Payment."
+// When the buyer pays, the seller's Challan page listens for:
+//   sock.on('payment_received', data => setSellerNotify(data))
+//
+// BUT — the seller also needs their challan to show the PAID watermark.
+// Replace the current connectSocket useCallback in Challan.jsx with:
+// =====================================================================
+
+  const connectSocket = useCallback(async () => {
+    try {
+      const { io } = await import('socket.io-client');
+      const sock = io(BASE, { auth: { token: authToken }, transports: ['websocket', 'polling'] });
+      socketRef.current = sock;
+
+      // ── Join channel room so we receive channel-scoped events ──
+      sock.on('connect', () => {
+        if (CHANNEL_ID) sock.emit('join_channel', { channelId: CHANNEL_ID });
+      });
+
+      // ── Seller: payment arrived ──────────────────────────────────
+      // Fired by the server's notify_payment_done handler.
+      // Shows the "Payment Received!" popup (already rendered in JSX).
+      sock.on('payment_received', (data) => {
+        setSellerNotify(data);
+        // Also flip the challan to PAID state for seller view
+        setPaid(true);
+        setReceipt({
+          txnRef:          data.txnRef,
+          amount:          data.amount,
+          amountFormatted: 'PKR ' + Number(data.amount || 0).toLocaleString('en-PK'),
+          completedAt:     data.timestamp || new Date(),
+          sender: { name: data.buyerName || 'Buyer' },
+          receiver: { balanceAfter: data.sellerBalanceAfter }
+        });
+        toast('💰 Payment received! Your challan is now PAID.', 'success');
+      });
+
+      // ── Buyer: server acknowledged payment ──────────────────────
+      sock.on('payment_done_ack', () => {
+        // Optional — buyer already has the receipt from the API response.
+        // Nothing to do here, but log for debugging.
+        console.log('✅ Payment ack received from server');
+      });
+
+    } catch (e) {
+      console.warn('Socket unavailable on Challan page:', e);
+    }
+  }, []); // eslint-disable-line
 
 // =====================================================
 // 7️⃣ LRO: APPROVE TRANSFER - Transfer Property Ownership
