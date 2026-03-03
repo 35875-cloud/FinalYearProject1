@@ -926,62 +926,6 @@ router.get('/lro/pending', authenticateToken, async (req, res) => {
   }
 });
 
-// =====================================================================
-// CHALLAN.JSX — SELLER REDIRECT PATCH
-//
-// The issue: When both parties agree in TransferNegotiation,
-// handleBothAgreed() fires for BOTH users and navigates each to:
-//   /citizen/challan?transferId=X&channelId=Y&role=BUYER  (buyer)
-//   /citizen/challan?transferId=X&channelId=Y&role=SELLER (seller)
-//
-// The seller arrives and sees "Awaiting Buyer Payment."
-// When the buyer pays, the seller's Challan page listens for:
-//   sock.on('payment_received', data => setSellerNotify(data))
-//
-// BUT — the seller also needs their challan to show the PAID watermark.
-// Replace the current connectSocket useCallback in Challan.jsx with:
-// =====================================================================
-
-  const connectSocket = useCallback(async () => {
-    try {
-      const { io } = await import('socket.io-client');
-      const sock = io(BASE, { auth: { token: authToken }, transports: ['websocket', 'polling'] });
-      socketRef.current = sock;
-
-      // ── Join channel room so we receive channel-scoped events ──
-      sock.on('connect', () => {
-        if (CHANNEL_ID) sock.emit('join_channel', { channelId: CHANNEL_ID });
-      });
-
-      // ── Seller: payment arrived ──────────────────────────────────
-      // Fired by the server's notify_payment_done handler.
-      // Shows the "Payment Received!" popup (already rendered in JSX).
-      sock.on('payment_received', (data) => {
-        setSellerNotify(data);
-        // Also flip the challan to PAID state for seller view
-        setPaid(true);
-        setReceipt({
-          txnRef:          data.txnRef,
-          amount:          data.amount,
-          amountFormatted: 'PKR ' + Number(data.amount || 0).toLocaleString('en-PK'),
-          completedAt:     data.timestamp || new Date(),
-          sender: { name: data.buyerName || 'Buyer' },
-          receiver: { balanceAfter: data.sellerBalanceAfter }
-        });
-        toast('💰 Payment received! Your challan is now PAID.', 'success');
-      });
-
-      // ── Buyer: server acknowledged payment ──────────────────────
-      sock.on('payment_done_ack', () => {
-        // Optional — buyer already has the receipt from the API response.
-        // Nothing to do here, but log for debugging.
-        console.log('✅ Payment ack received from server');
-      });
-
-    } catch (e) {
-      console.warn('Socket unavailable on Challan page:', e);
-    }
-  }, []); // eslint-disable-line
 
 // =====================================================
 // 7️⃣ LRO: APPROVE TRANSFER - Transfer Property Ownership
