@@ -129,7 +129,8 @@ router.get("/seller-properties", authenticateToken, async (req, res) => {
        AND status = 'APPROVED'
        AND property_id NOT IN (
          SELECT property_id FROM transfer_requests 
-         WHERE status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')
+         WHERE status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED', 'CHANNEL_ACTIVE')
+           AND (expires_at IS NULL OR expires_at > NOW())
        )
        ORDER BY created_at DESC`,
       [req.user.userId]
@@ -218,17 +219,29 @@ router.post("/initiate", authenticateToken, async (req, res) => {
 
     const property = propertyCheck.rows[0];
 
-    // Check for pending transfers
+    // Check for active (non-expired) pending transfers only
     const existingTransfer = await client.query(
-      `SELECT * FROM transfer_requests 
+      `SELECT transfer_id, expires_at FROM transfer_requests 
        WHERE property_id = $1 
-       AND status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED')`,
+       AND status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'PAYMENT_VERIFIED', 'CHANNEL_ACTIVE')
+       AND (expires_at IS NULL OR expires_at > NOW())`,
       [propertyId]
     );
 
     if (existingTransfer.rows.length > 0) {
-      throw new Error("This property already has a pending transfer request");
+      throw new Error("This property already has an active pending transfer request");
     }
+
+    // Auto-expire any stale transfers for this property before creating a new one
+    await client.query(
+      `UPDATE transfer_requests
+       SET status = 'EXPIRED', updated_at = NOW()
+       WHERE property_id = $1
+         AND status IN ('PAYMENT_PENDING', 'PAYMENT_UPLOADED', 'CHANNEL_ACTIVE')
+         AND expires_at IS NOT NULL
+         AND expires_at <= NOW()`,
+      [propertyId]
+    );
 
     // Calculate taxes (2% each)
     const propertyTaxBuyer = parseFloat((transferAmount * 0.02).toFixed(2));
@@ -658,6 +671,8 @@ router.get("/buyer-pending", authenticateToken, async (req, res) => {
        LEFT JOIN properties p ON tr.property_id = p.property_id
        LEFT JOIN users seller ON tr.seller_id = seller.user_id
        WHERE tr.buyer_id = $1
+         AND tr.status NOT IN ('EXPIRED', 'CANCELLED', 'REJECTED')
+         AND (tr.expires_at IS NULL OR tr.expires_at > NOW())
        ORDER BY tr.created_at DESC`,
       [buyerId]
     );
