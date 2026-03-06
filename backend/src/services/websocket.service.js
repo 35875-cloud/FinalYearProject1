@@ -1,3 +1,5 @@
+
+import crypto from 'crypto';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import pkg from 'pg';
@@ -5,34 +7,28 @@ import pkg from 'pg';
 const { Pool } = pkg;
 
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'landdb',
+  user:     process.env.DB_USER     || 'postgres',
+  host:     process.env.DB_HOST     || 'localhost',
+  database: process.env.DB_NAME     || 'landdb',
   password: process.env.DB_PASSWORD || 'postgres',
-  port: process.env.DB_PORT || 5432,
+  port:     process.env.DB_PORT     || 5432,
 });
 
 let io = null;
-
 const activeConnections = new Map(); // userId -> socket.id
-const userSockets = new Map(); // socket.id -> userId
+const userSockets       = new Map(); // socket.id -> userId
 
 // ─────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────
 function initializeSocketIO(httpServer) {
   io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      credentials: true
-    },
-    pingTimeout: 60000,
-    pingInterval: 25000
+    cors: { origin: '*', credentials: true },
+    pingTimeout:  60000,
+    pingInterval: 25000,
   });
-
   io.use(authenticateSocket);
   io.on('connection', handleConnection);
-
   console.log('✅ Socket.IO server initialized');
   return io;
 }
@@ -44,9 +40,8 @@ async function authenticateSocket(socket, next) {
   try {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error('Authentication required'));
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    socket.userId = decoded.userId;
+    socket.userId   = decoded.userId;
     socket.userRole = decoded.role;
     next();
   } catch (err) {
@@ -56,7 +51,7 @@ async function authenticateSocket(socket, next) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// CONNECTION HANDLER — ALL socket.on() calls are INSIDE this function
+// CONNECTION HANDLER
 // ─────────────────────────────────────────────────────────────────
 function handleConnection(socket) {
   const userId = socket.userId;
@@ -72,7 +67,6 @@ function handleConnection(socket) {
     }
     userSockets.delete(existingSocketId);
   }
-
   activeConnections.set(userId, socket.id);
   userSockets.set(socket.id, userId);
 
@@ -80,23 +74,27 @@ function handleConnection(socket) {
   socket.on('join_channel', async (data) => {
     try {
       const { channelId } = data;
-
       const client = await pool.connect();
+
       const participant = await client.query(
         'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
         [channelId, userId]
       );
-
       if (participant.rows.length === 0) {
         client.release();
         socket.emit('error', { message: 'Unauthorized: Not a participant' });
         return;
       }
-
       const role = participant.rows[0].role;
 
       await client.query(
         'UPDATE channel_participants SET is_online = true, last_seen = NOW() WHERE channel_id = $1 AND user_id = $2',
+        [channelId, userId]
+      );
+
+      const onlineRows = await client.query(
+        `SELECT cp.user_id, cp.role FROM channel_participants cp
+         WHERE cp.channel_id = $1 AND cp.is_online = true AND cp.user_id != $2`,
         [channelId, userId]
       );
       client.release();
@@ -106,18 +104,18 @@ function handleConnection(socket) {
 
       socket.to(channelId).emit('user_joined', { userId, role, timestamp: new Date() });
 
-      const onlineRows = await client.query(
-        `SELECT cp.user_id, cp.role FROM channel_participants cp
-         WHERE cp.channel_id = $1 AND cp.is_online = true AND cp.user_id != $2`,
-        [channelId, userId]
-      );
       for (const row of onlineRows.rows) {
         socket.emit('user_joined', { userId: row.user_id, role: row.role, timestamp: new Date(), alreadyOnline: true });
       }
 
-      socket.emit('self_joined', { userId, role, timestamp: new Date(), peerAlreadyOnline: onlineRows.rows.length > 0 });
+      socket.emit('self_joined', {
+        userId,
+        role,
+        timestamp: new Date(),
+        peerAlreadyOnline: onlineRows.rows.length > 0,
+      });
 
-      console.log(`User ${userId} joined channel ${channelId} as ${role}. Already online peers: ${onlineRows.rows.length}`);
+      console.log(`User ${userId} joined channel ${channelId} as ${role}. Online peers: ${onlineRows.rows.length}`);
 
     } catch (err) {
       console.error('Error joining channel:', err);
@@ -126,22 +124,17 @@ function handleConnection(socket) {
   });
 
   // ── SEND MESSAGE ──────────────────────────────────────────────
+  // TEXT and PRICE_OFFER are P2P-only (WebRTC DataChannel).
+  // Only IMAGE_MESSAGE and VOICE_MESSAGE go through server (CDN upload).
   socket.on('send_message', async (data) => {
     try {
       const { channelId, message, messageType = 'TEXT' } = data;
-
-      // ── P2P ENFORCEMENT ──────────────────────────────────────────────────
-      // TEXT and PRICE_OFFER travel via WebRTC DataChannel only.
-      // Only IMAGE_MESSAGE and VOICE_MESSAGE go through the server (need CDN).
       const P2P_ONLY = ['TEXT', 'PRICE_OFFER'];
       if (P2P_ONLY.includes((messageType || '').toUpperCase())) {
-        console.warn(`⛔ Blocked server-routed ${messageType} from user ${userId} — must use WebRTC`);
-        socket.emit('error', { message: `${messageType} must travel via P2P DataChannel, not server` });
+        console.warn(`⛔ Blocked server-routed ${messageType} from ${userId} — must use WebRTC`);
+        socket.emit('error', { message: `${messageType} must travel via P2P DataChannel` });
         return;
       }
-      // ────────────────────────────────────────────────────────────────────
-
-      console.log(`📨 send_message from ${userId} channel=${channelId} type=${messageType}`);
 
       if (!channelId || !message || !String(message).trim()) {
         socket.emit('error', { message: 'Invalid message data' });
@@ -149,18 +142,15 @@ function handleConnection(socket) {
       }
 
       const client = await pool.connect();
-
       const participant = await client.query(
         'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
         [channelId, userId]
       );
-
       if (participant.rows.length === 0) {
         client.release();
-        socket.emit('error', { message: 'Unauthorized: Not a participant' });
+        socket.emit('error', { message: 'Unauthorized' });
         return;
       }
-
       const senderRole = participant.rows[0].role;
 
       const transferRow = await client.query(
@@ -185,25 +175,21 @@ function handleConnection(socket) {
             VALUES ($1, $2, $3, $4, $5)
             RETURNING *
           `, [channelId, userId, senderRole, messageType, String(message).trim()]);
-        } else {
-          throw insertErr;
-        }
+        } else { throw insertErr; }
       }
-
       client.release();
 
       const saved = result.rows[0];
-      console.log(`✅ Message saved id=${saved.message_id}`);
-
       socket.to(channelId).emit('new_message', {
-        messageId: saved.message_id,
-        senderId: userId,
-        senderRole: senderRole,
-        messageType: messageType,
+        messageId:      saved.message_id,
+        senderId:       userId,
+        senderRole:     senderRole,
+        messageType:    messageType,
         messageContent: String(message).trim(),
-        timestamp: saved.timestamp || saved.created_at || new Date(),
-        isSystemMessage: false
+        timestamp:      saved.timestamp || saved.created_at || new Date(),
+        isSystemMessage: false,
       });
+      console.log(`✅ Message saved id=${saved.message_id} type=${messageType}`);
 
     } catch (err) {
       console.error('Error sending message:', err);
@@ -211,90 +197,17 @@ function handleConnection(socket) {
     }
   });
 
-  // ── SEND PRICE OFFER ──────────────────────────────────────────
-  socket.on('send_price_offer', async (data) => {
-    // ── P2P ENFORCEMENT ──────────────────────────────────────────────────
-    // Price offers travel via WebRTC DataChannel only — never stored on server.
-    console.warn(`⛔ Blocked server-routed price offer from user ${userId} — must use WebRTC`);
-    socket.emit('error', { message: 'Price offers must travel via P2P DataChannel, not server' });
-    return;
-    // ────────────────────────────────────────────────────────────────────
-    try {
-      const { channelId, offeredPrice } = data;
-
-      const client = await pool.connect();
-
-      const participant = await client.query(
-        'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
-        [channelId, userId]
-      );
-
-      if (participant.rows.length === 0) {
-        client.release();
-        socket.emit('error', { message: 'Unauthorized' });
-        return;
-      }
-
-      const senderRole = participant.rows[0].role;
-
-      const transferRow = await client.query(
-        'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1',
-        [channelId]
-      );
-      const transferId = transferRow.rows[0]?.transfer_id || null;
-
-      let result;
-      try {
-        result = await client.query(`
-          INSERT INTO channel_messages
-            (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, price_offer)
-          VALUES ($1, $2, $3, $4, 'PRICE_OFFER', $5, $6)
-          RETURNING *
-        `, [channelId, transferId, userId, senderRole,
-          `Offered price: PKR ${Number(offeredPrice).toLocaleString()}`, offeredPrice]);
-      } catch (insertErr) {
-        if (insertErr.code === '42703') {
-          result = await client.query(`
-            INSERT INTO channel_messages
-              (channel_id, sender_id, sender_role, message_type, message_content, price_offer)
-            VALUES ($1, $2, $3, 'PRICE_OFFER', $4, $5)
-            RETURNING *
-          `, [channelId, userId, senderRole,
-            `Offered price: PKR ${Number(offeredPrice).toLocaleString()}`, offeredPrice]);
-        } else {
-          throw insertErr;
-        }
-      }
-
-      client.release();
-
-      const saved = result.rows[0];
-
-      socket.to(channelId).emit('new_message', {
-        messageId: saved.message_id,
-        senderId: userId,
-        senderRole: senderRole,
-        messageType: 'PRICE_OFFER',
-        messageContent: saved.message_content,
-        priceOffer: offeredPrice,
-        timestamp: saved.timestamp || saved.created_at || new Date(),
-        isSystemMessage: false
-      });
-
-      console.log(`Price offer ${offeredPrice} sent in channel ${channelId}`);
-
-    } catch (err) {
-      console.error('Error sending price offer:', err);
-      socket.emit('error', { message: 'Failed to send price offer' });
-    }
+  // ── SEND PRICE OFFER (blocked — P2P only) ─────────────────────
+  socket.on('send_price_offer', () => {
+    console.warn(`⛔ Blocked server-routed price offer from ${userId} — must use WebRTC`);
+    socket.emit('error', { message: 'Price offers must travel via P2P DataChannel' });
   });
 
-  // ── AGREE TO DEAL ──────────────────────────────────────────
+  // ── AGREE TO DEAL ─────────────────────────────────────────────
   socket.on('agree_to_deal', async (data) => {
+    const client = await pool.connect();
     try {
       const { channelId, agreedTerms, agreedPrice } = data;
-
-      const client = await pool.connect();
       await client.query('BEGIN');
 
       const participant = await client.query(
@@ -308,16 +221,15 @@ function handleConnection(socket) {
         return;
       }
 
-      const role = participant.rows[0].role;
-      const columnName = role === 'SELLER' ? 'seller_agreed' : 'buyer_agreed';
-      const timestampColumn = role === 'SELLER' ? 'seller_agreed_at' : 'buyer_agreed_at';
+      const role        = participant.rows[0].role;
+      const colAgreed   = role === 'SELLER' ? 'seller_agreed'    : 'buyer_agreed';
+      const colTs       = role === 'SELLER' ? 'seller_agreed_at' : 'buyer_agreed_at';
       const parsedPrice = agreedPrice ? parseFloat(agreedPrice) : null;
 
       if (parsedPrice && parsedPrice > 0) {
         await client.query(`
           UPDATE transfer_requests
-          SET ${columnName} = true,
-              ${timestampColumn} = NOW(),
+          SET ${colAgreed} = true, ${colTs} = NOW(),
               agreed_price = $3,
               agreement_text = COALESCE(agreement_text, $2)
           WHERE channel_id = $1
@@ -325,191 +237,110 @@ function handleConnection(socket) {
       } else {
         await client.query(`
           UPDATE transfer_requests
-          SET ${columnName} = true,
-              ${timestampColumn} = NOW(),
+          SET ${colAgreed} = true, ${colTs} = NOW(),
               agreement_text = COALESCE(agreement_text, $2)
           WHERE channel_id = $1
         `, [channelId, agreedTerms || 'I agree.']);
       }
 
       const status = await client.query(
-        'SELECT seller_agreed, buyer_agreed, agreed_price FROM transfer_requests WHERE channel_id = $1',
+        'SELECT seller_agreed, buyer_agreed, agreed_price, transfer_id FROM transfer_requests WHERE channel_id = $1',
         [channelId]
       );
-      const row = status.rows[0] || {};
+      const row        = status.rows[0] || {};
       const bothAgreed = row.seller_agreed && row.buyer_agreed;
-      let challanPayload = null;
-      let challanMsgId = null;
       const finalPrice = parsedPrice || parseFloat(row.agreed_price || 0);
+      const transferId = row.transfer_id || null;
 
+      let agreementHash = null;
+
+      // ── If both agreed: generate SHA-256 hash, update status, store system msg
       if (bothAgreed) {
+        const agreementTimestamp = new Date().toISOString();
+        const hashInput  = `${channelId}:${transferId}:${finalPrice}:${agreementTimestamp}`;
+        agreementHash    = crypto.createHash('sha256').update(hashInput).digest('hex');
+
         await client.query(`
           UPDATE transfer_requests
-          SET channel_status = 'AGREED', agreement_timestamp = NOW()
+          SET channel_status      = 'AGREED',
+              agreement_timestamp = NOW(),
+              agreement_hash      = $2
           WHERE channel_id = $1
-        `, [channelId]);
-
-        // Pre-fetch transfer_id to avoid reusing $1 in both INSERT value and WHERE,
-        // which causes PostgreSQL error 42P08 (inconsistent types for parameter $1).
-        const trPrefetch = await client.query(
-          'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1',
-          [channelId]
-        );
-        const preFetchedTransferId = trPrefetch.rows[0]?.transfer_id || null;
+        `, [channelId, agreementHash]);
 
         await client.query(`
           INSERT INTO channel_messages
             (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
           VALUES ($1, $2, $3, 'SYSTEM', 'SYSTEM', $4, true)
         `, [
-          channelId,
-          preFetchedTransferId,
-          userId,
-          `🤝 Both parties agreed at PKR ${Number(finalPrice||0).toLocaleString('en-PK')}. Challan generated below.`,
+          channelId, transferId, userId,
+          `🤝 Both parties agreed at PKR ${Number(finalPrice||0).toLocaleString('en-PK')}. Agreement Hash: ${agreementHash}`,
         ]);
-
-        // ── Generate CHALLAN message with full details ──
-        try {
-          const cdRow = await client.query(`
-            SELECT
-              tr.transfer_id, tr.seller_id, tr.buyer_id,
-              p.property_id, p.district, p.tehsil, p.mauza, p.area_marla,
-              p.khasra_no, p.khewat_no,
-              s.name        AS seller_name,   s.cnic  AS seller_cnic,   s.father_name AS seller_father,
-              b.name        AS buyer_name,    b.cnic  AS buyer_cnic,    b.father_name AS buyer_father,
-              sa.account_no AS seller_account_no
-            FROM transfer_requests tr
-            JOIN properties    p  ON tr.property_id = p.property_id
-            JOIN users         s  ON tr.seller_id   = s.user_id
-            JOIN users         b  ON tr.buyer_id    = b.user_id
-            LEFT JOIN bank_accounts sa ON sa.user_id = tr.seller_id AND sa.is_active = true
-            WHERE tr.channel_id = $1
-            LIMIT 1
-          `, [channelId]);
-
-          if (cdRow.rows.length > 0) {
-            const cd = cdRow.rows[0];
-            challanPayload = JSON.stringify({
-              challanType: 'PROPERTY_TRANSFER',
-              status: 'UNPAID',
-              agreedPrice: finalPrice,
-              transferId: cd.transfer_id,
-              sellerId: cd.seller_id,
-              buyerId: cd.buyer_id,
-              property: {
-                propertyId: cd.property_id,
-                district: cd.district,
-                tehsil: cd.tehsil,
-                mauza: cd.mauza,
-                areaMarla: cd.area_marla,
-                khasraNo: cd.khasra_no,
-                khewatNo: cd.khewat_no,
-              },
-              seller: {
-                userId: cd.seller_id,
-                name: cd.seller_name,
-                cnic: cd.seller_cnic,
-                fatherName: cd.seller_father,
-                accountNo: cd.seller_account_no,
-              },
-              buyer: {
-                userId: cd.buyer_id,
-                name: cd.buyer_name,
-                cnic: cd.buyer_cnic,
-                fatherName: cd.buyer_father,
-              },
-              generatedAt: new Date().toISOString(),
-            });
-
-            const challanInsert = await client.query(`
-              INSERT INTO channel_messages
-                (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-              VALUES ($1, $2, $3, 'SYSTEM', 'CHALLAN', $4, false)
-              RETURNING message_id
-            `, [channelId, preFetchedTransferId, userId, challanPayload]);
-            challanMsgId = challanInsert.rows[0]?.message_id;
-          }
-        } catch (challanErr) {
-          console.error('⚠️ Challan generation error (non-fatal):', challanErr.message);
-        }
       }
-
+      // ── FIX: COMMIT and release OUTSIDE the if(bothAgreed) block ──
       await client.query('COMMIT');
       client.release();
 
+      // Notify both peers
       io.to(channelId).emit('agreement_updated', {
         role, agreed: true, bothAgreed,
         agreedPrice: finalPrice || null,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       if (bothAgreed) {
         io.to(channelId).emit('both_agreed', {
-          message: 'Both parties agreed. Challan generated in chat.',
-          agreedPrice: finalPrice || null,
-          timestamp: new Date()
+          message:       'Both parties agreed. Agreement recorded.',
+          agreedPrice:   finalPrice || null,
+          agreementHash,           // SHA-256 — blockchain uses this
+          timestamp:     new Date(),
         });
-
-        if (challanPayload) {
-          io.to(channelId).emit('new_message', {
-            messageId: challanMsgId,
-            senderId: 0,
-            senderRole: 'SYSTEM',
-            messageType: 'CHALLAN',
-            messageContent: challanPayload,
-            isSystemMessage: false,
-            timestamp: new Date(),
-          });
-        }
       }
 
-      console.log(`${role} agreed in channel ${channelId} @ PKR ${finalPrice}. Both: ${bothAgreed}`);
+      console.log(`${role} agreed in channel ${channelId} @ PKR ${finalPrice}. Both: ${bothAgreed}${agreementHash ? ' Hash: ' + agreementHash.slice(0,16) + '…' : ''}`);
+
     } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      client.release();
       console.error('Error recording agreement:', err);
       socket.emit('error', { message: 'Failed to record agreement' });
     }
   });
 
-  // ── CHALLAN SUBMITTED ──────────────────────────────────────────
-  socket.on('notify_challan_submitted', (data) => {
+  // ── DISAGREE ──────────────────────────────────────────────────
+  socket.on('disagreed', async (data) => {
     try {
-      const { channelId, buyerSignature, verifyAccountNo, buyerBalance } = data;
+      const { channelId, reason } = data || {};
       if (!channelId) return;
 
-      console.log('📄 Challan submitted event:', channelId);
+      const client = await pool.connect();
+      const pRow = await client.query(
+        'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
+        [channelId, userId]
+      );
+      const role = pRow.rows[0]?.role;
+      if (!role) { client.release(); return; }
 
-      io.to(channelId).emit('challan_submitted', {
-        message: 'Buyer submitted signed challan with account verification',
-        buyerSignature: buyerSignature.substring(0, 50) + '...',
-        verifiedAccount: verifyAccountNo,
-        buyerBalance: buyerBalance,
-        timestamp: new Date(),
-      });
+      await client.query(`
+        UPDATE transfer_requests
+        SET seller_agreed = false, buyer_agreed = false,
+            channel_status = 'NEGOTIATING',
+            agreement_hash = null, agreed_price = null
+        WHERE channel_id = $1
+      `, [channelId]);
 
-    } catch (err) {
-      console.error('Error in notify_challan_submitted:', err);
-    }
-  });
+      await client.query(`
+        INSERT INTO channel_messages
+          (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        SELECT $1, transfer_id, $3, 'SYSTEM', 'SYSTEM', $4, true
+        FROM transfer_requests WHERE channel_id = $1
+      `, [channelId, null, userId, `❌ ${role} disagreed. Negotiation reopened.${reason ? ' Reason: ' + reason : ''}`]);
 
-  // ── CHALLAN PAYMENT CONFIRMED ──────────────────────────────────────────
-  socket.on('confirm_challan_payment', async (data) => {
-    try {
-      const { channelId, transferId, txnRef, buyerBalanceAfter, sellerBalanceAfter } = data;
-      if (!channelId) return;
-
-      console.log('✅ Challan payment confirmed:', txnRef);
-
-      io.to(channelId).emit('challan_payment_confirmed', {
-        txnRef,
-        status: 'PAID',
-        buyerBalanceAfter,
-        sellerBalanceAfter,
-        timestamp: new Date(),
-        message: '🎉 Payment verified! Both parties can download the challan.',
-      });
+      client.release();
+      socket.to(channelId).emit('disagreed', { role, reason, timestamp: new Date() });
 
     } catch (err) {
-      console.error('Error in confirm_challan_payment:', err);
+      console.error('Error handling disagreed:', err);
     }
   });
 
@@ -518,7 +349,6 @@ function handleConnection(socket) {
     try {
       const { channelId } = data;
       socket.leave(channelId);
-
       const client = await pool.connect();
       const pRow = await client.query(
         'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
@@ -530,30 +360,18 @@ function handleConnection(socket) {
         [channelId, userId]
       );
       client.release();
-
       socket.to(channelId).emit('user_left', { userId, role, timestamp: new Date() });
-      console.log(`User ${userId} left channel ${channelId}`);
-
-    } catch (err) {
-      console.error('Error leaving channel:', err);
-    }
+    } catch (err) { console.error('Error leaving channel:', err); }
   });
 
   // ── TYPING ────────────────────────────────────────────────────
   socket.on('typing', (data) => {
     const { channelId } = data || {};
-    if (channelId) {
-      socket.to(channelId).emit('typing', { userId, timestamp: new Date() });
-    }
+    if (channelId) socket.to(channelId).emit('typing', { userId, timestamp: new Date() });
   });
 
-  // ── WebRTC SIGNALING ──────────────────────────────────────────
-  // The server is a pure relay here — it NEVER reads offer/answer/ICE.
-  // It just forwards them to the other peer in the same channel room.
-  // Once the DataChannel is open, chat messages bypass this server entirely.
-
+  // ── WebRTC SIGNALING (pure relay — server never reads content) ─
   socket.on('webrtc_offer', (data) => {
-    // data: { channelId, offer: RTCSessionDescriptionInit }
     const { channelId, offer } = data || {};
     if (!channelId || !offer) return;
     console.log(`📡 WebRTC offer relayed  [${channelId}] from ${userId}`);
@@ -561,7 +379,6 @@ function handleConnection(socket) {
   });
 
   socket.on('webrtc_answer', (data) => {
-    // data: { channelId, answer: RTCSessionDescriptionInit }
     const { channelId, answer } = data || {};
     if (!channelId || !answer) return;
     console.log(`📡 WebRTC answer relayed [${channelId}] from ${userId}`);
@@ -569,18 +386,15 @@ function handleConnection(socket) {
   });
 
   socket.on('webrtc_ice', (data) => {
-    // data: { channelId, candidate: RTCIceCandidateInit }
     const { channelId, candidate } = data || {};
     if (!channelId || !candidate) return;
     socket.to(channelId).emit('webrtc_ice', { candidate, fromUserId: userId });
   });
 
   socket.on('webrtc_hangup', (data) => {
-    // Peer closed the page / left — tell the other side to clean up
     const { channelId } = data || {};
     if (channelId) socket.to(channelId).emit('webrtc_hangup', { fromUserId: userId });
   });
-  // ─────────────────────────────────────────────────────────────
 
   // ── DISCONNECT ────────────────────────────────────────────────
   socket.on('disconnect', async () => {
@@ -588,20 +402,16 @@ function handleConnection(socket) {
       console.log(`❌ User disconnected: ${userId} (${socket.id})`);
       activeConnections.delete(userId);
       userSockets.delete(socket.id);
-
       const client = await pool.connect();
       await client.query(
         'UPDATE channel_participants SET is_online = false, last_seen = NOW() WHERE user_id = $1',
         [userId]
       );
       client.release();
-
-    } catch (err) {
-      console.error('Error handling disconnect:', err);
-    }
+    } catch (err) { console.error('Error handling disconnect:', err); }
   });
 
-} // ← end of handleConnection
+} // ← end handleConnection
 
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
@@ -609,12 +419,10 @@ function handleConnection(socket) {
 function emitToChannel(channelId, eventName, data) {
   if (io) io.to(channelId).emit(eventName, data);
 }
-
 function emitToUser(uid, eventName, data) {
   const socketId = activeConnections.get(uid);
   if (io && socketId) io.to(socketId).emit(eventName, data);
 }
-
 async function getOnlineUsers(channelId) {
   const client = await pool.connect();
   try {
@@ -623,13 +431,8 @@ async function getOnlineUsers(channelId) {
       [channelId]
     );
     return result.rows;
-  } finally {
-    client.release();
-  }
+  } finally { client.release(); }
 }
-
-function isUserOnline(uid) {
-  return activeConnections.has(uid);
-}
+function isUserOnline(uid) { return activeConnections.has(uid); }
 
 export default { initializeSocketIO, emitToChannel, emitToUser, getOnlineUsers, isUserOnline };
