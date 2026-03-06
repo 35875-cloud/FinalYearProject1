@@ -267,7 +267,7 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
       await client.query(`
         INSERT INTO channel_messages 
           (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-        VALUES ($1, $2, $3, 'SYSTEM', 'CHALLAN', $4, true)
+        VALUES ($1, $2, $3, 'SYSTEM', 'CHALLAN', $4, false)
       `, [channelId, row.transfer_id, row.buyer_id, JSON.stringify(challanPayload)]);
 
       await client.query('COMMIT');
@@ -439,6 +439,7 @@ async function getChannelDetails(channelId, userId) {
         tr.seller_agreed_at, tr.buyer_agreed_at,
         tr.property_id, tr.seller_id, tr.buyer_id,
         tr.transfer_amount,
+        tr.payment_status, tr.challan_txn_id, tr.payment_completed_at,
         seller.name  AS seller_name, seller.cnic AS seller_cnic,
         buyer.name   AS buyer_name,  buyer.cnic  AS buyer_cnic,
         CONCAT(p.district, ', ', p.tehsil, ', ', p.mauza) AS property_location,

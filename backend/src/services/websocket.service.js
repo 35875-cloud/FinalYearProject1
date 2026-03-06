@@ -115,7 +115,7 @@ function handleConnection(socket) {
         socket.emit('user_joined', { userId: row.user_id, role: row.role, timestamp: new Date(), alreadyOnline: true });
       }
 
-      socket.emit('self_joined', { userId, role, timestamp: new Date() });
+      socket.emit('self_joined', { userId, role, timestamp: new Date(), peerAlreadyOnline: onlineRows.rows.length > 0 });
 
       console.log(`User ${userId} joined channel ${channelId} as ${role}. Already online peers: ${onlineRows.rows.length}`);
 
@@ -130,7 +130,18 @@ function handleConnection(socket) {
     try {
       const { channelId, message, messageType = 'TEXT' } = data;
 
-      console.log(`📨 send_message from ${userId} channel=${channelId} msg="${message}"`);
+      // ── P2P ENFORCEMENT ──────────────────────────────────────────────────
+      // TEXT and PRICE_OFFER travel via WebRTC DataChannel only.
+      // Only IMAGE_MESSAGE and VOICE_MESSAGE go through the server (need CDN).
+      const P2P_ONLY = ['TEXT', 'PRICE_OFFER'];
+      if (P2P_ONLY.includes((messageType || '').toUpperCase())) {
+        console.warn(`⛔ Blocked server-routed ${messageType} from user ${userId} — must use WebRTC`);
+        socket.emit('error', { message: `${messageType} must travel via P2P DataChannel, not server` });
+        return;
+      }
+      // ────────────────────────────────────────────────────────────────────
+
+      console.log(`📨 send_message from ${userId} channel=${channelId} type=${messageType}`);
 
       if (!channelId || !message || !String(message).trim()) {
         socket.emit('error', { message: 'Invalid message data' });
@@ -202,6 +213,12 @@ function handleConnection(socket) {
 
   // ── SEND PRICE OFFER ──────────────────────────────────────────
   socket.on('send_price_offer', async (data) => {
+    // ── P2P ENFORCEMENT ──────────────────────────────────────────────────
+    // Price offers travel via WebRTC DataChannel only — never stored on server.
+    console.warn(`⛔ Blocked server-routed price offer from user ${userId} — must use WebRTC`);
+    socket.emit('error', { message: 'Price offers must travel via P2P DataChannel, not server' });
+    return;
+    // ────────────────────────────────────────────────────────────────────
     try {
       const { channelId, offeredPrice } = data;
 
@@ -332,14 +349,24 @@ function handleConnection(socket) {
           WHERE channel_id = $1
         `, [channelId]);
 
+        // Pre-fetch transfer_id to avoid reusing $1 in both INSERT value and WHERE,
+        // which causes PostgreSQL error 42P08 (inconsistent types for parameter $1).
+        const trPrefetch = await client.query(
+          'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1',
+          [channelId]
+        );
+        const preFetchedTransferId = trPrefetch.rows[0]?.transfer_id || null;
+
         await client.query(`
           INSERT INTO channel_messages
             (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-          SELECT $1, transfer_id, $2, 'SYSTEM', 'SYSTEM',
-            '🤝 Both parties agreed at PKR ' || COALESCE($3::TEXT, '?') || '. Challan generated below.',
-            true
-          FROM transfer_requests WHERE channel_id = $1
-        `, [channelId, userId, finalPrice]);
+          VALUES ($1, $2, $3, 'SYSTEM', 'SYSTEM', $4, true)
+        `, [
+          channelId,
+          preFetchedTransferId,
+          userId,
+          `🤝 Both parties agreed at PKR ${Number(finalPrice||0).toLocaleString('en-PK')}. Challan generated below.`,
+        ]);
 
         // ── Generate CHALLAN message with full details ──
         try {
@@ -397,10 +424,9 @@ function handleConnection(socket) {
             const challanInsert = await client.query(`
               INSERT INTO channel_messages
                 (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-              SELECT $1, tr.transfer_id, $2, 'SYSTEM', 'CHALLAN', $3, false
-              FROM transfer_requests tr WHERE tr.channel_id = $1
+              VALUES ($1, $2, $3, 'SYSTEM', 'CHALLAN', $4, false)
               RETURNING message_id
-            `, [channelId, userId, challanPayload]);
+            `, [channelId, preFetchedTransferId, userId, challanPayload]);
             challanMsgId = challanInsert.rows[0]?.message_id;
           }
         } catch (challanErr) {
@@ -520,6 +546,41 @@ function handleConnection(socket) {
       socket.to(channelId).emit('typing', { userId, timestamp: new Date() });
     }
   });
+
+  // ── WebRTC SIGNALING ──────────────────────────────────────────
+  // The server is a pure relay here — it NEVER reads offer/answer/ICE.
+  // It just forwards them to the other peer in the same channel room.
+  // Once the DataChannel is open, chat messages bypass this server entirely.
+
+  socket.on('webrtc_offer', (data) => {
+    // data: { channelId, offer: RTCSessionDescriptionInit }
+    const { channelId, offer } = data || {};
+    if (!channelId || !offer) return;
+    console.log(`📡 WebRTC offer relayed  [${channelId}] from ${userId}`);
+    socket.to(channelId).emit('webrtc_offer', { offer, fromUserId: userId });
+  });
+
+  socket.on('webrtc_answer', (data) => {
+    // data: { channelId, answer: RTCSessionDescriptionInit }
+    const { channelId, answer } = data || {};
+    if (!channelId || !answer) return;
+    console.log(`📡 WebRTC answer relayed [${channelId}] from ${userId}`);
+    socket.to(channelId).emit('webrtc_answer', { answer, fromUserId: userId });
+  });
+
+  socket.on('webrtc_ice', (data) => {
+    // data: { channelId, candidate: RTCIceCandidateInit }
+    const { channelId, candidate } = data || {};
+    if (!channelId || !candidate) return;
+    socket.to(channelId).emit('webrtc_ice', { candidate, fromUserId: userId });
+  });
+
+  socket.on('webrtc_hangup', (data) => {
+    // Peer closed the page / left — tell the other side to clean up
+    const { channelId } = data || {};
+    if (channelId) socket.to(channelId).emit('webrtc_hangup', { fromUserId: userId });
+  });
+  // ─────────────────────────────────────────────────────────────
 
   // ── DISCONNECT ────────────────────────────────────────────────
   socket.on('disconnect', async () => {
