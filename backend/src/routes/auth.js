@@ -32,8 +32,8 @@ function generateBlockchainAddress(publicKey) {
   return "0x" + crypto.createHash("sha256").update(publicKey).digest("hex").substring(0, 40);
 }
 
-function generateJWT(userId, role, userEmail) {
-  const payload = { userId, role, email: userEmail, timestamp: Date.now() };
+function generateJWT(userId, role, userEmail, lroNodeId = null) {
+  const payload = { userId, role, email: userEmail, timestamp: Date.now(), lroNodeId };
   return jwt.sign(payload, process.env.JWT_SECRET || "default-jwt-secret", {
     expiresIn: process.env.JWT_EXPIRES_IN || "24h",
   });
@@ -444,7 +444,7 @@ router.post("/login", async (req, res) => {
     // Fetch user details
     const result = await pool.query(
       `SELECT user_id, role, password_hash, is_active, approval_status, 
-              approved_at, name, rejection_reason
+              approved_at, name, rejection_reason, lro_node_id
        FROM users 
        WHERE email = $1`,
       [email.toLowerCase()]
@@ -533,7 +533,7 @@ router.post("/login", async (req, res) => {
     );
 
     // Generate JWT token
-    const token = generateJWT(user.user_id, user.role, email);
+    const token = generateJWT(user.user_id, user.role, email, user.lro_node_id || null);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Store JWT session
