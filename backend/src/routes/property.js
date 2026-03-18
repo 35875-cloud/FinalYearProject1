@@ -301,14 +301,20 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
     console.log("📋 Fetching properties for user:", req.user.userId);
 
     const result = await pool.query(
-      `SELECT 
-        p.property_id, p.owner_name, p.owner_cnic, p.father_name, 
-        p.fard_no, p.khewat_no, p.khasra_no, p.khatooni_no, p.area_marla, 
+      `SELECT
+        p.property_id,
+        -- JOIN users for live owner info — reflects transfers immediately
+        owner_u.name        AS owner_name,
+        owner_u.cnic        AS owner_cnic,
+        owner_u.father_name AS father_name,
+        p.fard_no, p.khewat_no, p.khasra_no, p.khatooni_no, p.area_marla,
         p.property_type, p.district, p.tehsil, p.mauza, p.address,
         p.status, p.created_at, p.property_photo_path, p.year,
-        u.name as added_by_name
+        p.is_for_sale, p.asking_price,
+        officer_u.name AS added_by_name
       FROM properties p
-      LEFT JOIN users u ON p.added_by_officer_id = u.user_id
+      JOIN  users owner_u   ON owner_u.user_id  = p.owner_id
+      LEFT JOIN users officer_u ON officer_u.user_id = p.added_by_officer_id
       WHERE p.owner_id = $1 AND p.status = 'APPROVED'
       ORDER BY p.created_at DESC`,
       [req.user.userId]

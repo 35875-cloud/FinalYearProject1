@@ -331,19 +331,150 @@ router.post('/transfer', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
+    // 6. Mark the CHALLAN message as PAID in channel_messages so it
+    //    persists across page refreshes — this is the source of truth.
+    if (channelId) {
+      try {
+        // Find the CHALLAN message for this channel and update its JSON payload
+        const challanMsg = await pool.query(
+          `SELECT message_id, message_content
+           FROM channel_messages
+           WHERE channel_id = $1 AND message_type = 'CHALLAN'
+           ORDER BY message_id DESC LIMIT 1`,
+          [channelId]
+        );
+        if (challanMsg.rows.length > 0) {
+          // Fetch user names to embed in receipt
+          let challanNames = {};
+          try {
+            const nr = await pool.query(
+              'SELECT user_id, name FROM users WHERE user_id IN ($1,$2)',
+              [senderUserId, receiverUserId]
+            );
+            nr.rows.forEach(r => { challanNames[r.user_id] = r.name; });
+          } catch(_) {}
+
+          let payload = {};
+          try { payload = JSON.parse(challanMsg.rows[0].message_content || '{}'); } catch(_) {}
+          payload.status  = 'PAID';
+          payload.txnRef  = txnRef;
+          payload.paidAt  = new Date().toISOString();
+          // Full receipt embedded so both buyer and seller can render it
+          payload.receipt = {
+            txnRef,
+            amount:      parsedAmount,
+            completedAt: new Date().toISOString(),
+            buyer: {
+              name:      challanNames[senderUserId]   || 'Buyer',
+              accountNo: sender.account_no,
+              maskedNo:  maskAccount(sender.account_no),
+              bankName:  sender.bank_name,
+            },
+            seller: {
+              name:      challanNames[receiverUserId] || 'Seller',
+              accountNo: receiver.account_no,
+              maskedNo:  maskAccount(receiver.account_no),
+              bankName:  receiver.bank_name,
+            },
+          };
+          await pool.query(
+            `UPDATE channel_messages SET message_content = $1 WHERE message_id = $2`,
+            [JSON.stringify(payload), challanMsg.rows[0].message_id]
+          );
+        }
+      } catch (updateErr) {
+        console.warn('⚠️ Could not mark CHALLAN message as PAID:', updateErr.message);
+      }
+    }
+
+    // 7. Auto-generate payment hash and move to LRO_REVIEW
+    let paymentHash = null;
+    try {
+      const trRow = await pool.query(
+        'SELECT agreement_hash FROM transfer_requests WHERE transfer_id = $1',
+        [transferId]
+      );
+      const agreementHash = trRow.rows[0]?.agreement_hash || '';
+      const { createHash } = await import('crypto');
+      paymentHash = createHash('sha256')
+        .update(agreementHash + '|' + txnRef + '|' + parsedAmount + '|' + senderUserId + '|' + receiverUserId + '|' + Date.now())
+        .digest('hex');
+
+      await pool.query(
+        `UPDATE transfer_requests
+            SET payment_hash             = $1,
+                status                   = 'LRO_REVIEW',
+                seller_payment_proof_url = COALESCE(seller_payment_proof_url, buyer_payment_proof_url, 'auto-verified'),
+                seller_proof_uploaded_at = NOW(),
+                updated_at               = NOW()
+          WHERE transfer_id = $2`,
+        [paymentHash, transferId]
+      );
+      if (channelId) {
+        await pool.query(
+          `INSERT INTO channel_messages
+               (channel_id, transfer_id, sender_id, sender_role,
+                message_type, message_content, is_system_message)
+             VALUES ($1, $2, $3, 'SYSTEM', 'HASH_ANNOUNCEMENT',
+               '✅ Payment verified by banking module. Payment hash generated. Case sent to LRO for final review.',
+               true)`,
+          [channelId, transferId, senderUserId]
+        );
+      }
+      console.log('🔐 Payment hash:', paymentHash.slice(0, 16) + '…');
+    } catch (hashErr) {
+      console.warn('⚠️ Hash generation (non-fatal):', hashErr.message);
+    }
+
+    // 8. Fetch names for receipt + socket events
+    const names = await pool.query(
+      'SELECT user_id, name FROM users WHERE user_id IN ($1, $2)',
+      [senderUserId, receiverUserId]
+    );
+    const nameMap = {};
+    names.rows.forEach(r => { nameMap[r.user_id] = r.name; });
+
+    // 9. Emit socket events
+    try {
+      const wsio = globalThis.__websocketService?.getIO?.();
+      if (wsio) {
+        if (channelId) {
+          wsio.to(channelId).emit('transfer:payment_confirmed', {
+            transferId, paymentHash, txnRef, amount: parsedAmount,
+            paidAt: new Date().toISOString(),
+          });
+          wsio.to(channelId).emit('new_message', {
+            channelId, transferId,
+            senderId: senderUserId, senderRole: 'SYSTEM',
+            messageType: 'SYSTEM',
+            messageContent: '💰 Payment of PKR ' + parsedAmount.toLocaleString('en-PK') + ' confirmed. TXN: ' + txnRef + '. Awaiting LRO review.',
+            isSystemMessage: true,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        wsio.to('user:' + receiverUserId).emit('transfer:payment_received', {
+          transferId, channelId, paymentHash, txnRef, amount: parsedAmount,
+          buyerName: nameMap[senderUserId] || 'Buyer',
+          message: 'PKR ' + parsedAmount.toLocaleString('en-PK') + ' received. Case forwarded to LRO.',
+        });
+        wsio.to('lro_room').emit('transfer:ready_for_review', {
+          transferId, channelId, paymentHash, txnRef, amount: parsedAmount,
+        });
+        wsio.to('lro_room').emit('lro:new_case', {
+          transferId, paymentHash, amount: parsedAmount, status: 'LRO_REVIEW',
+        });
+        console.log('📡 Socket events emitted to channel, seller, and LRO room');
+      }
+    } catch (socketErr) {
+      console.warn('⚠️ Socket emit (non-fatal):', socketErr.message);
+    }
+
     console.log('✅ PAYMENT SUCCESS');
     console.log('   TXN Ref      :', txnRef);
     console.log('   Amount       : PKR', parsedAmount);
     console.log('   Sender after : PKR', balanceAfterSender);
     console.log('   Receiver after: PKR', balanceAfterReceiver);
-
-    // ── Fetch names for receipt ───────────────────────────────────
-    const names = await pool.query(`
-      SELECT user_id, name FROM users WHERE user_id IN ($1, $2)
-    `, [senderUserId, receiverUserId]);
-
-    const nameMap = {};
-    names.rows.forEach(r => { nameMap[r.user_id] = r.name; });
+    console.log('   Payment hash :', paymentHash ? paymentHash.slice(0,16) + '…' : 'pending');
 
     // ── Return receipt ────────────────────────────────────────────
     return res.json({

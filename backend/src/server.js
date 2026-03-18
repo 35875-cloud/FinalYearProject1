@@ -24,6 +24,8 @@ import blockchainRoutes         from "./routes/blockchain.js";
 import channelRoutes            from "./routes/channel.js";
 import paymentRoutes            from './routes/payment.js';
 import p2pRoutes                from './routes/p2p_routes.js';   // NEW
+import marketplaceRoutes        from './routes/marketplace_routes.js'; // NEW
+import transferNewRoutes        from './routes/transfer_new_routes.js'; // NEW WORKFLOW
 import websocketService         from "./services/websocket.service.js";
 import pool                     from "./config/db.js";
 
@@ -64,6 +66,7 @@ app.get("/api/health", async (req, res) => {
 
 app.use("/api/auth",              authRoutes);
 app.use("/api/properties",        propertyRoutes);
+app.use("/api/transfers",         transferNewRoutes); // NEW WORKFLOW — mount BEFORE legacy
 app.use("/api/transfers",         transferRoutes);
 app.use("/api/ownership-history", ownershipHistoryRoutes);
 app.use("/api/market",            marketAnalyticsRoutes);
@@ -71,6 +74,7 @@ app.use("/api/blockchain",        blockchainRoutes);
 app.use('/api/blockchain',        blockchainRouter);
 app.use("/api/channels",          channelRoutes);
 app.use("/api/p2p",               p2pRoutes);          // NEW — encrypted message routes
+app.use("/api/marketplace",       marketplaceRoutes);  // NEW — property marketplace
 
 // ── 404 / Error ───────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: "Route not found", path: req.originalUrl }));
@@ -84,6 +88,7 @@ const httpServer = http.createServer(app);
 
 try {
   websocketService.initializeSocketIO(httpServer);
+  globalThis.__websocketService = websocketService; // expose for transfer_new_routes.js
   console.log("✅ WebSocket (Socket.IO) initialized");
 } catch (error) {
   console.error("❌ Failed to initialize WebSocket:", error.message);
