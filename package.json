@@ -4,7 +4,7 @@
   "description": "��#\u0000 \u0000F\u0000i\u0000n\u0000a\u0000l\u0000Y\u0000e\u0000a\u0000r\u0000P\u0000r\u0000o\u0000j\u0000e\u0000c\u0000t\u0000",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+     "start": "node src/server.js"
   },
   "repository": {
     "type": "git",
