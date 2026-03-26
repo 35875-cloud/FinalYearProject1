@@ -157,16 +157,19 @@ try {
 const PORT = process.env.PORT || 5000;
 
 httpServer.listen(PORT, () => {
+  const nodeId   = process.env.NODE_ID   || 'MAIN';
+  const nodeCity = process.env.NODE_CITY || 'Default';
   console.log("\n=====================================================");
-  console.log("🚀 Blockchain Land Records Backend Server");
+  console.log(`🚀 PLRA Backend Node: ${nodeId} — ${nodeCity}`);
   console.log("=====================================================");
-  console.log(`✅ Server:      http://localhost:${PORT}`);
-  console.log(`🔒 P2P Crypto:  http://localhost:${PORT}/api/p2p`);
+  console.log(`✅ Server:  http://localhost:${PORT}`);
+  console.log(`🏙️  City:    ${nodeCity}`);
+  console.log(`🔗 Node ID: ${nodeId}`);
+   console.log(`🔒 P2P Crypto:  http://localhost:${PORT}/api/p2p`);
   console.log(`🔌 WebSocket:   ws://localhost:${PORT}`);
   console.log(`📅 Started:     ${new Date().toLocaleString()}`);
+  
   console.log("=====================================================\n");
-
-  // ✅ FIXED: Start AFTER server starts
   startTamperMonitor();
 });
 
