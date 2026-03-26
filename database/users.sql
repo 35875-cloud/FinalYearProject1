@@ -44,3 +44,10 @@ FROM information_schema.columns
 WHERE table_name = 'users' 
 ORDER BY ordinal_position;
 
+ 
+ 
+-- Logic for manufacturer-specific permissions
+-- Add unique constraint to email field
+-- Define role hierarchy for admin vs manufacturer
+-- Constraint to prevent admin deletion
+-- Added check to prevent duplicate role assignments

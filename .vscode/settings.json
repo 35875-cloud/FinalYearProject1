@@ -1,6 +1,7 @@
 {
     "livePreview.defaultPreviewPath": "/frontend/auth/register.html",
     "solidity.packageDefaultDependenciesDirectory": "node_modules",
+<<<<<<< HEAD
     "solidity.packageDefaultDependenciesContractsDirectory": "node_modules/@openzeppelin/contracts",
     "liveServer.settings.port": 5502,
        "css.validate": false,
@@ -13,4 +14,7 @@
     "javascript": "javascript",
     "html": "HTML"
   }
+=======
+    "solidity.packageDefaultDependenciesContractsDirectory": "node_modules/@openzeppelin/contracts"
+>>>>>>> pineenor/main
 }
