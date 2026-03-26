@@ -1,0 +1,89 @@
+version: '3.8'
+
+networks:
+  plra_nodes:
+    name: plra_nodes
+
+services:
+
+  # ── Node 1: Lahore ──────────────────────────────────
+  db.lahore:
+    image: postgres:15
+    container_name: plra_db_lahore
+    environment:
+      POSTGRES_DB: landdb_lahore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "6700"
+    ports:
+      - "5433:5432"
+    volumes:
+      - lahore_db:/var/lib/postgresql/data
+    networks:
+      - plra_nodes
+
+  # ── Node 2: Rawalpindi ──────────────────────────────
+  db.rawalpindi:
+    image: postgres:15
+    container_name: plra_db_rawalpindi
+    environment:
+      POSTGRES_DB: landdb_rawalpindi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "6700"
+    ports:
+      - "5434:5432"
+    volumes:
+      - rawalpindi_db:/var/lib/postgresql/data
+    networks:
+      - plra_nodes
+
+  # ── Node 3: Faisalabad ──────────────────────────────
+  db.faisalabad:
+    image: postgres:15
+    container_name: plra_db_faisalabad
+    environment:
+      POSTGRES_DB: landdb_faisalabad
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "6700"
+    ports:
+      - "5435:5432"
+    volumes:
+      - faisalabad_db:/var/lib/postgresql/data
+    networks:
+      - plra_nodes
+
+  # ── Node 4: Multan ──────────────────────────────────
+  db.multan:
+    image: postgres:15
+    container_name: plra_db_multan
+    environment:
+      POSTGRES_DB: landdb_multan
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "6700"
+    ports:
+      - "5436:5432"
+    volumes:
+      - multan_db:/var/lib/postgresql/data
+    networks:
+      - plra_nodes
+
+  # ── Node 5: Gujranwala ──────────────────────────────
+  db.gujranwala:
+    image: postgres:15
+    container_name: plra_db_gujranwala
+    environment:
+      POSTGRES_DB: landdb_gujranwala
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "6700"
+    ports:
+      - "5437:5432"
+    volumes:
+      - gujranwala_db:/var/lib/postgresql/data
+    networks:
+      - plra_nodes
+
+volumes:
+  lahore_db:
+  rawalpindi_db:
+  faisalabad_db:
+  multan_db:
+  gujranwala_db:
