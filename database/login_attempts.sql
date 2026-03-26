@@ -10,3 +10,9 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 CREATE INDEX IF NOT EXISTS idx_login_email ON login_attempts(email);
 CREATE INDEX IF NOT EXISTS idx_login_time ON login_attempts(attempt_time);
 
+ 
+ 
+ 
+-- Logic to track failed login attempts per IP
+-- Indexing for fast retrieval of audit logs
+-- Logic to automatically unblock IP after 24 hours

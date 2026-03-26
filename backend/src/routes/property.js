@@ -8,16 +8,25 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 
+<<<<<<< HEAD
 const router = express.Router();
+=======
+const router = express.Router(); // ✅ REQUIRED
+>>>>>>> pineenor/main
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import blockchainService from "../services/blockchain.service.js";
 
+<<<<<<< HEAD
 // =====================================================
 // AUTHENTICATION MIDDLEWARE
 // =====================================================
+=======
+
+
+>>>>>>> pineenor/main
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
@@ -125,10 +134,36 @@ async function getLatestBlockHash() {
   }
 }
 
+<<<<<<< HEAD
 
 
 // =====================================================
 // TEST ROUTE
+=======
+// Create blockchain record
+async function createBlockchainRecord(propertyId, transactionType, data, userId) {
+  try {
+    const blockchainHash = generateBlockchainHash({ propertyId, transactionType, data, timestamp: new Date() });
+    const previousHash = await getLatestBlockHash();
+    
+    await pool.query(
+      `INSERT INTO blockchain_ledger 
+      (property_id, transaction_type, transaction_data, blockchain_hash, previous_hash, creator_user_id) 
+      VALUES ($1, $2, $3, $4, $5, $6)`,
+      [propertyId, transactionType, JSON.stringify(data), blockchainHash, previousHash, userId]
+    );
+    
+    console.log("✅ Blockchain record created:", blockchainHash);
+    return blockchainHash;
+  } catch (err) {
+    console.error("❌ Error creating blockchain record:", err);
+    throw err;
+  }
+}
+
+// =====================================================
+// TEST ROUTE - Check if routes are loaded
+>>>>>>> pineenor/main
 // =====================================================
 router.get("/test", (req, res) => {
   res.json({ 
@@ -139,6 +174,7 @@ router.get("/test", (req, res) => {
 });
 
 // =====================================================
+<<<<<<< HEAD
 // ADD PROPERTY - SIMPLE (No Photos Required)
 // =====================================================
 router.post("/add-property-simple", authenticateToken, async (req, res) => {
@@ -150,6 +186,27 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
     const userRole = req.user.role.toUpperCase();
     
     if (!['LRO', 'LAND RECORD OFFICER'].includes(userRole)) {
+=======
+// 1️⃣ ADD NEW PROPERTY (Land Record Officer)
+// =====================================================
+router.post("/add-property", authenticateToken, upload.fields([
+  { name: 'ownerPhoto', maxCount: 1 },
+  { name: 'propertyPhoto', maxCount: 1 }
+]), async (req, res) => {
+  console.log("\n========================================");
+  console.log("📝 ADD PROPERTY REQUEST RECEIVED");
+  console.log("========================================");
+  
+  try {
+    console.log("User ID:", req.user.userId);
+    console.log("User Role:", req.user.role);
+    console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
+
+    // Check if user is Land Record Officer
+    if (req.user.role !== 'LRO' && req.user.role !== 'LAND RECORD OFFICER') {
+      console.log("❌ Access denied - not an LRO");
+>>>>>>> pineenor/main
       return res.status(403).json({ 
         success: false, 
         message: "Access denied. Only Land Record Officers can add properties." 
@@ -157,6 +214,7 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
     }
 
     const {
+<<<<<<< HEAD
       ownerName, ownerCnic, fatherName, khewatNo, khatooniNo, khasraNo,
       areaMarla, propertyType, district, tehsil, mauza, address, year
     } = req.body;
@@ -193,12 +251,61 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
     );
 
     if (existingProperty.rows.length > 0) {
+=======
+      ownerName, ownerCnic, fatherName, fardNo, khasraNo, khatooniNo,
+      areaMarla, propertyType, district, tehsil, mauza, address
+    } = req.body;
+
+    console.log("Form Data:");
+    console.log("- Owner Name:", ownerName);
+    console.log("- Owner CNIC:", ownerCnic);
+    console.log("- Fard No:", fardNo);
+
+    // Validate required fields
+    if (!ownerName || !ownerCnic || !fatherName || !fardNo || !khasraNo || 
+        !khatooniNo || !areaMarla || !propertyType || !district || !tehsil) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        success: false, 
+        message: "All required fields must be provided" 
+      });
+    }
+
+    // Check if files are uploaded
+    if (!req.files || !req.files.ownerPhoto || !req.files.propertyPhoto) {
+      console.log("❌ Missing files");
+      return res.status(400).json({ 
+        success: false, 
+        message: "Owner photo and property photo are required" 
+      });
+    }
+
+    console.log("✅ All validations passed");
+
+    // Clean CNIC
+    const cleanedCnic = ownerCnic.replace(/\D/g, "");
+    console.log("Cleaned CNIC:", cleanedCnic);
+
+    // Check if property already exists
+    const existingProperty = await pool.query(
+      "SELECT * FROM properties WHERE fard_no = $1 AND khasra_no = $2 AND khatooni_no = $3",
+      [fardNo, khasraNo, khatooniNo]
+    );
+
+    if (existingProperty.rows.length > 0) {
+      console.log("❌ Property already exists");
+>>>>>>> pineenor/main
       return res.json({
         success: false,
         message: "Property with these details already exists"
       });
     }
 
+<<<<<<< HEAD
+=======
+    console.log("✅ Property is unique");
+
+>>>>>>> pineenor/main
     // Check if owner exists, if not create owner record
     let ownerResult = await pool.query(
       "SELECT user_id FROM users WHERE cnic = $1",
@@ -207,6 +314,7 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
 
     let ownerId;
     if (ownerResult.rows.length === 0) {
+<<<<<<< HEAD
       const userId = "USR" + Math.floor(100000 + Math.random() * 900000);
       const bcrypt = await import('bcrypt');
       const defaultPassword = await bcrypt.hash("default123", 10);
@@ -217,6 +325,18 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
         [userId, ownerName, cleanedCnic, fatherName, `${cleanedCnic}@temp.pk`, 
          `03001234567`, defaultPassword, 'CITIZEN', true]
       );
+=======
+      console.log("Creating new owner record...");
+      // Owner doesn't exist, create a basic record
+      const userId = "USR" + Math.floor(100000 + Math.random() * 900000);
+      
+      await pool.query(
+        `INSERT INTO users (id, user_id, role, name, cnic, father_name, is_active) 
+         VALUES ($1, $2, 'CITIZEN', $3, $4, $5, TRUE)`,
+        [uuidv4(), userId, ownerName, cleanedCnic, fatherName]
+      );
+      
+>>>>>>> pineenor/main
       ownerId = userId;
       console.log("✅ Created new owner:", ownerId);
     } else {
@@ -224,6 +344,7 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
       console.log("✅ Found existing owner:", ownerId);
     }
 
+<<<<<<< HEAD
     // Generate property ID
     const propertyId = await generatePropertyId();
 
@@ -270,15 +391,89 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
         'PROPERTY_ADDED',
         propertyId,
         JSON.stringify({ propertyId, ownerName, status: 'PENDING' }),
+=======
+    // Generate Property ID
+    const propertyId = await generatePropertyId();
+    console.log("✅ Generated Property ID:", propertyId);
+
+    // Generate file hashes
+    const ownerPhotoPath = req.files.ownerPhoto[0].path;
+    const propertyPhotoPath = req.files.propertyPhoto[0].path;
+    
+    console.log("Owner Photo Path:", ownerPhotoPath);
+    console.log("Property Photo Path:", propertyPhotoPath);
+
+    const ownerPhotoHash = generateFileHash(ownerPhotoPath);
+    const propertyPhotoHash = generateFileHash(propertyPhotoPath);
+    
+    console.log("✅ Generated file hashes");
+
+    // Insert property record
+    console.log("Inserting property into database...");
+    
+    await pool.query(
+      `INSERT INTO properties 
+      (property_id, owner_id, owner_name, owner_cnic, father_name, fard_no, khasra_no, 
+       khatooni_no, area_marla, property_type, district, tehsil, mauza, address, 
+       owner_photo_path, owner_photo_hash, property_photo_path, property_photo_hash, 
+       added_by_officer, status) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+      [
+        propertyId, ownerId, ownerName, cleanedCnic, fatherName, fardNo, 
+        khasraNo, khatooniNo, parseFloat(areaMarla), propertyType, district, 
+        tehsil, mauza || null, address || null, ownerPhotoPath, ownerPhotoHash, 
+        propertyPhotoPath, propertyPhotoHash, req.user.userId, 'PENDING_APPROVAL'
+      ]
+    );
+
+    console.log("✅ Property inserted into database");
+
+    // Create blockchain record
+    const propertyData = {
+      property_id: propertyId,
+      owner_id: ownerId,
+      owner_name: ownerName,
+      fard_no: fardNo,
+      khasra_no: khasraNo,
+      area_marla: areaMarla,
+      district,
+      tehsil
+    };
+
+    const blockchainHash = await createBlockchainRecord(
+      propertyId,
+      'PROPERTY_REGISTRATION',
+      propertyData,
+      req.user.userId
+    );
+
+    console.log("✅ Blockchain record created");
+
+    // Log audit trail
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address) 
+       VALUES ($1, 'PROPERTY_ADDED', $2, $3, $4)`,
+      [
+        req.user.userId,
+        propertyId,
+        JSON.stringify({ propertyId, ownerName, fardNo }),
+>>>>>>> pineenor/main
         req.ip || 'unknown'
       ]
     );
 
+<<<<<<< HEAD
     console.log("✅ Property added successfully:", propertyId);
+=======
+    console.log("✅ Audit log created");
+    console.log("========================================");
+    console.log("✅ PROPERTY ADDED SUCCESSFULLY");
+>>>>>>> pineenor/main
     console.log("========================================\n");
 
     return res.json({
       success: true,
+<<<<<<< HEAD
       message: "Property added successfully. Awaiting approval.",
       propertyId,
       status: 'PENDING'
@@ -289,18 +484,42 @@ router.post("/add-property-simple", authenticateToken, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error: " + err.message
+=======
+      message: "Property record added successfully and pending approval",
+      propertyId,
+      blockchainHash,
+      status: 'PENDING_APPROVAL'
+    });
+
+  } catch (err) {
+    console.error("========================================");
+    console.error("❌ ADD PROPERTY ERROR");
+    console.error("========================================");
+    console.error("Error:", err);
+    console.error("Stack:", err.stack);
+    console.error("========================================\n");
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error: " + err.message 
+>>>>>>> pineenor/main
     });
   }
 });
 
 // =====================================================
+<<<<<<< HEAD
 // GET USER PROPERTIES (Citizen - Only APPROVED)
+=======
+// 2️⃣ GET USER PROPERTIES (Citizen)
+>>>>>>> pineenor/main
 // =====================================================
 router.get("/my-properties", authenticateToken, async (req, res) => {
   try {
     console.log("📋 Fetching properties for user:", req.user.userId);
 
     const result = await pool.query(
+<<<<<<< HEAD
       `SELECT
         p.property_id,
         -- JOIN users for live owner info — reflects transfers immediately
@@ -316,11 +535,26 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
       JOIN  users owner_u   ON owner_u.user_id  = p.owner_id
       LEFT JOIN users officer_u ON officer_u.user_id = p.added_by_officer_id
       WHERE p.owner_id = $1 AND p.status = 'APPROVED'
+=======
+      `SELECT 
+        p.property_id, p.owner_name, p.owner_cnic, p.father_name, 
+        p.fard_no, p.khasra_no, p.khatooni_no, p.area_marla, 
+        p.property_type, p.district, p.tehsil, p.mauza, p.address,
+        p.status, p.created_at, p.property_photo_path,
+        u.name as added_by_name
+      FROM properties p
+      LEFT JOIN users u ON p.added_by_officer = u.user_id
+      WHERE p.owner_id = $1
+>>>>>>> pineenor/main
       ORDER BY p.created_at DESC`,
       [req.user.userId]
     );
 
+<<<<<<< HEAD
     console.log("✅ Found", result.rows.length, "approved properties");
+=======
+    console.log("✅ Found", result.rows.length, "properties");
+>>>>>>> pineenor/main
 
     return res.json({
       success: true,
@@ -338,7 +572,11 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
+<<<<<<< HEAD
 // GET PROPERTY DETAILS
+=======
+// 3️⃣ GET PROPERTY DETAILS
+>>>>>>> pineenor/main
 // =====================================================
 router.get("/property/:propertyId", authenticateToken, async (req, res) => {
   try {
@@ -355,7 +593,11 @@ router.get("/property/:propertyId", authenticateToken, async (req, res) => {
         officer.user_id as officer_id
       FROM properties p
       LEFT JOIN users u ON p.owner_id = u.user_id
+<<<<<<< HEAD
       LEFT JOIN users officer ON p.added_by_officer_id = officer.user_id
+=======
+      LEFT JOIN users officer ON p.added_by_officer = officer.user_id
+>>>>>>> pineenor/main
       WHERE p.property_id = $1`,
       [propertyId]
     );
@@ -368,6 +610,10 @@ router.get("/property/:propertyId", authenticateToken, async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
+=======
+    // Check if user has permission to view this property
+>>>>>>> pineenor/main
     const property = result.rows[0];
     const userRole = req.user.role.toUpperCase();
     
@@ -406,14 +652,22 @@ router.get("/property/:propertyId", authenticateToken, async (req, res) => {
 });
 
 // =====================================================
+<<<<<<< HEAD
 // GET OFFICER STATS
+=======
+// 4️⃣ GET OFFICER STATS
+>>>>>>> pineenor/main
 // =====================================================
 router.get("/officer-stats", authenticateToken, async (req, res) => {
   try {
     console.log("📊 Fetching officer stats");
 
     const pendingReg = await pool.query(
+<<<<<<< HEAD
       "SELECT COUNT(*) FROM properties WHERE status = 'PENDING'"
+=======
+      "SELECT COUNT(*) FROM properties WHERE status = 'PENDING_APPROVAL'"
+>>>>>>> pineenor/main
     );
 
     const pendingTransfer = await pool.query(
@@ -425,7 +679,11 @@ router.get("/officer-stats", authenticateToken, async (req, res) => {
     );
 
     const approvedToday = await pool.query(
+<<<<<<< HEAD
       "SELECT COUNT(*) FROM properties WHERE status = 'APPROVED' AND DATE(updated_at) = CURRENT_DATE"
+=======
+      "SELECT COUNT(*) FROM properties WHERE status = 'APPROVED' AND DATE(approved_at) = CURRENT_DATE"
+>>>>>>> pineenor/main
     );
 
     return res.json({
@@ -445,6 +703,7 @@ router.get("/officer-stats", authenticateToken, async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 // =====================================================
 // GET PENDING REGISTRATIONS (LRO)
 // =====================================================
@@ -1943,3 +2202,43 @@ router.post("/dc-approve", authenticateToken, async (req, res) => {
 });
 
 export default router;
+=======
+
+// In your add-property route, after database insertion:
+
+// Create blockchain record
+// const blockchainData = {
+//   propertyId,
+//   ownerId,
+//   ownerName,
+//   ownerCnic: cleanedCnic,
+//   fatherName,
+//   fardNo,
+//   khasraNo,
+//   khatooniNo,
+//   areaMarla: parseInt(areaMarla),
+//   propertyType,
+//   district,
+//   tehsil,
+//   documentHash: propertyPhotoHash // Use the document hash
+// };
+
+// try {
+//   const blockchainResult = await blockchainService.registerProperty(blockchainData);
+  
+//   // Update database with blockchain transaction info
+//   await pool.query(
+//     `UPDATE blockchain_ledger 
+//      SET blockchain_hash = $1, verified = true 
+//      WHERE property_id = $2`,
+//     [blockchainResult.transactionHash, propertyId]
+//   );
+  
+//   console.log("✅ Property registered on blockchain:", blockchainResult.transactionHash);
+// } catch (blockchainError) {
+//   console.error("❌ Blockchain registration failed:", blockchainError);
+//   // Property is in database but not on blockchain - handle this case
+// }
+
+export default router;
+>>>>>>> pineenor/main
