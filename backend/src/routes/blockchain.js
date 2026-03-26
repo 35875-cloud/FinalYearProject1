@@ -7,6 +7,18 @@ import express from 'express';
 import blockchainService from '../services/blockchain.service.js';
 import tamperingService from '../services/blockchainTampering.service.js';
 import jwt from 'jsonwebtoken';
+import pkg from 'pg';
+import fabricService from '../services/fabric.service.mock.js';
+import wsService from '../services/websocket.service.js';
+
+const { Pool } = pkg;
+const pool2 = new Pool({
+  host:     process.env.DB_HOST     || 'localhost',
+  port:     parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME     || 'landdb',
+  user:     process.env.DB_USER     || 'postgres',
+  password: process.env.DB_PASSWORD || '6700',
+});
 
 const router = express.Router();
 
@@ -415,5 +427,248 @@ router.get('/tampering/info', authenticateToken, requireAdmin, async (req, res) 
         }
     });
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+//  PoA VOTING ROUTES  (called by LROVotingPanel.jsx)
+// ═══════════════════════════════════════════════════════════════
+
+function requireLROorDC(req, res, next) {
+  const role = (req.user?.role || '').toUpperCase();
+  if (!['LRO','DC','ADMIN','LAND RECORD OFFICER','DEPUTY COMMISSIONER'].includes(role)) {
+    return res.status(403).json({ success: false, error: 'LRO or DC role required' });
+  }
+  next();
+}
+
+// GET /api/blockchain/lro/cases  - all AGREED+ cases for LROVotingPanel
+router.get('/lro/cases', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const result = await pool2.query(`
+      SELECT
+        tr.channel_id, tr.transfer_id, tr.property_id,
+        tr.seller_id,  tr.buyer_id,    tr.agreed_price,
+        tr.agreement_hash, tr.agreement_timestamp,
+        tr.channel_status, tr.seller_agreed, tr.buyer_agreed,
+        seller.name  AS seller_name, seller.cnic AS seller_cnic,
+        buyer.name   AS buyer_name,  buyer.cnic  AS buyer_cnic,
+        p.district, p.mauza, p.khasra_no, p.fard_no, p.area_marla
+      FROM transfer_requests tr
+      LEFT JOIN users      seller ON seller.user_id   = tr.seller_id
+      LEFT JOIN users      buyer  ON buyer.user_id    = tr.buyer_id
+      LEFT JOIN properties p      ON p.property_id   = tr.property_id
+      WHERE tr.agreement_hash IS NOT NULL
+        AND tr.channel_status IN ('AGREED','LRO_PENDING','LRO_APPROVED','LRO_REJECTED','TRANSFERRED')
+      ORDER BY tr.agreement_timestamp DESC
+      LIMIT 100
+    `);
+    res.json({ success: true, cases: result.rows });
+  } catch (err) {
+    console.error('GET /lro/cases error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/blockchain/agreement/:channelId
+// Returns full case details including buyer/seller names for LRO voting panel
+router.get('/agreement/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+
+    // ── Fetch DB record with full buyer/seller/property info ──
+    const dbRow = await pool2.query(
+      `SELECT
+         tr.channel_id, tr.transfer_id, tr.property_id,
+         tr.seller_id,  tr.buyer_id,    tr.agreed_price,
+         tr.agreement_hash, tr.agreement_timestamp,
+         tr.channel_status, tr.seller_agreed, tr.buyer_agreed,
+         seller.name        AS seller_name,
+         seller.cnic        AS seller_cnic,
+         seller.father_name AS seller_father,
+         buyer.name         AS buyer_name,
+         buyer.cnic         AS buyer_cnic,
+         buyer.father_name  AS buyer_father,
+         p.fard_no,
+         p.district,
+         p.tehsil,
+         p.mauza,
+         p.khasra_no,
+         p.area_marla
+       FROM transfer_requests tr
+       LEFT JOIN users      seller ON seller.user_id   = tr.seller_id
+       LEFT JOIN users      buyer  ON buyer.user_id    = tr.buyer_id
+       LEFT JOIN properties p      ON p.property_id   = tr.property_id
+       WHERE tr.channel_id = $1`,
+      [channelId]
+    );
+    const db = dbRow.rows[0] || null;
+
+    // ── Fetch blockchain record (now includes enriched names) ──
+    const chainRecord = await fabricService.getAgreementFromChain(channelId);
+
+    // ── Tamper check: compare DB hash vs chain hash ──
+    let tamperCheck = null;
+    if (db?.agreement_hash) {
+      tamperCheck = await fabricService.verifyAgreementHash(channelId, db.agreement_hash);
+    }
+
+    const integrity = tamperCheck
+      ? (tamperCheck.verified ? 'CLEAN' : 'TAMPERED')
+      : (chainRecord.found    ? 'NOT_VERIFIED' : 'NOT_ON_CHAIN');
+
+    // If tampered - log alert
+    if (integrity === 'TAMPERED') {
+      console.error(`⚠️  TAMPER ALERT: channel=\${channelId}  DB_hash=\${db.agreement_hash?.slice(0,16)}  chain_hash=\${tamperCheck?.chainHash?.slice(0,16)}`);
+    }
+
+    res.json({
+      success:    true,
+      channelId,
+      database:   db,
+      blockchain: chainRecord.agreement || null,
+      onChain:    chainRecord.found,
+      tamperCheck,
+      integrity,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/blockchain/history/:channelId
+router.get('/history/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const result = await fabricService.getAgreementHistory(req.params.channelId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/blockchain/verify/:channelId
+router.get('/verify/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const dbRow = await pool2.query(
+      'SELECT agreement_hash FROM transfer_requests WHERE channel_id = $1', [channelId]
+    );
+    if (!dbRow.rows[0]?.agreement_hash) {
+      return res.json({ success: false, onChain: false, integrity: 'NO_HASH',
+        error: 'No agreement hash - both parties must agree first' });
+    }
+    const result = await fabricService.verifyAgreementHash(channelId, dbRow.rows[0].agreement_hash);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/blockchain/retry-anchor/:channelId
+router.post('/retry-anchor/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const dbRow = await pool2.query(
+      `SELECT tr.channel_id, tr.transfer_id, tr.property_id,
+              tr.seller_id, tr.buyer_id, tr.agreed_price,
+              tr.agreement_hash, tr.agreement_timestamp
+       FROM transfer_requests tr WHERE tr.channel_id = $1`, [channelId]
+    );
+    const row = dbRow.rows[0];
+    if (!row) return res.status(404).json({ success: false, error: 'Channel not found' });
+    if (!row.agreement_hash) return res.status(400).json({ success: false, error: 'No hash yet - both parties must agree first' });
+    const existing = await fabricService.getAgreementFromChain(channelId);
+    if (existing.found) return res.json({ success: true, message: 'Already on chain', txId: existing.agreement?.blockchainTxId });
+    const result = await fabricService.recordAgreementOnChain({
+      channelId, transferId: row.transfer_id, propertyId: String(row.property_id),
+      sellerId: String(row.seller_id), buyerId: String(row.buyer_id),
+      agreedPrice: row.agreed_price, agreementHash: row.agreement_hash,
+      timestamp: row.agreement_timestamp?.toISOString() || new Date().toISOString(),
+    });
+    res.json({ success: result.success, txId: result.txId, agreementHash: result.agreementHash, error: result.error });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/blockchain/lro/submit/:channelId
+router.post('/lro/submit/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const check = await pool2.query(
+      'SELECT channel_status, agreement_hash FROM transfer_requests WHERE channel_id = $1', [channelId]
+    );
+    if (!check.rows[0]) return res.status(404).json({ success: false, error: 'Channel not found' });
+    if (check.rows[0].channel_status !== 'AGREED')
+      return res.status(400).json({ success: false, error: `Status is ${check.rows[0].channel_status} - can only submit AGREED cases` });
+    const result = await fabricService.submitForLROVerification(channelId, String(req.user.userId));
+    if (result.success) {
+      await pool2.query("UPDATE transfer_requests SET channel_status = 'LRO_PENDING' WHERE channel_id = $1", [channelId]);
+    }
+    res.json({ success: result.success, txId: result.txId, status: result.status, error: result.error });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/blockchain/lro/vote/:channelId
+router.post('/lro/vote/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const { vote, reason, nodeId: bodyNodeId } = req.body;
+    const nodeId = req.user.lroNodeId || bodyNodeId;
+    if (!nodeId) return res.status(400).json({ success: false, error: 'No LRO node ID. Your account must have lro_node_id set in the database.' });
+    if (!vote || !['APPROVE','REJECT'].includes(vote.toUpperCase()))
+      return res.status(400).json({ success: false, error: 'vote must be APPROVE or REJECT' });
+    const check = await pool2.query('SELECT channel_status FROM transfer_requests WHERE channel_id = $1', [channelId]);
+    if (check.rows[0]?.channel_status !== 'LRO_PENDING')
+      return res.status(400).json({ success: false, error: `Cannot vote - status is ${check.rows[0]?.channel_status}. Case must be LRO_PENDING.` });
+    const result = await fabricService.castPoAVote(channelId, nodeId, vote.toUpperCase(), reason || '');
+    if (result.success && result.status) {
+      await pool2.query('UPDATE transfer_requests SET channel_status = $2 WHERE channel_id = $1', [channelId, result.status]);
+      try {
+        const eventName = result.status === 'LRO_APPROVED' ? 'poa_approved' :
+                          result.status === 'LRO_REJECTED' ? 'poa_rejected' : 'poa_vote_cast';
+        if (wsService?.emitToChannel) wsService.emitToChannel(channelId, eventName, {
+          channelId, nodeId, vote: vote.toUpperCase(),
+          approvals: result.approvals, rejections: result.rejections,
+          status: result.status, timestamp: new Date(),
+        });
+      } catch(wsErr) { /* non-fatal */ }
+    }
+    res.json({ success: result.success, txId: result.txId, nodeId, vote: vote.toUpperCase(),
+      approvals: result.approvals, rejections: result.rejections, status: result.status, error: result.error });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/blockchain/lro/transfer/:channelId
+router.post('/lro/transfer/:channelId', authenticateToken, requireLROorDC, async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const check = await pool2.query('SELECT channel_status FROM transfer_requests WHERE channel_id = $1', [channelId]);
+    if (check.rows[0]?.channel_status !== 'LRO_APPROVED')
+      return res.status(400).json({ success: false, error: `Cannot transfer - need LRO_APPROVED. Current: ${check.rows[0]?.channel_status}` });
+    const result = await fabricService.executeTransfer(channelId, String(req.user.userId));
+    if (result.success) {
+      await pool2.query("UPDATE transfer_requests SET channel_status = 'TRANSFERRED' WHERE channel_id = $1", [channelId]);
+      await pool2.query(
+        `UPDATE properties SET owner_id = (SELECT buyer_id FROM transfer_requests WHERE channel_id = $1)
+         WHERE property_id = (SELECT property_id FROM transfer_requests WHERE channel_id = $1)`, [channelId]
+      );
+      try {
+        if (wsService?.emitToChannel) wsService.emitToChannel(channelId, 'transfer_executed', {
+          channelId, propertyId: result.propertyId, newOwner: result.newOwner,
+          txId: result.txId, timestamp: new Date(),
+        });
+      } catch(wsErr) { /* non-fatal */ }
+    }
+    res.json({ success: result.success, txId: result.txId, propertyId: result.propertyId,
+      newOwner: result.newOwner, status: result.status, error: result.error });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 export default router;
