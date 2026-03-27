@@ -1,0 +1,15 @@
+version: '3'
+services:
+  voting-system:
+    image: voting-system:latest
+    build:
+      context: ./voting-system
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    networks:
+      - voting-network
+
+networks:
+  voting-network:
+    driver: bridge
