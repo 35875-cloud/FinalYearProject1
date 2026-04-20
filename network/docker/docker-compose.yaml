@@ -1,0 +1,252 @@
+networks:
+  fabric-network:
+    name: fabric-network
+    driver: bridge
+
+services:
+  orderer.example.com:
+    image: hyperledger/fabric-orderer:2.5.0
+    container_name: orderer.example.com
+    environment:
+      ORDERER_GENERAL_LISTENADDRESS: 0.0.0.0
+      ORDERER_GENERAL_LISTENPORT: 7050
+      ORDERER_GENERAL_LOCALMSPID: OrdererMSP
+      ORDERER_GENERAL_LOCALMSPDIR: /var/hyperledger/orderer/msp
+      ORDERER_GENERAL_TLS_ENABLED: "true"
+      ORDERER_GENERAL_TLS_PRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_GENERAL_TLS_CERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_GENERAL_TLS_ROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_GENERAL_BOOTSTRAPMETHOD: none
+      ORDERER_CHANNELPARTICIPATION_ENABLED: "true"
+      ORDERER_ADMIN_TLS_ENABLED: "true"
+      ORDERER_ADMIN_TLS_CERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_ADMIN_TLS_PRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_ADMIN_TLS_ROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_ADMIN_TLS_CLIENTROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_ADMIN_LISTENADDRESS: 0.0.0.0:7053
+    volumes:
+      - ../../:/workspace
+      - ../crypto-material/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ../crypto-material/ordererOrganizations/example.com/orderers/orderer.example.com/tls:/var/hyperledger/orderer/tls
+      - orderer_data:/var/hyperledger/production/orderer
+    ports:
+      - "7050:7050"
+      - "7053:7053"
+    networks:
+      - fabric-network
+
+  peer0.org1.example.com:
+    image: hyperledger/fabric-peer:2.5.0
+    container_name: peer0.org1.example.com
+    environment:
+      PLRA_NODE_ID: LRO_NODE_1
+      PLRA_NODE_CITY: Lahore
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: fabric-network
+      CORE_PEER_ID: peer0.org1.example.com
+      CORE_PEER_ADDRESS: peer0.org1.example.com:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer0.org1.example.com:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer1.org1.example.com:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.org1.example.com:7051
+      CORE_PEER_LOCALMSPID: Org1MSP
+      CORE_PEER_MSPCONFIGPATH: /var/hyperledger/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CLIENTAUTHREQUIRED: "false"
+      CORE_PEER_TLS_CERT_FILE: /var/hyperledger/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /var/hyperledger/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /var/hyperledger/tls/ca.crt
+      CORE_CHAINCODE_LOGGING_LEVEL: info
+    volumes:
+      - ../../:/workspace
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp:/var/hyperledger/msp
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/var/hyperledger/tls
+      - peer0_org1_data:/var/hyperledger/production
+    ports:
+      - "7051:7051"
+    networks:
+      - fabric-network
+    depends_on:
+      - orderer.example.com
+
+  peer1.org1.example.com:
+    image: hyperledger/fabric-peer:2.5.0
+    container_name: peer1.org1.example.com
+    environment:
+      PLRA_NODE_ID: LRO_NODE_2
+      PLRA_NODE_CITY: Rawalpindi
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: fabric-network
+      CORE_PEER_ID: peer1.org1.example.com
+      CORE_PEER_ADDRESS: peer1.org1.example.com:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer1.org1.example.com:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.org1.example.com:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer1.org1.example.com:7051
+      CORE_PEER_LOCALMSPID: Org1MSP
+      CORE_PEER_MSPCONFIGPATH: /var/hyperledger/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CLIENTAUTHREQUIRED: "false"
+      CORE_PEER_TLS_CERT_FILE: /var/hyperledger/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /var/hyperledger/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /var/hyperledger/tls/ca.crt
+      CORE_CHAINCODE_LOGGING_LEVEL: info
+    volumes:
+      - ../../:/workspace
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/msp:/var/hyperledger/msp
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/tls:/var/hyperledger/tls
+      - peer1_org1_data:/var/hyperledger/production
+    ports:
+      - "8051:7051"
+    networks:
+      - fabric-network
+    depends_on:
+      - orderer.example.com
+
+  peer2.org1.example.com:
+    image: hyperledger/fabric-peer:2.5.0
+    container_name: peer2.org1.example.com
+    environment:
+      PLRA_NODE_ID: LRO_NODE_3
+      PLRA_NODE_CITY: Faisalabad
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: fabric-network
+      CORE_PEER_ID: peer2.org1.example.com
+      CORE_PEER_ADDRESS: peer2.org1.example.com:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer2.org1.example.com:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.org1.example.com:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer2.org1.example.com:7051
+      CORE_PEER_LOCALMSPID: Org1MSP
+      CORE_PEER_MSPCONFIGPATH: /var/hyperledger/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CLIENTAUTHREQUIRED: "false"
+      CORE_PEER_TLS_CERT_FILE: /var/hyperledger/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /var/hyperledger/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /var/hyperledger/tls/ca.crt
+      CORE_CHAINCODE_LOGGING_LEVEL: info
+    volumes:
+      - ../../:/workspace
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer2.org1.example.com/msp:/var/hyperledger/msp
+      - ../crypto-material/peerOrganizations/org1.example.com/peers/peer2.org1.example.com/tls:/var/hyperledger/tls
+      - peer2_org1_data:/var/hyperledger/production
+    ports:
+      - "19051:7051"
+    networks:
+      - fabric-network
+    depends_on:
+      - orderer.example.com
+
+  peer0.org2.example.com:
+    image: hyperledger/fabric-peer:2.5.0
+    container_name: peer0.org2.example.com
+    environment:
+      PLRA_NODE_ID: LRO_NODE_4
+      PLRA_NODE_CITY: Multan
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: fabric-network
+      CORE_PEER_ID: peer0.org2.example.com
+      CORE_PEER_ADDRESS: peer0.org2.example.com:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer0.org2.example.com:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer1.org2.example.com:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.org2.example.com:7051
+      CORE_PEER_LOCALMSPID: Org2MSP
+      CORE_PEER_MSPCONFIGPATH: /var/hyperledger/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CLIENTAUTHREQUIRED: "false"
+      CORE_PEER_TLS_CERT_FILE: /var/hyperledger/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /var/hyperledger/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /var/hyperledger/tls/ca.crt
+      CORE_CHAINCODE_LOGGING_LEVEL: info
+    volumes:
+      - ../../:/workspace
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-material/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp:/var/hyperledger/msp
+      - ../crypto-material/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls:/var/hyperledger/tls
+      - peer0_org2_data:/var/hyperledger/production
+    ports:
+      - "12051:7051"
+    networks:
+      - fabric-network
+    depends_on:
+      - orderer.example.com
+
+  peer1.org2.example.com:
+    image: hyperledger/fabric-peer:2.5.0
+    container_name: peer1.org2.example.com
+    environment:
+      PLRA_NODE_ID: LRO_NODE_5
+      PLRA_NODE_CITY: Gujranwala
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: fabric-network
+      CORE_PEER_ID: peer1.org2.example.com
+      CORE_PEER_ADDRESS: peer1.org2.example.com:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer1.org2.example.com:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.org2.example.com:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer1.org2.example.com:7051
+      CORE_PEER_LOCALMSPID: Org2MSP
+      CORE_PEER_MSPCONFIGPATH: /var/hyperledger/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CLIENTAUTHREQUIRED: "false"
+      CORE_PEER_TLS_CERT_FILE: /var/hyperledger/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /var/hyperledger/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /var/hyperledger/tls/ca.crt
+      CORE_CHAINCODE_LOGGING_LEVEL: info
+    volumes:
+      - ../../:/workspace
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../crypto-material/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/msp:/var/hyperledger/msp
+      - ../crypto-material/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/tls:/var/hyperledger/tls
+      - peer1_org2_data:/var/hyperledger/production
+    ports:
+      - "13051:7051"
+    networks:
+      - fabric-network
+    depends_on:
+      - orderer.example.com
+
+  voting-ccaas:
+    profiles: ["chaincode"]
+    container_name: voting-ccaas
+    image: node:18-bullseye-slim
+    working_dir: /workspace/chaincode/voting
+    env_file:
+      - ../chaincode.env
+    environment:
+      CHAINCODE_SERVER_ADDRESS: 0.0.0.0:9999
+      NODE_ENV: production
+    command: >
+      sh -lc "
+      if [ -z \"$$CHAINCODE_ID\" ]; then
+        echo 'CHAINCODE_ID is required';
+        exit 1;
+      fi;
+      npm install --no-audit --no-fund &&
+      npx fabric-chaincode-node server
+      --chaincode-address=$$CHAINCODE_SERVER_ADDRESS
+      --chaincode-id=$$CHAINCODE_ID
+      "
+    volumes:
+      - ../../:/workspace
+      - voting_ccaas_node_modules:/workspace/chaincode/voting/node_modules
+    networks:
+      - fabric-network
+
+volumes:
+  orderer_data:
+  peer0_org1_data:
+  peer1_org1_data:
+  peer2_org1_data:
+  peer0_org2_data:
+  peer1_org2_data:
+  voting_ccaas_node_modules:
