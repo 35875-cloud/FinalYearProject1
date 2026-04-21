@@ -34,6 +34,7 @@ import marketplaceRoutes from "./routes/marketplace.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import p2pSchemaService from "./services/p2pSchema.service.js";
 import auditService from "./services/audit.service.js";
+import opsAutomationService from "./services/opsAutomation.service.js";
 
 // NEW: Import P2P channel routes and WebSocket service
 import channelRoutes from "./routes/channel.js";
@@ -310,6 +311,7 @@ httpServer.listen(PORT, () => {
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log("=====================================================\n");
     console.log(`Fabric proof API: http://localhost:${PORT}/api/fabric-status/public`);
+    opsAutomationService.start();
     void logFabricStartupStatus();
 });
 
@@ -338,6 +340,7 @@ process.on("uncaughtException", (err) => {
 // Graceful shutdown
 process.on("SIGTERM", () => {
     console.log("SIGTERM received, closing server gracefully...");
+    opsAutomationService.stop();
     httpServer.close(() => {
         console.log("✅ Server closed successfully");
         pool.end(); // Close database connections
@@ -347,6 +350,7 @@ process.on("SIGTERM", () => {
 
 process.on("SIGINT", () => {
     console.log("\nSIGINT received, closing server gracefully...");
+    opsAutomationService.stop();
     httpServer.close(() => {
         console.log("✅ Server closed successfully");
         pool.end(); // Close database connections

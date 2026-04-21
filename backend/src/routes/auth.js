@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
 import elliptic from "elliptic";
 import auditService from "../services/audit.service.js";
+import emailService from "../services/email.service.js";
 const { ec: EC } = elliptic;
 
 const router = express.Router();
@@ -54,12 +55,7 @@ function generateLoginChallengeToken(userId, role, userEmail) {
 }
 
 async function sendEmail(to, subject, body) {
-  console.log("\n📧 ============ EMAIL ============");
-  console.log(`To: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`${body}`);
-  console.log("=================================\n");
-  return true;
+  return emailService.sendTextEmail(to, subject, body);
 }
 
 async function isAccountLocked(email) {
