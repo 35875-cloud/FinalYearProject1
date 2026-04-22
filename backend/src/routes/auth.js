@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
 import elliptic from "elliptic";
 import auditService from "../services/audit.service.js";
-import emailService from "../services/email.service.js";
 const { ec: EC } = elliptic;
 
 const router = express.Router();
@@ -54,8 +53,16 @@ function generateLoginChallengeToken(userId, role, userEmail) {
   );
 }
 
-async function sendEmail(to, subject, body) {
-  return emailService.sendTextEmail(to, subject, body);
+async function deliverLocalNotice(target, subject, body) {
+  console.log("\n[NOTICE:LOCAL_ONLY]");
+  console.log(`Target: ${target || "UNSPECIFIED"}`);
+  console.log(`Subject: ${subject}`);
+  console.log(body);
+  console.log("[/NOTICE:LOCAL_ONLY]\n");
+  return {
+    delivered: false,
+    localLogged: true,
+  };
 }
 
 async function isAccountLocked(email) {
@@ -113,7 +120,7 @@ async function handleFailedLogin(email, ipAddress) {
       [attempts, lockUntil, email]
     );
 
-    await sendEmail(
+    await deliverLocalNotice(
       process.env.ADMIN_EMAIL || "admin@landrecords.gov.pk",
       "⚠️ Account Locked - Multiple Failed Attempts",
       `User ${email} locked after ${attempts} failed attempts from IP: ${ipAddress}`
@@ -278,7 +285,7 @@ async function issueLoginOtpChallenge({
     [email, otp, expires]
   );
 
-  await sendEmail(
+  await deliverLocalNotice(
     email,
     "Secure Login Verification Code",
     `Hi ${user.name || "Officer"},\n\nYour secure login verification code is ${otp}.\nIt is valid for ${minutes} minutes.\n\nIf you did not try to sign in, please contact the administrator.`
@@ -519,7 +526,7 @@ router.post("/register-citizen", async (req, res) => {
       [email, otp, expires, "registration"]
     );
 
-    await sendEmail(email, "Registration OTP", `Your OTP: ${otp}\nValid for 5 minutes.`);
+    await deliverLocalNotice(email, "Registration OTP", `Your OTP: ${otp}\nValid for 5 minutes.`);
 
     // ✅ DISPLAY OTP PROMINENTLY IN TERMINAL
     console.log("\n" + "=".repeat(60));
@@ -541,7 +548,7 @@ router.post("/register-citizen", async (req, res) => {
     
     return res.json({ 
       success: true, 
-      message: "OTP sent to email",
+      message: "Verification code generated",
       ...(isDevelopment && { otp: otp }) // Only include OTP in development
     });
   } catch (err) {
@@ -670,14 +677,14 @@ await pool.query(
 
     // Send appropriate email based on approval status
     if (needsApproval) {
-      await sendEmail(
+      await deliverLocalNotice(
         email, 
         "Registration Pending Approval", 
         `Dear ${name},
 
 Thank you for registering as ${role}.
 
-Your account is pending admin approval. You will receive an email notification once your account is approved.
+Your account is pending admin approval. Please wait for confirmation from the admin portal.
 
 User ID: ${userID}
 Blockchain Address: ${blockchainAddress}
@@ -690,7 +697,7 @@ Blockchain Land Records Team`
 
       // Notify admin about new registration
       const adminEmail = process.env.ADMIN_EMAIL || "admin@landrecords.gov.pk";
-      await sendEmail(
+      await deliverLocalNotice(
         adminEmail,
         "New User Registration Requires Approval",
         `A new ${role} registration requires your approval:
@@ -705,7 +712,7 @@ Please review and approve/reject this registration in the admin panel.`
 
     } else {
       // Citizen registration - auto-approved
-      await sendEmail(
+      await deliverLocalNotice(
         email, 
         "Welcome to Blockchain Land Records!", 
         `Welcome ${name}!
@@ -1241,7 +1248,7 @@ router.post("/request-password-reset", async (req, res) => {
     if (user.rows.length === 0) {
       return res.json({
         success: true,
-        message: "If email exists, reset code sent",
+        message: "If the account exists, a reset code has been generated",
       });
     }
 
@@ -1255,7 +1262,7 @@ router.post("/request-password-reset", async (req, res) => {
       [email, otp, expires]
     );
 
-    await sendEmail(
+    await deliverLocalNotice(
       email,
       "Password Reset Code",
       `Hi ${user.rows[0].name},\n\nYour reset code: ${otp}\nValid for 15 minutes.`
@@ -1281,7 +1288,7 @@ router.post("/request-password-reset", async (req, res) => {
 
     return res.json({
       success: true,
-      message: "If email exists, reset code sent",
+      message: "If the account exists, a reset code has been generated",
       ...(isDevelopment && { otp: otp }) // Only include OTP in development
     });
   } catch (err) {
@@ -1371,7 +1378,7 @@ router.post("/reset-password", async (req, res) => {
     );
 
     const user = await pool.query("SELECT name FROM users WHERE email = $1", [email]);
-    await sendEmail(
+    await deliverLocalNotice(
       email,
       "Password Changed",
       `Hi ${user.rows[0].name},\n\nPassword changed successfully.\nIf not you, contact support immediately.`
@@ -1538,7 +1545,7 @@ router.post("/approve-user", authenticateToken, async (req, res) => {
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
       
-      await sendEmail(
+      await deliverLocalNotice(
         user.email,
         "Account Approved - Blockchain Land Records",
         `Dear ${user.name},\n\nYour ${user.role} account has been approved!\n\nYou can now login at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}\n\nBest regards,\nBlockchain Land Records Team`
@@ -1613,7 +1620,7 @@ router.post("/reject-user", authenticateToken, async (req, res) => {
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
       
-      await sendEmail(
+      await deliverLocalNotice(
         user.email,
         "Account Registration Update - Blockchain Land Records",
         `Dear ${user.name},\n\nWe regret to inform you that your ${user.role} account registration was not approved.\n\nReason: ${reason}\n\nIf you believe this is an error, please contact support.\n\nBest regards,\nBlockchain Land Records Team`

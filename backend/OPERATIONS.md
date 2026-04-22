@@ -63,7 +63,7 @@ It handles:
 - scheduled backup creation
 - periodic health snapshots
 - tamper and workflow drift alert persistence
-- critical alert email delivery
+- critical alert console logging
 
 Useful environment variables:
 
@@ -75,14 +75,11 @@ OPS_BACKUP_INTERVAL_MINUTES=1440
 OPS_HEALTH_INTERVAL_MINUTES=30
 OPS_BACKUP_STARTUP_DELAY_MS=60000
 OPS_HEALTH_STARTUP_DELAY_MS=15000
-OPS_ALERT_EMAILS_ENABLED=true
 OPS_ALERT_REPEAT_MINUTES=180
 OPS_ALERT_MIN_SEVERITY=CRITICAL
-ADMIN_EMAIL=system@landregistry.gov
 ```
 
 ## Alert Delivery
 
-- SMTP delivery uses the existing `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASSWORD`, and `EMAIL_FROM` settings
-- If SMTP is still using placeholder values, alert delivery safely falls back to console logging instead of crashing the backend
-- Alert emails are currently sent to `ADMIN_EMAIL` plus active approved admin users in the database
+- Alert delivery now stays local to the backend console
+- Critical alerts are persisted in `system_alerts` and logged by the scheduler without any SMTP or Gmail dependency
