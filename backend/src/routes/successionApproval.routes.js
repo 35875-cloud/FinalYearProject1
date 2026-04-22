@@ -57,6 +57,13 @@ function normalizeOwnerGender(value) {
   return ["MALE", "FEMALE"].includes(normalized) ? normalized : "";
 }
 
+function inferGenderFromRelation(relationType) {
+  const normalized = normalizeRelationType(relationType);
+  if (normalized === "WIFE" || normalized === "DAUGHTER") return "FEMALE";
+  if (normalized === "HUSBAND" || normalized === "SON") return "MALE";
+  return "";
+}
+
 async function resolveNodeId(userId) {
   const direct = findNodeByUserId(userId);
   if (direct) return direct.nodeId;
@@ -113,8 +120,11 @@ async function getCitizenOwnedProperty(propertyId, userId, client = pool) {
         p.mauza,
         p.area_marla,
         p.status,
-        COALESCE(p.has_co_owners, FALSE) AS has_co_owners
+        COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
+        u.gender AS owner_gender
       FROM properties p
+      LEFT JOIN users u
+        ON u.user_id = p.owner_id
       WHERE p.property_id = $1
         AND p.owner_id = $2
         AND COALESCE(p.status, '') = 'APPROVED'
@@ -134,6 +144,7 @@ async function listActiveFamilyMembers(ownerUserId, client = pool) {
         owner_user_id,
         linked_user_id,
         relation_type,
+        gender,
         full_name,
         cnic,
         date_of_birth,
@@ -187,6 +198,20 @@ async function listCitizenSuccessionRequests(userId, propertyId = null, client =
   return result.rows;
 }
 
+async function getCitizenGender(userId, client = pool) {
+  const result = await client.query(
+    `
+      SELECT gender
+      FROM users
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return normalizeOwnerGender(result.rows[0]?.gender);
+}
+
 function buildShareHash(shareSnapshot) {
   return crypto
     .createHash("sha256")
@@ -196,11 +221,14 @@ function buildShareHash(shareSnapshot) {
 
 router.get("/family-members", authenticateToken, requireCitizen, async (req, res) => {
   try {
+    const ownerGender = await getCitizenGender(req.user.userId);
     const members = await listActiveFamilyMembers(req.user.userId);
     return res.json({
       success: true,
       members,
+      ownerGender: ownerGender || null,
       supportedRelations: successionRuleService.getSupportedRelations(),
+      allowedRelations: successionRuleService.getAllowedRelations(ownerGender),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -215,11 +243,31 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
     const dateOfBirth = String(req.body.dateOfBirth || "").trim() || null;
     const notes = String(req.body.notes || "").trim() || null;
     const linkedUserId = String(req.body.linkedUserId || "").trim() || null;
+    const inferredGender = inferGenderFromRelation(relationType);
+    const ownerGender = await getCitizenGender(req.user.userId);
+    const allowedRelations = successionRuleService.getAllowedRelations(ownerGender);
 
     if (!successionRuleService.getSupportedRelations().includes(relationType)) {
       return res.status(400).json({
         success: false,
         message: "Relation type must be WIFE, HUSBAND, SON, or DAUGHTER",
+      });
+    }
+
+    if (!ownerGender) {
+      return res.status(400).json({
+        success: false,
+        message: "Save owner gender in profile first before adding succession family members",
+      });
+    }
+
+    if (!allowedRelations.includes(relationType)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          ownerGender === "MALE"
+            ? "Male owner can add wife and children only"
+            : "Female owner can add children only",
       });
     }
 
@@ -230,11 +278,19 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
       });
     }
 
+    if (!inferredGender) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to determine family member gender from relation type",
+      });
+    }
+
     let resolvedLinkedUserId = linkedUserId;
+    let resolvedLinkedUserGender = "";
     if (!resolvedLinkedUserId && cnic) {
       const linkedUser = await pool.query(
         `
-          SELECT user_id
+          SELECT user_id, gender
           FROM users
           WHERE cnic = $1
             AND UPPER(role) = 'CITIZEN'
@@ -243,6 +299,26 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
         [cnic]
       );
       resolvedLinkedUserId = linkedUser.rows[0]?.user_id || null;
+      resolvedLinkedUserGender = normalizeOwnerGender(linkedUser.rows[0]?.gender);
+    } else if (resolvedLinkedUserId) {
+      const linkedUser = await pool.query(
+        `
+          SELECT gender
+          FROM users
+          WHERE user_id = $1
+            AND UPPER(role) = 'CITIZEN'
+          LIMIT 1
+        `,
+        [resolvedLinkedUserId]
+      );
+      resolvedLinkedUserGender = normalizeOwnerGender(linkedUser.rows[0]?.gender);
+    }
+
+    if (resolvedLinkedUserGender && resolvedLinkedUserGender !== inferredGender) {
+      return res.status(400).json({
+        success: false,
+        message: `Linked citizen gender does not match relation type ${relationType}`,
+      });
     }
 
     const isMinor = dateOfBirth
@@ -261,6 +337,7 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
           owner_user_id,
           linked_user_id,
           relation_type,
+          gender,
           full_name,
           cnic,
           date_of_birth,
@@ -271,8 +348,8 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
           updated_at
         )
         VALUES (
-          $1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, '')::date, NULLIF($8, ''),
-          $9, TRUE, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, NULLIF($7, ''), NULLIF($8, '')::date, NULLIF($9, ''),
+          $10, TRUE, NOW(), NOW()
         )
         RETURNING *
       `,
@@ -281,6 +358,7 @@ router.post("/family-members", authenticateToken, requireCitizen, async (req, re
         req.user.userId,
         resolvedLinkedUserId,
         relationType,
+        resolvedLinkedUserGender || inferredGender,
         fullName,
         cnic || "",
         dateOfBirth || "",
@@ -340,7 +418,7 @@ router.get("/property/:propertyId/preview", authenticateToken, requireCitizen, a
     }
 
     const familyMembers = await listActiveFamilyMembers(req.user.userId);
-    const ownerGender = normalizeOwnerGender(req.query.ownerGender);
+    const ownerGender = normalizeOwnerGender(property.owner_gender);
     const preview = successionRuleService.buildIslamicFamilyPreview({
       ownerGender,
       familyMembers,
@@ -352,6 +430,7 @@ router.get("/property/:propertyId/preview", authenticateToken, requireCitizen, a
       property,
       familyMembers,
       preview,
+      allowedRelations: successionRuleService.getAllowedRelations(ownerGender),
       requests,
     });
   } catch (error) {
@@ -380,7 +459,6 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
 
   try {
     const propertyId = String(req.body.propertyId || "").trim();
-    const ownerGender = normalizeOwnerGender(req.body.ownerGender);
     const notes = String(req.body.notes || "").trim() || null;
     const deathCertificateReference =
       String(req.body.deathCertificateReference || "").trim() || null;
@@ -393,13 +471,6 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
       });
     }
 
-    if (!ownerGender) {
-      return res.status(400).json({
-        success: false,
-        message: "Owner gender is required",
-      });
-    }
-
     await client.query("BEGIN");
 
     const property = await getCitizenOwnedProperty(propertyId, req.user.userId, client);
@@ -408,6 +479,15 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
       return res.status(404).json({
         success: false,
         message: "Approved owned property not found",
+      });
+    }
+
+    const ownerGender = normalizeOwnerGender(property.owner_gender);
+    if (!ownerGender) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        message: "Owner gender is missing on the citizen profile. Save it once in profile or succession planner before submitting.",
       });
     }
 
