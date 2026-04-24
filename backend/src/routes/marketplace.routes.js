@@ -4,8 +4,6 @@ import crypto from "crypto";
 
 import pool from "../config/db.js";
 import p2pSchemaService from "../services/p2pSchema.service.js";
-import propertyCoOwnershipService from "../services/propertyCoOwnership.service.js";
-import propertyCoOwnerConsentService from "../services/propertyCoOwnerConsent.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
 
@@ -34,8 +32,6 @@ async function ensureMarketplaceSchema() {
 
   await p2pSchemaService.ensureSchema();
   await propertyFreezeService.ensureSchema();
-  await propertyCoOwnershipService.ensureSchema();
-  await propertyCoOwnerConsentService.ensureSchema();
   await propertyEncumbranceService.ensureSchema();
 
   await pool.query(`
@@ -102,17 +98,6 @@ function buildTransferId() {
 
 function buildChannelId() {
   return `CH-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
-}
-
-function buildConsentBlockingMessage(consentState, actionLabel) {
-  if (!consentState?.required) return "";
-  if (consentState.status === "REJECTED") {
-    return `Shared-owner consent was rejected. Start a new consent request before ${actionLabel}.`;
-  }
-  if (consentState.status === "PENDING") {
-    return `Shared-owner consent is still pending before ${actionLabel}: ${consentState.summaryLabel || "awaiting all co-owner approvals"}`;
-  }
-  return `Shared-owner consent must be requested before ${actionLabel}.`;
 }
 
 async function createTransferFromAcceptedRequest(client, requestRow) {
@@ -271,10 +256,10 @@ router.get("/listings", async (req, res) => {
           p.listed_at,
           COALESCE(p.is_for_sale, FALSE) AS is_for_sale,
           COALESCE(p.is_frozen, FALSE) AS is_frozen,
-          COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
-          COALESCE(p.ownership_model, 'SOLE') AS ownership_model,
-          COALESCE(p.active_co_owner_count, 0) AS active_co_owner_count,
-          p.co_owner_summary,
+          FALSE AS has_co_owners,
+          'SOLE' AS ownership_model,
+          0 AS active_co_owner_count,
+          NULL::TEXT AS co_owner_summary,
           COALESCE(p.is_encumbered, FALSE) AS is_encumbered,
           COALESCE(p.active_encumbrance_count, 0) AS active_encumbrance_count,
           p.encumbrance_summary,
@@ -320,10 +305,10 @@ router.get("/seller/listings", async (req, res) => {
           p.asking_price,
           p.listed_at,
           COALESCE(p.is_frozen, FALSE) AS is_frozen,
-          COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
-          COALESCE(p.ownership_model, 'SOLE') AS ownership_model,
-          COALESCE(p.active_co_owner_count, 0) AS active_co_owner_count,
-          p.co_owner_summary,
+          FALSE AS has_co_owners,
+          'SOLE' AS ownership_model,
+          0 AS active_co_owner_count,
+          NULL::TEXT AS co_owner_summary,
           COALESCE(p.is_encumbered, FALSE) AS is_encumbered,
           COALESCE(p.active_encumbrance_count, 0) AS active_encumbrance_count,
           p.encumbrance_summary,
@@ -377,9 +362,9 @@ router.post("/listings", async (req, res) => {
           COALESCE(is_for_sale, FALSE) AS is_for_sale,
           COALESCE(is_frozen, FALSE) AS is_frozen,
           freeze_reason_label,
-          COALESCE(has_co_owners, FALSE) AS has_co_owners,
-          COALESCE(active_co_owner_count, 0) AS active_co_owner_count,
-          co_owner_summary,
+          FALSE AS has_co_owners,
+          0 AS active_co_owner_count,
+          NULL::TEXT AS co_owner_summary,
           COALESCE(is_encumbered, FALSE) AS is_encumbered,
           encumbrance_summary
         FROM properties
@@ -394,8 +379,6 @@ router.post("/listings", async (req, res) => {
       return res.status(404).json({ success: false, message: "Property not found" });
     }
 
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(propertyId);
-
     if (propertyResult.rows[0].status !== "APPROVED") {
       return res.status(400).json({ success: false, message: "Only approved properties can be listed" });
     }
@@ -404,18 +387,6 @@ router.post("/listings", async (req, res) => {
       return res.status(409).json({
         success: false,
         message: `Property is under dispute hold${propertyResult.rows[0].freeze_reason_label ? `: ${propertyResult.rows[0].freeze_reason_label}` : ""}`,
-      });
-    }
-
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      propertyId,
-      req.user.userId
-    );
-    if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-      return res.status(409).json({
-        success: false,
-        message: buildConsentBlockingMessage(consentState, "listing on the marketplace"),
-        consent: consentState,
       });
     }
 
@@ -475,9 +446,9 @@ router.post("/request", async (req, res) => {
         SELECT property_id, owner_id, owner_name, asking_price,
                COALESCE(is_for_sale, FALSE) AS is_for_sale,
                COALESCE(is_frozen, FALSE) AS is_frozen,
-               COALESCE(has_co_owners, FALSE) AS has_co_owners,
-               COALESCE(active_co_owner_count, 0) AS active_co_owner_count,
-               co_owner_summary,
+               FALSE AS has_co_owners,
+               0 AS active_co_owner_count,
+               NULL::TEXT AS co_owner_summary,
                COALESCE(is_encumbered, FALSE) AS is_encumbered,
                encumbrance_summary,
                freeze_reason_label,
@@ -494,11 +465,6 @@ router.post("/request", async (req, res) => {
     }
 
     const property = propertyResult.rows[0];
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(propertyId);
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      propertyId,
-      req.user.userId
-    );
     if (property.owner_id === req.user.userId) {
       return res.status(400).json({ success: false, message: "You cannot request your own property" });
     }
@@ -506,13 +472,6 @@ router.post("/request", async (req, res) => {
       return res.status(409).json({
         success: false,
         message: `Property is currently under dispute hold${property.freeze_reason_label ? `: ${property.freeze_reason_label}` : ""}`,
-      });
-    }
-    if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-      return res.status(409).json({
-        success: false,
-        message: buildConsentBlockingMessage(consentState, "buyer requests"),
-        consent: consentState,
       });
     }
     if (property.is_encumbered) {
@@ -655,10 +614,6 @@ router.post("/request/:requestId/accept", async (req, res) => {
     }
 
     const requestRow = requestResult.rows[0];
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(
-      requestRow.property_id,
-      client
-    );
     if (requestRow.status !== "PENDING") {
       await client.query("ROLLBACK");
       return res.status(400).json({ success: false, message: "This request is already processed" });
@@ -669,20 +624,6 @@ router.post("/request/:requestId/accept", async (req, res) => {
       return res.status(409).json({
         success: false,
         message: `Property is currently under dispute hold${requestRow.freeze_reason_label ? `: ${requestRow.freeze_reason_label}` : ""}`,
-      });
-    }
-
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      requestRow.property_id,
-      req.user.userId,
-      client
-    );
-    if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        success: false,
-        message: buildConsentBlockingMessage(consentState, "accepting a buyer request"),
-        consent: consentState,
       });
     }
 

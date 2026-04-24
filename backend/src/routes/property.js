@@ -14,8 +14,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import blockchainService from "../services/blockchain.service.js";
-import propertyCoOwnershipService from "../services/propertyCoOwnership.service.js";
-import propertyCoOwnerConsentService from "../services/propertyCoOwnerConsent.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
 
@@ -131,10 +129,10 @@ async function getLatestBlockHash() {
 
 function requirePropertyRestrictionAuthority(req, res, next) {
   const role = String(req.user?.role || "").toUpperCase();
-  if (!["ADMIN", "DC"].includes(role)) {
+  if (role !== "DC") {
     return res.status(403).json({
       success: false,
-      message: "Access denied. Property restriction authority required.",
+      message: "Access denied. Deputy Commissioner restriction authority required.",
     });
   }
   next();
@@ -142,16 +140,25 @@ function requirePropertyRestrictionAuthority(req, res, next) {
 
 function attachPropertyRestrictions(row, options = {}) {
   const encumbranceState = options.encumbranceState || null;
-  const coOwnershipState = options.coOwnershipState || null;
-  const consentState = options.consentState || null;
   return {
     ...row,
     freeze_details: propertyFreezeService.buildFreezeDetails(row),
-    co_ownership_details:
-      coOwnershipState?.co_ownership_details ||
-      propertyCoOwnershipService.buildCoOwnershipSummaryFromRow(row),
-    co_owners: coOwnershipState?.co_owners || [],
-    sale_transfer_consent: consentState || row.sale_transfer_consent || null,
+    has_co_owners: false,
+    ownership_model: "SOLE",
+    active_co_owner_count: 0,
+    co_owner_summary: null,
+    last_co_ownership_sync_at: null,
+    co_ownership_details: {
+      active: false,
+      count: 0,
+      ownershipModel: "SOLE",
+      summaryLabel: null,
+      syncedAt: null,
+      totalAllocatedPercent: 0,
+      items: [],
+    },
+    co_owners: [],
+    sale_transfer_consent: null,
     encumbrance_details:
       encumbranceState?.encumbrance_details ||
       propertyEncumbranceService.buildEncumbranceSummaryFromRow(row),
@@ -383,11 +390,11 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
         p.asking_price,
         p.listed_at,
         COALESCE(p.is_frozen, FALSE) AS is_frozen,
-        COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
-        COALESCE(p.ownership_model, 'SOLE') AS ownership_model,
-        COALESCE(p.active_co_owner_count, 0) AS active_co_owner_count,
-        p.co_owner_summary,
-        p.last_co_ownership_sync_at,
+        FALSE AS has_co_owners,
+        'SOLE' AS ownership_model,
+        0 AS active_co_owner_count,
+        NULL::TEXT AS co_owner_summary,
+        NULL::TIMESTAMP AS last_co_ownership_sync_at,
         COALESCE(p.is_encumbered, FALSE) AS is_encumbered,
         COALESCE(p.active_encumbrance_count, 0) AS active_encumbrance_count,
         p.encumbrance_summary,
@@ -406,28 +413,7 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
 
     console.log("✅ Found", result.rows.length, "approved properties");
 
-    const properties = await Promise.all(
-      result.rows.map(async (row) => {
-        const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(row.property_id);
-        const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-          row.property_id,
-          req.user.userId
-        );
-        return attachPropertyRestrictions(
-          {
-            ...row,
-            has_co_owners: coOwnershipState?.has_co_owners ?? row.has_co_owners,
-            ownership_model: coOwnershipState?.ownership_model ?? row.ownership_model,
-            active_co_owner_count:
-              coOwnershipState?.active_co_owner_count ?? row.active_co_owner_count,
-            co_owner_summary: coOwnershipState?.co_owner_summary ?? row.co_owner_summary,
-            last_co_ownership_sync_at:
-              coOwnershipState?.last_co_ownership_sync_at ?? row.last_co_ownership_sync_at,
-          },
-          { coOwnershipState, consentState }
-        );
-      })
-    );
+    const properties = result.rows.map((row) => attachPropertyRestrictions(row));
 
     return res.json({
       success: true,
@@ -447,8 +433,6 @@ router.get("/my-properties", authenticateToken, async (req, res) => {
 router.use(async (_req, _res, next) => {
   try {
     await propertyFreezeService.ensureSchema();
-    await propertyCoOwnershipService.ensureSchema();
-    await propertyCoOwnerConsentService.ensureSchema();
     await propertyEncumbranceService.ensureSchema();
     next();
   } catch (error) {
@@ -489,11 +473,11 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
           p.property_photo_path,
           p.year,
           COALESCE(p.is_frozen, FALSE) AS is_frozen,
-          COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
-          COALESCE(p.ownership_model, 'SOLE') AS ownership_model,
-          COALESCE(p.active_co_owner_count, 0) AS active_co_owner_count,
-          p.co_owner_summary,
-          p.last_co_ownership_sync_at,
+          FALSE AS has_co_owners,
+          'SOLE' AS ownership_model,
+          0 AS active_co_owner_count,
+          NULL::TEXT AS co_owner_summary,
+          NULL::TIMESTAMP AS last_co_ownership_sync_at,
           COALESCE(p.is_encumbered, FALSE) AS is_encumbered,
           COALESCE(p.active_encumbrance_count, 0) AS active_encumbrance_count,
           p.encumbrance_summary,
@@ -537,14 +521,7 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
       [req.user.userId]
     );
 
-    const shares = await Promise.all(
-      result.rows.map(async (row) => {
-        const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(row.property_id);
-        const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-          row.property_id,
-          req.user.userId
-        );
-
+    const shares = result.rows.map((row) => {
         return {
           property_id: row.property_id,
           owner_id: row.owner_id,
@@ -566,13 +543,11 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
           property_photo_path: row.property_photo_path,
           year: row.year,
           is_frozen: row.is_frozen,
-          has_co_owners: coOwnershipState?.has_co_owners ?? row.has_co_owners,
-          ownership_model: coOwnershipState?.ownership_model ?? row.ownership_model,
-          active_co_owner_count:
-            coOwnershipState?.active_co_owner_count ?? row.active_co_owner_count,
-          co_owner_summary: coOwnershipState?.co_owner_summary ?? row.co_owner_summary,
-          last_co_ownership_sync_at:
-            coOwnershipState?.last_co_ownership_sync_at ?? row.last_co_ownership_sync_at,
+          has_co_owners: false,
+          ownership_model: "SOLE",
+          active_co_owner_count: 0,
+          co_owner_summary: null,
+          last_co_ownership_sync_at: null,
           is_encumbered: row.is_encumbered,
           active_encumbrance_count: row.active_encumbrance_count,
           encumbrance_summary: row.encumbrance_summary,
@@ -589,17 +564,7 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
           freeze_released_by: row.freeze_released_by,
           freeze_release_notes: row.freeze_release_notes,
           ...attachPropertyRestrictions(
-            {
-              ...row,
-              has_co_owners: coOwnershipState?.has_co_owners ?? row.has_co_owners,
-              ownership_model: coOwnershipState?.ownership_model ?? row.ownership_model,
-              active_co_owner_count:
-                coOwnershipState?.active_co_owner_count ?? row.active_co_owner_count,
-              co_owner_summary: coOwnershipState?.co_owner_summary ?? row.co_owner_summary,
-              last_co_ownership_sync_at:
-                coOwnershipState?.last_co_ownership_sync_at ?? row.last_co_ownership_sync_at,
-            },
-            { coOwnershipState, consentState }
+            row
           ),
           viewer_share: {
             allocation_id: row.allocation_id,
@@ -624,8 +589,7 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
             cnic: row.allocation_cnic,
           },
         };
-      })
-    );
+      });
 
     const linkedAllocations = shares.filter(
       (item) => item.viewer_share?.linked_user_id === req.user.userId
@@ -682,11 +646,6 @@ router.get("/property/:propertyId", authenticateToken, async (req, res) => {
     const property = result.rows[0];
     const userRole = req.user.role.toUpperCase();
     let viewerShare = null;
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(propertyId);
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      propertyId,
-      req.user.userId
-    );
     const encumbranceState = await propertyEncumbranceService.getPropertyEncumbranceState(propertyId);
     
     if (userRole === 'CITIZEN' && property.owner_id !== req.user.userId) {
@@ -716,17 +675,8 @@ router.get("/property/:propertyId", authenticateToken, async (req, res) => {
       success: true,
       property: {
         ...attachPropertyRestrictions(
-          {
-            ...result.rows[0],
-            has_co_owners: coOwnershipState?.has_co_owners ?? result.rows[0].has_co_owners,
-            ownership_model: coOwnershipState?.ownership_model ?? result.rows[0].ownership_model,
-            active_co_owner_count:
-              coOwnershipState?.active_co_owner_count ?? result.rows[0].active_co_owner_count,
-            co_owner_summary: coOwnershipState?.co_owner_summary ?? result.rows[0].co_owner_summary,
-            last_co_ownership_sync_at:
-              coOwnershipState?.last_co_ownership_sync_at ?? result.rows[0].last_co_ownership_sync_at,
-          },
-          { coOwnershipState, encumbranceState, consentState }
+          result.rows[0],
+          { encumbranceState }
         ),
         ...(viewerShare ? { viewer_share: viewerShare } : {}),
       },
@@ -2195,185 +2145,38 @@ router.get("/encumbrances", authenticateToken, requirePropertyRestrictionAuthori
 });
 
 router.get("/co-ownerships", authenticateToken, requirePropertyRestrictionAuthority, async (req, res) => {
-  try {
-    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 100);
-    const cases = await propertyCoOwnershipService.listCoOwnershipCases({ limit });
-
-    return res.json({
-      success: true,
-      cases,
-      summary: {
-        joint: cases.length,
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    message: "Joint ownership has been disabled in this build.",
+  });
 });
 
 router.get("/my-co-owner-consents", authenticateToken, async (req, res) => {
-  try {
-    const role = String(req.user?.role || "").toUpperCase();
-    if (role !== "CITIZEN") {
-      return res.status(403).json({
-        success: false,
-        message: "Citizen access required",
-      });
-    }
-
-    const consents = await propertyCoOwnerConsentService.listPendingForUser(req.user.userId);
-    return res.json({
-      success: true,
-      consents,
-      total: consents.length,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    message: "Joint ownership consent workflow has been disabled in this build.",
+  });
 });
 
 router.get("/co-owner-consents", authenticateToken, requirePropertyRestrictionAuthority, async (req, res) => {
-  try {
-    const includeResolved = String(req.query.includeResolved || "").toLowerCase() === "true";
-    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 100);
-    const consents = await propertyCoOwnerConsentService.listConsentCases({ includeResolved, limit });
-
-    return res.json({
-      success: true,
-      consents,
-      summary: {
-        pending: consents.filter((item) => item.status === "PENDING").length,
-        approved: consents.filter((item) => item.status === "APPROVED").length,
-        rejected: consents.filter((item) => item.status === "REJECTED").length,
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error: " + err.message,
-    });
-  }
+  return res.status(410).json({
+    success: false,
+    message: "Joint ownership consent workflow has been disabled in this build.",
+  });
 });
 
 router.post("/co-owner-consents/request", authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    const role = String(req.user?.role || "").toUpperCase();
-    if (role !== "CITIZEN") {
-      return res.status(403).json({
-        success: false,
-        message: "Citizen access required",
-      });
-    }
-
-    await client.query("BEGIN");
-    const propertyId = String(req.body.propertyId || "").trim();
-    const notes = String(req.body.notes || "");
-    const requestedPrice = req.body.requestedPrice;
-
-    if (!propertyId) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        message: "Property ID is required",
-      });
-    }
-
-    const result = await propertyCoOwnerConsentService.requestConsent(
-      {
-        propertyId,
-        actorUserId: req.user.userId,
-        actorName: req.user.name || null,
-        notes,
-        requestedPrice,
-        ipAddress: req.ip || null,
-        routePath: req.originalUrl,
-        httpMethod: req.method,
-      },
-      client
-    );
-
-    await client.query("COMMIT");
-
-    return res.json({
-      success: true,
-      changed: result.changed,
-      message: result.changed
-        ? `Shared-owner consent requested for ${propertyId}`
-        : `Shared-owner consent already exists for ${propertyId}`,
-      consent: result.consent,
-    });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  } finally {
-    client.release();
-  }
+  return res.status(410).json({
+    success: false,
+    message: "Joint ownership consent workflow has been disabled in this build.",
+  });
 });
 
 router.post("/co-owner-consents/:consentId/respond", authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    const role = String(req.user?.role || "").toUpperCase();
-    if (role !== "CITIZEN") {
-      return res.status(403).json({
-        success: false,
-        message: "Citizen access required",
-      });
-    }
-
-    await client.query("BEGIN");
-    const vote = String(req.body.vote || "APPROVE").toUpperCase();
-    const notes = String(req.body.notes || "");
-
-    if (!["APPROVE", "REJECT"].includes(vote)) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        message: "Vote must be APPROVE or REJECT",
-      });
-    }
-
-    const consent = await propertyCoOwnerConsentService.respondToConsent(
-      {
-        consentId: req.params.consentId,
-        actorUserId: req.user.userId,
-        vote,
-        notes,
-        ipAddress: req.ip || null,
-        routePath: req.originalUrl,
-        httpMethod: req.method,
-      },
-      client
-    );
-
-    await client.query("COMMIT");
-
-    return res.json({
-      success: true,
-      message: vote === "APPROVE" ? "Consent approved successfully" : "Consent rejected successfully",
-      consent,
-    });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  } finally {
-    client.release();
-  }
+  return res.status(410).json({
+    success: false,
+    message: "Joint ownership consent workflow has been disabled in this build.",
+  });
 });
 
 router.post("/encumbrances", authenticateToken, requirePropertyRestrictionAuthority, async (req, res) => {

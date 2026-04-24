@@ -71,6 +71,27 @@ function safeParseJson(text) {
   }
 }
 
+function isLoopbackHost(host = "") {
+  const normalized = String(host || "").trim().toLowerCase();
+  return normalized === "127.0.0.1" || normalized === "localhost" || normalized === "::1";
+}
+
+function profileUsesLoopback(profile = {}) {
+  const urls = [
+    ...Object.values(profile.peers || {}).map((details) => details?.url),
+    ...Object.values(profile.orderers || {}).map((details) => details?.url),
+  ];
+
+  return urls.some((urlString) => {
+    try {
+      const parsed = new URL(urlString);
+      return isLoopbackHost(parsed.hostname);
+    } catch (error) {
+      return false;
+    }
+  });
+}
+
 function normalizeBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
   return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
@@ -237,7 +258,12 @@ class FabricGatewayService {
   async loadConnectionProfile(orgName = "Org1", preferredPeerNames = []) {
     const raw = await fs.readFile(this.getConnectionProfilePath(), "utf8");
     const profile = JSON.parse(raw);
-    const hostOverride = await this.resolveHostOverride();
+    const explicitHostOverride = this.getConfiguredHostOverride();
+    const resolvedHostOverride = explicitHostOverride || await this.resolveHostOverride();
+    const hostOverride =
+      explicitHostOverride || !profileUsesLoopback(profile)
+        ? resolvedHostOverride
+        : null;
 
     profile.client = profile.client || {};
     profile.client.organization = orgName;
@@ -324,6 +350,12 @@ class FabricGatewayService {
       }
     }
 
+    Object.defineProperty(profile, "__hostOverride", {
+      value: hostOverride,
+      enumerable: false,
+      configurable: true,
+    });
+
     return profile;
   }
 
@@ -349,6 +381,10 @@ class FabricGatewayService {
     } finally {
       gateway.disconnect();
     }
+  }
+
+  async probeConnection(nodeId = "LRO_NODE_1") {
+    return this.withContract(this.getVotingChaincodeName(), nodeId, async () => true);
   }
 
   parseResponse(buffer) {
@@ -635,10 +671,12 @@ class FabricGatewayService {
     let profileLoaded = false;
     let walletReady = false;
     let error = null;
+    let effectiveHostOverride = null;
 
     try {
-      await this.loadConnectionProfile("Org1");
+      const profile = await this.loadConnectionProfile("Org1");
       profileLoaded = true;
+      effectiveHostOverride = profile?.__hostOverride || null;
       await this.ensureWallet();
       walletReady = true;
     } catch (gatewayError) {
@@ -651,7 +689,8 @@ class FabricGatewayService {
       agreementChaincode: this.getAgreementChaincodeName(),
       connectionProfile: this.getConnectionProfilePath(),
       walletPath: this.getWalletPath(),
-      hostOverride: await this.resolveHostOverride(),
+      hostOverride: effectiveHostOverride,
+      detectedHostOverride: await this.resolveHostOverride(),
       discovery: this.getDiscoveryOptions(),
       profileLoaded,
       walletReady,

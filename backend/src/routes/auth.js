@@ -163,6 +163,71 @@ function normalizeTwoFactorMethod(value = "") {
   return "NONE";
 }
 
+function normalizeGender(value = "") {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "MALE" || normalized === "FEMALE") {
+    return normalized;
+  }
+  return "";
+}
+
+function normalizeLoginIdentifier(value = "") {
+  return String(value || "").trim();
+}
+
+function extractCnicDigits(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 13 ? digits : "";
+}
+
+async function findUserByLoginIdentifier(identifier) {
+  const normalizedIdentifier = normalizeLoginIdentifier(identifier);
+  const loweredIdentifier = normalizedIdentifier.toLowerCase();
+  const upperIdentifier = normalizedIdentifier.toUpperCase();
+  const cnicDigits = extractCnicDigits(normalizedIdentifier);
+
+  const result = await pool.query(
+    `SELECT user_id, role, password_hash, is_active, approval_status,
+            approved_at, name, rejection_reason, email, cnic,
+            account_locked, lock_until
+     FROM users
+     WHERE LOWER(email) = $1
+        OR UPPER(user_id) = $2
+        OR ($3 <> '' AND cnic = $3)
+     ORDER BY
+       CASE
+         WHEN LOWER(email) = $1 THEN 1
+         WHEN UPPER(user_id) = $2 THEN 2
+         WHEN ($3 <> '' AND cnic = $3) THEN 3
+         ELSE 4
+       END
+     LIMIT 1`,
+    [loweredIdentifier, upperIdentifier, cnicDigits]
+  );
+
+  return result.rows[0] || null;
+}
+
+function mapUserIdentityConstraintError(error) {
+  if (!error || error.code !== "23505") return null;
+
+  const details = `${error.constraint || ""} ${error.detail || ""}`.toLowerCase();
+
+  if (details.includes("cnic")) {
+    return "CNIC is already registered";
+  }
+
+  if (details.includes("email")) {
+    return "Email is already registered";
+  }
+
+  if (details.includes("user_id")) {
+    return "Generated user ID conflicted with an existing account. Please try again.";
+  }
+
+  return "This account information is already registered";
+}
+
 function base32Encode(buffer) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   let bits = "";
@@ -401,10 +466,10 @@ async function issueLoginTotpSetupChallenge({
   });
 }
 
-async function finalizeSuccessfulLogin({ user, email, ipAddress, req }) {
+async function finalizeSuccessfulLogin({ user, email, ipAddress, req, loginIdentifier = null }) {
   await pool.query(
-    "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE email = $1",
-    [email]
+    "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE user_id = $1",
+    [user.user_id]
   );
 
   const token = generateJWT(user.user_id, user.role, email);
@@ -423,6 +488,7 @@ async function finalizeSuccessfulLogin({ user, email, ipAddress, req }) {
     targetId: user.user_id,
     targetType: "USER",
     details: {
+      loginIdentifier,
       email,
       role: user.role,
       approvalStatus: user.approval_status,
@@ -436,6 +502,7 @@ async function finalizeSuccessfulLogin({ user, email, ipAddress, req }) {
   console.log("\n" + "=".repeat(60));
   console.log("LOGIN SUCCESSFUL");
   console.log("=".repeat(60));
+  console.log(`Login Identifier: ${loginIdentifier || email}`);
   console.log(`Email: ${email}`);
   console.log(`User ID: ${user.user_id}`);
   console.log(`Role: ${user.role}`);
@@ -484,20 +551,21 @@ function authenticateToken(req, res, next) {
 // =====================================================
 router.post("/register-citizen", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role, fatherName, fatherCnic } = req.body;
+    let { name, cnic, email, mobile, password, role, fatherName, fatherCnic, gender } = req.body;
 
     name = name.trim();
     email = email.trim().toLowerCase();
     mobile = mobile.trim();
     const father_name = fatherName ? fatherName.trim() : null;
     const father_cnic = fatherCnic ? fatherCnic.replace(/\D/g, "") : null;
+    const normalizedGender = normalizeGender(gender);
     
     // Debug log
     console.log("✅ Processing father_name:", father_name);
     console.log("✅ Processing father_cnic:", father_cnic);
     cnic = cnic.replace(/\D/g, "");
 
-    if (!name || !cnic || !email || !mobile || !password || !role) {
+    if (!name || !cnic || !email || !mobile || !password || !role || !normalizedGender) {
       return res.json({ success: false, message: "All fields are required" });
     }
     
@@ -505,7 +573,11 @@ router.post("/register-citizen", async (req, res) => {
     console.log("📝 Registration received - Father Name:", fatherName);
 
     const existing = await pool.query(
-      "SELECT * FROM users WHERE cnic=$1 OR email=$2 OR mobile=$3",
+      `SELECT *
+       FROM users
+       WHERE cnic = $1
+          OR LOWER(email) = LOWER($2)
+          OR mobile = $3`,
       [cnic, email, mobile]
     );
 
@@ -563,7 +635,7 @@ router.post("/register-citizen", async (req, res) => {
 
 router.post("/verify-otp", async (req, res) => {
   try {
-    let { name, cnic, email, mobile, password, role, otp, fatherName, fatherCnic } = req.body;
+    let { name, cnic, email, mobile, password, role, otp, fatherName, fatherCnic, gender } = req.body;
 
     email = email.trim().toLowerCase();
     otp = otp.trim();
@@ -605,6 +677,27 @@ router.post("/verify-otp", async (req, res) => {
     mobile = mobile.trim();
     const father_name = fatherName ? fatherName.trim() : null;
     const father_cnic = fatherCnic ? fatherCnic.replace(/\D/g, "") : null;
+    const normalizedGender = normalizeGender(gender);
+
+    if (!normalizedGender) {
+      return res.json({ success: false, message: "Gender is required" });
+    }
+
+    const duplicateIdentity = await pool.query(
+      `SELECT user_id
+       FROM users
+       WHERE cnic = $1
+          OR LOWER(email) = LOWER($2)
+       LIMIT 1`,
+      [cnic, email]
+    );
+
+    if (duplicateIdentity.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "CNIC or Email is already registered",
+      });
+    }
 
     // ✅ CRITICAL: Determine approval status based on role
     const roleUpper = role.toUpperCase();
@@ -641,13 +734,13 @@ await pool.query(
   `INSERT INTO users (
     id, user_id, role, name, cnic, email, mobile, password_hash, 
     public_key, encrypted_private_key, blockchain_address, 
-    approval_status, is_active, father_name, father_cnic, requested_at
+    approval_status, is_active, father_name, father_cnic, gender, requested_at
   ) 
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
   [
     id, userID, roleUpper, name, cnic, email, mobile, hash, 
     publicKey, encryptedPrivateKey, blockchainAddress, 
-    approvalStatus, isActive, father_name, father_cnic
+    approvalStatus, isActive, father_name, father_cnic, normalizedGender
   ]
 );
 
@@ -742,6 +835,14 @@ Blockchain Land Records Team`
 
   } catch (err) {
     console.error("❌ verify-otp error:", err);
+    const identityConstraintMessage = mapUserIdentityConstraintError(err);
+    if (identityConstraintMessage) {
+      return res.status(409).json({
+        success: false,
+        message: identityConstraintMessage,
+      });
+    }
+
     return res.status(500).json({ 
       success: false, 
       message: "Server error: " + err.message 
@@ -755,48 +856,42 @@ Blockchain Land Records Team`
 // =====================================================
 router.post("/login", async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const identifier = normalizeLoginIdentifier(
+      req.body.identifier || req.body.email || req.body.userId || req.body.cnic || ""
+    );
+    const { password } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress || "unknown";
 
-    if (!normalizedEmail || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password required",
+        message: "User ID or CNIC and password required",
       });
     }
 
-    const locked = await isAccountLocked(normalizedEmail);
+    const user = await findUserByLoginIdentifier(identifier);
+
+    if (!user) {
+      await recordLoginAttempt(identifier, ipAddress, false, "User not found");
+      return res.json({
+        success: false,
+        message: "Invalid login ID or password",
+      });
+    }
+
+    const normalizedEmail = String(user.email || "").trim().toLowerCase();
+    const locked = await isAccountLocked(normalizedEmail || identifier);
     if (locked) {
-      await recordLoginAttempt(normalizedEmail, ipAddress, false, "Account locked");
+      await recordLoginAttempt(normalizedEmail || identifier, ipAddress, false, "Account locked");
       return res.json({
         success: false,
         message: "Account locked due to multiple failed login attempts. Please try again later.",
       });
     }
 
-    const result = await pool.query(
-      `SELECT user_id, role, password_hash, is_active, approval_status,
-              approved_at, name, rejection_reason, two_factor_enabled,
-              two_factor_method, two_factor_secret, two_factor_temp_secret
-       FROM users
-       WHERE email = $1`,
-      [normalizedEmail]
-    );
-
-    if (!result.rows.length) {
-      await recordLoginAttempt(normalizedEmail, ipAddress, false, "User not found");
-      return res.json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    const user = result.rows[0];
-
     if (requiresLoginTwoFactor(user.role)) {
       if (user.approval_status === "PENDING") {
-        await recordLoginAttempt(normalizedEmail, ipAddress, false, "Account pending approval");
+        await recordLoginAttempt(normalizedEmail || identifier, ipAddress, false, "Account pending approval");
         return res.json({
           success: false,
           message: "Your account is pending admin approval. Please wait for approval confirmation email.",
@@ -805,7 +900,7 @@ router.post("/login", async (req, res, next) => {
       }
 
       if (user.approval_status === "REJECTED") {
-        await recordLoginAttempt(normalizedEmail, ipAddress, false, "Account rejected");
+        await recordLoginAttempt(normalizedEmail || identifier, ipAddress, false, "Account rejected");
         return res.json({
           success: false,
           message: user.rejection_reason
@@ -816,7 +911,7 @@ router.post("/login", async (req, res, next) => {
       }
 
       if (!user.is_active) {
-        await recordLoginAttempt(normalizedEmail, ipAddress, false, "Account inactive");
+        await recordLoginAttempt(normalizedEmail || identifier, ipAddress, false, "Account inactive");
         return res.json({
           success: false,
           message: "Your account is currently inactive. Please contact administrator.",
@@ -826,11 +921,11 @@ router.post("/login", async (req, res, next) => {
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      await handleFailedLogin(normalizedEmail, ipAddress);
-      await recordLoginAttempt(normalizedEmail, ipAddress, false, "Invalid password");
+      await handleFailedLogin(normalizedEmail || identifier, ipAddress);
+      await recordLoginAttempt(normalizedEmail || identifier, ipAddress, false, "Invalid password");
       return res.json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid login ID or password",
       });
     }
 
@@ -839,6 +934,7 @@ router.post("/login", async (req, res, next) => {
       email: normalizedEmail,
       ipAddress,
       req,
+      loginIdentifier: identifier,
     });
 
     return res.json(loginResult);
@@ -1065,49 +1161,47 @@ router.post("/resend-login-otp", async (req, res) => {
 
 router.post("/login-legacy-fallback", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const identifier = normalizeLoginIdentifier(
+      req.body.identifier || req.body.email || req.body.userId || req.body.cnic || ""
+    );
+    const { password } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress || "unknown";
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({ 
         success: false, 
-        message: "Email and password required" 
+        message: "User ID or CNIC and password required" 
       });
     }
 
-    // Check if account is locked
-    const locked = await isAccountLocked(email);
+    const user = await findUserByLoginIdentifier(identifier);
+
+    if (!user) {
+      await recordLoginAttempt(identifier, ipAddress, false, "User not found");
+      return res.json({ 
+        success: false, 
+        message: "Invalid login ID or password" 
+      });
+    }
+
+    const email = String(user.email || "").trim();
+    const loginEmail = email.toLowerCase() || identifier;
+
+    const locked = await isAccountLocked(loginEmail);
     if (locked) {
-      await recordLoginAttempt(email, ipAddress, false, "Account locked");
+      await recordLoginAttempt(loginEmail, ipAddress, false, "Account locked");
       return res.json({
         success: false,
         message: "Account locked due to multiple failed login attempts. Please try again later.",
       });
     }
 
-    // Fetch user details
-    const result = await pool.query(
-      `SELECT user_id, role, password_hash, is_active, approval_status, 
-              approved_at, name, rejection_reason
-       FROM users 
-       WHERE email = $1`,
-      [email.toLowerCase()]
-    );
-
-    if (result.rows.length === 0) {
-      await recordLoginAttempt(email, ipAddress, false, "User not found");
-      return res.json({ 
-        success: false, 
-        message: "Invalid email or password" 
-      });
-    }
-
-    const user = result.rows[0];
-
     console.log("\n========================================");
     console.log("🔐 LOGIN ATTEMPT");
     console.log("========================================");
-    console.log("Email:", email);
+    console.log("Login Identifier:", identifier);
+    console.log("Email:", user.email || "N/A");
+    console.log("CNIC:", user.cnic || "N/A");
     console.log("Role:", user.role);
     console.log("Approval Status:", user.approval_status);
     console.log("Is Active:", user.is_active);
@@ -1125,7 +1219,7 @@ router.post("/login-legacy-fallback", async (req, res) => {
     if (restrictedRoles.includes(user.role.toUpperCase())) {
       // Check if pending approval
       if (user.approval_status === 'PENDING') {
-        await recordLoginAttempt(email, ipAddress, false, "Account pending approval");
+          await recordLoginAttempt(loginEmail, ipAddress, false, "Account pending approval");
         return res.json({
           success: false,
           message: "Your account is pending admin approval. Please wait for approval confirmation email.",
@@ -1135,7 +1229,7 @@ router.post("/login-legacy-fallback", async (req, res) => {
       
       // Check if rejected
       if (user.approval_status === 'REJECTED') {
-        await recordLoginAttempt(email, ipAddress, false, "Account rejected");
+          await recordLoginAttempt(loginEmail, ipAddress, false, "Account rejected");
         return res.json({
           success: false,
           message: user.rejection_reason 
@@ -1147,7 +1241,7 @@ router.post("/login-legacy-fallback", async (req, res) => {
 
       // Check if account is not active even after approval
       if (!user.is_active) {
-        await recordLoginAttempt(email, ipAddress, false, "Account inactive");
+          await recordLoginAttempt(loginEmail, ipAddress, false, "Account inactive");
         return res.json({ 
           success: false, 
           message: "Your account is currently inactive. Please contact administrator." 
@@ -1159,22 +1253,22 @@ router.post("/login-legacy-fallback", async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
-      await handleFailedLogin(email, ipAddress);
-      await recordLoginAttempt(email, ipAddress, false, "Invalid password");
-      return res.json({ 
-        success: false, 
-        message: "Invalid email or password" 
-      });
-    }
+        await handleFailedLogin(loginEmail, ipAddress);
+        await recordLoginAttempt(loginEmail, ipAddress, false, "Invalid password");
+        return res.json({ 
+          success: false, 
+          message: "Invalid login ID or password" 
+        });
+      }
 
     // Reset failed login attempts and update last login
     await pool.query(
-      "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE email = $1",
-      [email]
-    );
+        "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE user_id = $1",
+        [user.user_id]
+      );
 
-    // Generate JWT token
-    const token = generateJWT(user.user_id, user.role, email);
+      // Generate JWT token
+      const token = generateJWT(user.user_id, user.role, user.email || "");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Store JWT session
@@ -1185,14 +1279,16 @@ router.post("/login-legacy-fallback", async (req, res) => {
     );
 
     // Record successful login
-    await recordLoginAttempt(email, ipAddress, true);
+      await recordLoginAttempt(loginEmail, ipAddress, true);
     await auditService.writeLog({
       userId: user.user_id,
       actionType: "LOGIN_SUCCESS",
       targetId: user.user_id,
       targetType: "USER",
       details: {
-        email,
+          loginIdentifier: identifier,
+          email: user.email || null,
+          cnic: user.cnic || null,
         role: user.role,
         approvalStatus: user.approval_status,
       },
@@ -1402,7 +1498,7 @@ router.get("/user-profile", authenticateToken, async (req, res) => {
     await ensureUserTwoFactorSchema();
 
     const result = await pool.query(
-      `SELECT user_id, name, email, cnic, mobile, role, blockchain_address,
+      `SELECT user_id, name, email, cnic, mobile, role, gender, father_name, blockchain_address,
        created_at, last_login, two_factor_enabled, two_factor_method, two_factor_setup_at
        FROM users WHERE user_id = $1`,
       [req.user.userId]
@@ -1421,6 +1517,7 @@ router.get("/user-profile", authenticateToken, async (req, res) => {
       email: user.email,
       cnic: user.cnic,
       mobile: user.mobile,
+      gender: user.gender,
       father_name: user.father_name,
       role: user.role,
       blockchain_address: user.blockchain_address,
@@ -1659,7 +1756,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
     await ensureUserTwoFactorSchema();
 
     const result = await pool.query(
-      `SELECT user_id, role, name, cnic, email, mobile, father_name, father_cnic,
+      `SELECT user_id, role, name, cnic, email, mobile, gender, father_name, father_cnic,
               blockchain_address, created_at, last_login, is_active,
               two_factor_enabled, two_factor_method, two_factor_setup_at
        FROM users 
@@ -1691,6 +1788,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
         cnic: user.cnic,
         email: user.email,
         mobile: user.mobile,
+        gender: user.gender,
         father_name: user.father_name,
         father_cnic: user.father_cnic,
         blockchain_address: user.blockchain_address,
@@ -1705,6 +1803,49 @@ router.get("/profile", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Get profile error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+});
+
+router.patch("/profile", authenticateToken, async (req, res) => {
+  try {
+    const normalizedGender = normalizeGender(req.body.gender);
+
+    if (!normalizedGender) {
+      return res.status(400).json({
+        success: false,
+        message: "Gender must be MALE or FEMALE",
+      });
+    }
+
+    const result = await pool.query(
+      `
+        UPDATE users
+        SET gender = $1
+        WHERE user_id = $2
+        RETURNING user_id, role, name, cnic, email, mobile, gender, father_name, father_cnic,
+                  blockchain_address, created_at, last_login, is_active
+      `,
+      [normalizedGender, req.user.userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: result.rows[0],
+    });
+  } catch (err) {
+    console.error("❌ Update profile error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error: " + err.message

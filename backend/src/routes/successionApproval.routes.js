@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import fabricGatewayService from "../services/fabricGateway.service.js";
 import fabricPLRAService from "../services/fabricPLRA.service.js";
-import propertyCoOwnershipService from "../services/propertyCoOwnership.service.js";
 import successionRuleService from "../services/successionRule.service.js";
 import { findNodeByUserId, findNodeFromEmail } from "../config/plraNodes.js";
 
@@ -120,7 +119,7 @@ async function getCitizenOwnedProperty(propertyId, userId, client = pool) {
         p.mauza,
         p.area_marla,
         p.status,
-        COALESCE(p.has_co_owners, FALSE) AS has_co_owners,
+        FALSE AS has_co_owners,
         u.gender AS owner_gender
       FROM properties p
       LEFT JOIN users u
@@ -488,14 +487,6 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
       return res.status(400).json({
         success: false,
         message: "Owner gender is missing on the citizen profile. Save it once in profile or succession planner before submitting.",
-      });
-    }
-
-    if (property.has_co_owners) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        success: false,
-        message: "This property already has co-owners recorded. Start a new succession plan only from a sole-owned property.",
       });
     }
 
@@ -1110,10 +1101,6 @@ router.post(
         req.user.userId,
         "LRO_NODE_1"
       );
-
-      await propertyCoOwnershipService
-        .syncPropertyCoOwnersFromSuccession(updated.rows[0].property_id)
-        .catch(() => null);
 
       return res.json({
         success: true,

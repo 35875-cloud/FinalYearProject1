@@ -70,11 +70,22 @@ class BlockchainService {
   validateStoredHash(blockData) {
     const candidates = this.buildHashCandidates(blockData);
     const storedHash = String(blockData?.blockchain_hash || "");
+    const difficulty = Number(blockData?.difficulty_level || this.difficulty || 0);
+    const payload = this.normalizeTransactionData(blockData?.transaction_data);
+    const usesLegacyPowFallback =
+      difficulty > 0 &&
+      payload &&
+      typeof payload === "object" &&
+      !Array.isArray(payload) &&
+      !payload.consensusMechanism;
+    const meetsDifficulty = storedHash.startsWith("0".repeat(difficulty));
+    const legacyValid = usesLegacyPowFallback && meetsDifficulty;
 
     return {
-      valid: candidates.includes(storedHash),
+      valid: candidates.includes(storedHash) || legacyValid,
       expectedHash: candidates[0] || "",
       candidates,
+      mode: legacyValid ? "legacy-pow-fallback" : "replay-hash",
     };
   }
 

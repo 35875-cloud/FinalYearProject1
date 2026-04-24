@@ -126,20 +126,11 @@ async function getLedgerTableAvailability() {
 }
 
 async function loadCitizenFeed(userId) {
-  const consentTableResult = await pool.query(`
-    SELECT
-      to_regclass('public.property_co_owner_consents') AS consent_table,
-      to_regclass('public.property_co_owner_consent_votes') AS consent_vote_table
-  `);
-  const consentTables = consentTableResult.rows[0] || {};
-  const hasConsentWorkflow = Boolean(consentTables.consent_table) && Boolean(consentTables.consent_vote_table);
-
   const [
     receiptPendingResult,
     sellerRequestsResult,
     approvedPropertiesResult,
     recentTransferDecisionsResult,
-    pendingConsentResult,
     channelResponse,
   ] = await Promise.all([
     pool.query(
@@ -213,33 +204,6 @@ async function loadCitizenFeed(userId) {
       `,
       [userId]
     ),
-    hasConsentWorkflow
-      ? pool.query(
-          `
-            SELECT
-              c.consent_id,
-              c.property_id,
-              c.operation_label,
-              c.initiated_at AS occurred_at,
-              c.requested_price,
-              COALESCE(c.initiated_by_name, owner.name, 'A co-owner') AS initiated_by_name,
-              p.district,
-              p.tehsil,
-              p.mauza
-            FROM property_co_owner_consents c
-            JOIN property_co_owner_consent_votes v
-              ON v.consent_id = c.consent_id
-            LEFT JOIN properties p ON p.property_id = c.property_id
-            LEFT JOIN users owner ON owner.user_id = c.initiated_by_user_id
-            WHERE v.participant_user_id = $1
-              AND v.vote IS NULL
-              AND UPPER(COALESCE(c.status, '')) = 'PENDING'
-            ORDER BY c.initiated_at DESC, c.created_at DESC
-            LIMIT 4
-          `,
-          [userId]
-        )
-      : Promise.resolve({ rows: [] }),
     channelService.getUserChannels(userId),
   ]);
 
@@ -300,29 +264,6 @@ async function loadCitizenFeed(userId) {
     );
   }
 
-  for (const item of pendingConsentResult.rows) {
-    notifications.push(
-      buildNotification({
-        id: `co-owner-consent-${item.consent_id}`,
-        type: "CO_OWNER_CONSENT_PENDING",
-        priority: "high",
-        title: "A shared-owner approval is waiting for you",
-        body: `${item.operation_label || "Sale or transfer"} for ${item.property_id} was started by ${item.initiated_by_name || "a co-owner"}. Review the shared property and approve or reject it from your citizen workspace.`,
-        actionPath: "/citizen/my-properties",
-        actionLabel: "Review Shared Property",
-        occurredAt: item.occurred_at,
-        meta: {
-          consentId: item.consent_id,
-          propertyId: item.property_id,
-          district: item.district,
-          tehsil: item.tehsil,
-          mauza: item.mauza,
-          requestedPrice: item.requested_price,
-        },
-      })
-    );
-  }
-
   for (const item of approvedPropertiesResult.rows) {
     notifications.push(
       buildNotification({
@@ -368,7 +309,7 @@ async function loadCitizenFeed(userId) {
         .reduce((sum, item) => sum + Number(item.meta?.unreadCount || 0), 0),
       pendingSellerRequests: sellerRequestsResult.rows.length,
       receiptPending: receiptPendingResult.rows.length,
-      coOwnerActionsPending: pendingConsentResult.rows.length,
+      coOwnerActionsPending: 0,
     },
     notifications: trimmed,
   };
@@ -456,7 +397,7 @@ async function loadLroFeed(userId) {
           ON rv.property_id = rbc.property_id
          AND rv.lro_node_id = $1
         WHERE UPPER(COALESCE(rbc.status, '')) = 'VOTING'
-          AND rv.vote_id IS NULL
+          AND rv.property_id IS NULL
         ORDER BY COALESCE(rbc.updated_at, rbc.submitted_at, rbc.created_at) DESC
         LIMIT 4
       `,
@@ -483,7 +424,7 @@ async function loadLroFeed(userId) {
           ON tbv.transfer_id = tbc.transfer_id
          AND tbv.lro_node_id = $1
         WHERE UPPER(COALESCE(tbc.status, '')) = 'VOTING'
-          AND tbv.vote_id IS NULL
+          AND tbv.transfer_id IS NULL
         ORDER BY COALESCE(tbc.updated_at, tbc.submitted_at, tbc.created_at) DESC
         LIMIT 4
       `,

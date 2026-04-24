@@ -5,8 +5,6 @@ import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import blockchainService from "../services/blockchain.service.js";
 import channelService from "../services/channel.service.js";
-import propertyCoOwnershipService from "../services/propertyCoOwnership.service.js";
-import propertyCoOwnerConsentService from "../services/propertyCoOwnerConsent.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import fabricGatewayService from "../services/fabricGateway.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
@@ -93,7 +91,6 @@ async function ensureTransferVotingSchema() {
     transferVotingSchemaReadyPromise = (async () => {
       await pool.query(CREATE_TRANSFER_CASES_SQL);
       await pool.query(CREATE_TRANSFER_VOTES_SQL);
-      await propertyCoOwnershipService.ensureSchema();
       await pool.query(`ALTER TABLE transfer_requests ADD COLUMN IF NOT EXISTS approved_by VARCHAR(60)`);
       await pool.query(`ALTER TABLE transfer_requests ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`);
       await pool.query(`ALTER TABLE transfer_requests ADD COLUMN IF NOT EXISTS approval_notes TEXT`);
@@ -151,7 +148,6 @@ function normalizeMoney(value) {
 router.use(async (_req, res, next) => {
   try {
     await ensureTransferVotingSchema();
-    await propertyCoOwnerConsentService.ensureSchema();
     next();
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -783,7 +779,6 @@ router.post(
 
     try {
       await ensureTables();
-      await propertyCoOwnershipService.ensureSchema(client);
       await propertyEncumbranceService.ensureSchema(client);
       await client.query("BEGIN");
 
@@ -838,27 +833,6 @@ router.post(
         return res.status(409).json({
           success: false,
           message: `Property is currently under dispute hold${freezeState.freeze_reason_label ? `: ${freezeState.freeze_reason_label}` : ""}`,
-        });
-      }
-
-      const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(
-        transfer.property_id,
-        client
-      );
-      const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-        transfer.property_id,
-        req.user.userId,
-        client
-      );
-      if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({
-          success: false,
-          message:
-            consentState?.status === "REJECTED"
-              ? "Shared-owner consent was rejected. Start a new consent request before transfer voting can be submitted."
-              : `Shared-owner consent is required before transfer voting can be submitted${consentState?.summaryLabel ? `: ${consentState.summaryLabel}` : ""}`,
-          consent: consentState,
         });
       }
 
@@ -1298,7 +1272,6 @@ router.post(
     try {
       await ensureTables();
       await propertyRegistryIntegrityService.ensureTables();
-      await propertyCoOwnershipService.ensureSchema(client);
       await propertyEncumbranceService.ensureSchema(client);
       await client.query("BEGIN");
 
@@ -1327,27 +1300,6 @@ router.post(
         return res.status(409).json({
           success: false,
           message: `Property is currently under dispute hold${freezeState.freeze_reason_label ? `: ${freezeState.freeze_reason_label}` : ""}`,
-        });
-      }
-
-      const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(
-        votingCase.property_id,
-        client
-      );
-      const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-        votingCase.property_id,
-        req.user.userId,
-        client
-      );
-      if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({
-          success: false,
-          message:
-            consentState?.status === "REJECTED"
-              ? "Shared-owner consent was rejected. Start a new consent request before DC can finalize the transfer."
-              : `Shared-owner consent is required before DC can finalize the transfer${consentState?.summaryLabel ? `: ${consentState.summaryLabel}` : ""}`,
-          consent: consentState,
         });
       }
 

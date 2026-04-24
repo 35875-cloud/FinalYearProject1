@@ -8,8 +8,6 @@ import pool from "../config/db.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import channelService from '../services/channel.service.js';
-import propertyCoOwnershipService from "../services/propertyCoOwnership.service.js";
-import propertyCoOwnerConsentService from "../services/propertyCoOwnerConsent.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
 
@@ -122,8 +120,6 @@ router.post("/verify-buyer", authenticateToken, async (req, res) => {
 router.get("/seller-properties", authenticateToken, async (req, res) => {
   try {
     await propertyFreezeService.ensureSchema();
-    await propertyCoOwnershipService.ensureSchema();
-    await propertyCoOwnerConsentService.ensureSchema();
     await propertyEncumbranceService.ensureSchema();
     console.log("\n========================================");
     console.log("📋 FETCHING SELLER'S PROPERTIES");
@@ -133,10 +129,10 @@ router.get("/seller-properties", authenticateToken, async (req, res) => {
       `SELECT property_id, fard_no, khasra_no, khatooni_no, 
               district, tehsil, area_marla, property_type, status,
               COALESCE(is_frozen, FALSE) AS is_frozen,
-              COALESCE(has_co_owners, FALSE) AS has_co_owners,
-              COALESCE(ownership_model, 'SOLE') AS ownership_model,
-              COALESCE(active_co_owner_count, 0) AS active_co_owner_count,
-              co_owner_summary,
+              FALSE AS has_co_owners,
+              'SOLE' AS ownership_model,
+              0 AS active_co_owner_count,
+              NULL::TEXT AS co_owner_summary,
               COALESCE(is_encumbered, FALSE) AS is_encumbered,
               encumbrance_summary,
               freeze_reason_label
@@ -180,8 +176,6 @@ router.post("/initiate", authenticateToken, async (req, res) => {
   
   try {
     await propertyFreezeService.ensureSchema(client);
-    await propertyCoOwnershipService.ensureSchema(client);
-    await propertyCoOwnerConsentService.ensureSchema(client);
     await propertyEncumbranceService.ensureSchema(client);
     await client.query('BEGIN');
 
@@ -240,27 +234,9 @@ router.post("/initiate", authenticateToken, async (req, res) => {
     }
 
     const property = propertyCheck.rows[0];
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(
-      propertyId,
-      client
-    );
-
     if (property.is_frozen) {
       throw new Error(
         `Property is currently under dispute hold${property.freeze_reason_label ? `: ${property.freeze_reason_label}` : ''}`
-      );
-    }
-
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      propertyId,
-      req.user.userId,
-      client
-    );
-    if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-      throw new Error(
-        consentState?.status === "REJECTED"
-          ? "Shared-owner consent was rejected. Start a new consent request before transfer initiation."
-          : `Shared-owner consent is required before transfer initiation${consentState?.summaryLabel ? `: ${consentState.summaryLabel}` : ""}`
       );
     }
 
@@ -1091,8 +1067,6 @@ router.post("/approve", authenticateToken, async (req, res) => {
   
   try {
     await client.query('BEGIN');
-    await propertyCoOwnershipService.ensureSchema(client);
-    await propertyCoOwnerConsentService.ensureSchema(client);
     await propertyEncumbranceService.ensureSchema(client);
 
     const userRole = req.user.role.toUpperCase();
@@ -1131,29 +1105,11 @@ router.post("/approve", authenticateToken, async (req, res) => {
     }
 
     const transfer = transferResult.rows[0];
-    const consentState = await propertyCoOwnerConsentService.getPropertyConsentState(
-      transfer.property_id,
-      req.user.userId,
-      client
-    );
-
     await propertyEncumbranceService.assertNoActiveEncumbrance(
       transfer.property_id,
       client,
       "Property has an active encumbrance and cannot be transferred"
     );
-
-    const coOwnershipState = await propertyCoOwnershipService.getPropertyCoOwnershipState(
-      transfer.property_id,
-      client
-    );
-    if (coOwnershipState?.has_co_owners && !consentState?.canProceed) {
-      throw new Error(
-        consentState?.status === "REJECTED"
-          ? "Shared-owner consent was rejected. Start a new consent request before transfer approval."
-          : `Shared-owner consent is required before transfer approval${consentState?.summaryLabel ? `: ${consentState.summaryLabel}` : ""}`
-      );
-    }
 
     console.log("Property ID:", transfer.property_id);
     console.log("Current Owner ID:", transfer.owner_id);
