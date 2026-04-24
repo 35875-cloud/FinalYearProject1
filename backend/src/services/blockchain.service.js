@@ -11,6 +11,73 @@ class BlockchainService {
     this.difficulty = 4; // Proof of Work difficulty (for hybrid mode)
   }
 
+  normalizeTimestampForHash(value) {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString();
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+  }
+
+  normalizeTransactionData(value) {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  buildHashCandidates(blockData) {
+    const data = this.normalizeTransactionData(blockData?.transaction_data);
+    const timestamps = [];
+
+    const addTimestamp = (candidate) => {
+      const normalized = this.normalizeTimestampForHash(candidate);
+      if (normalized && !timestamps.includes(normalized)) {
+        timestamps.push(normalized);
+      }
+    };
+
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      // Older demo blocks were hashed with the transaction payload timestamp
+      // while later verification used mined_at from PostgreSQL.
+      addTimestamp(data.timestamp);
+      addTimestamp(data.mined_at);
+      addTimestamp(data.minedAt);
+    }
+
+    addTimestamp(blockData?.mined_at);
+
+    if (!timestamps.length) {
+      timestamps.push("");
+    }
+
+    return timestamps.map((timestamp) =>
+      this.calculateHash(
+        blockData.block_index,
+        blockData.previous_hash,
+        timestamp,
+        data,
+        blockData.nonce
+      )
+    );
+  }
+
+  validateStoredHash(blockData) {
+    const candidates = this.buildHashCandidates(blockData);
+    const storedHash = String(blockData?.blockchain_hash || "");
+
+    return {
+      valid: candidates.includes(storedHash),
+      expectedHash: candidates[0] || "",
+      candidates,
+    };
+  }
+
   // =====================================================
   // PROOF OF AUTHORITY (PoA) CONSENSUS
   // =====================================================
@@ -146,7 +213,7 @@ class BlockchainService {
       const insertResult = await pool.query(
         `INSERT INTO blockchain_ledger 
         (block_index, property_id, blockchain_hash, previous_hash, transaction_data, nonce, mined_by, mined_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
         [
           blockIndex,
@@ -155,7 +222,8 @@ class BlockchainService {
           previousHash,
           JSON.stringify(transactionData),
           nonce,
-          validatorUserId
+          validatorUserId,
+          timestamp,
         ]
       );
 
@@ -252,15 +320,9 @@ class BlockchainService {
         }
 
         // Recalculate hash and verify
-        const recalculatedHash = this.calculateHash(
-          currentBlock.block_index,
-          currentBlock.previous_hash,
-          currentBlock.mined_at,
-          currentBlock.transaction_data,
-          currentBlock.nonce
-        );
+        const hashValidation = this.validateStoredHash(currentBlock);
 
-        if (recalculatedHash !== currentBlock.blockchain_hash) {
+        if (!hashValidation.valid) {
           console.log(`❌ Block ${i} has invalid hash`);
           return false;
         }
@@ -359,13 +421,7 @@ class BlockchainService {
         const currentBlock = chain[i];
         const previousBlock = chain[i - 1];
 
-        const recalculatedHash = this.calculateHash(
-          currentBlock.block_index,
-          currentBlock.previous_hash,
-          currentBlock.mined_at,
-          currentBlock.transaction_data,
-          currentBlock.nonce
-        );
+        const hashValidation = this.validateStoredHash(currentBlock);
 
         if (currentBlock.previous_hash !== previousBlock.blockchain_hash) {
           isValid = false;
@@ -377,12 +433,12 @@ class BlockchainService {
           });
         }
 
-        if (recalculatedHash !== currentBlock.blockchain_hash) {
+        if (!hashValidation.valid) {
           isValid = false;
           invalidBlocks.push({
             blockIndex: currentBlock.block_index,
             reason: "Hash tampering detected",
-            expected: recalculatedHash,
+            expected: hashValidation.expectedHash,
             actual: currentBlock.blockchain_hash
           });
         }
