@@ -175,6 +175,10 @@ function normalizeLoginIdentifier(value = "") {
   return String(value || "").trim();
 }
 
+function isEmailLikeIdentifier(value = "") {
+  return String(value || "").includes("@");
+}
+
 function extractCnicDigits(value = "") {
   const digits = String(value || "").replace(/\D/g, "");
   return digits.length === 13 ? digits : "";
@@ -879,6 +883,14 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
+    if (isEmailLikeIdentifier(identifier) && String(user.role || "").toUpperCase() === "CITIZEN") {
+      await recordLoginAttempt(identifier, ipAddress, false, "Citizen email login blocked");
+      return res.json({
+        success: false,
+        message: "Citizens must login with User ID or CNIC only.",
+      });
+    }
+
     const normalizedEmail = String(user.email || "").trim().toLowerCase();
     const locked = await isAccountLocked(normalizedEmail || identifier);
     if (locked) {
@@ -1181,6 +1193,14 @@ router.post("/login-legacy-fallback", async (req, res) => {
       return res.json({ 
         success: false, 
         message: "Invalid login ID or password" 
+      });
+    }
+
+    if (isEmailLikeIdentifier(identifier) && String(user.role || "").toUpperCase() === "CITIZEN") {
+      await recordLoginAttempt(identifier, ipAddress, false, "Citizen email login blocked");
+      return res.json({
+        success: false,
+        message: "Citizens must login with User ID or CNIC only.",
       });
     }
 

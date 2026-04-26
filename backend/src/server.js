@@ -34,6 +34,7 @@ import marketplaceRoutes from "./routes/marketplace.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import p2pSchemaService from "./services/p2pSchema.service.js";
 import auditService from "./services/audit.service.js";
+import ownershipHistoryService from "./services/ownershipHistory.service.js";
 import opsAutomationService from "./services/opsAutomation.service.js";
 
 // NEW: Import P2P channel routes and WebSocket service
@@ -67,6 +68,13 @@ try {
     console.log("✅ P2P messaging schema verified");
 } catch (error) {
     console.error("❌ Failed to verify P2P messaging schema:", error.message);
+}
+
+try {
+    await ownershipHistoryService.ensureSchema();
+    console.log("Ownership history schema verified");
+} catch (error) {
+    console.error("Failed to verify ownership history schema:", error.message);
 }
 
 // =====================================================

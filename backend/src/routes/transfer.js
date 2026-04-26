@@ -10,6 +10,7 @@ import crypto from "crypto";
 import channelService from '../services/channel.service.js';
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
+import ownershipHistoryService from "../services/ownershipHistory.service.js";
 
 // =====================================================
 // MIDDLEWARE - JWT Authentication
@@ -1135,21 +1136,24 @@ router.post("/approve", authenticateToken, async (req, res) => {
       ]
     );
 
-    // Create ownership history record
-    await client.query(
-      `INSERT INTO property_ownership_history (
-        property_id, previous_owner_id, new_owner_id, 
-        transfer_type, transfer_amount, transfer_date, 
-        remarks, created_at
-      ) VALUES ($1, $2, $3, 'SALE', $4, NOW(), $5, NOW())`,
-      [
-        transfer.property_id,
-        transfer.owner_id, // Previous owner (seller)
-        transfer.buyer_id,  // New owner (buyer)
-        transfer.transfer_amount || transfer.agreed_price || 0,
-        `Transfer approved by ${req.user.name || 'Officer'}. ${approvalNotes || ''}`
-      ]
-    );
+    await ownershipHistoryService.recordOwnershipEvent(client, {
+      propertyId: transfer.property_id,
+      previousOwnerId: transfer.owner_id,
+      previousOwnerName: transfer.owner_name,
+      previousOwnerCnic: transfer.owner_cnic,
+      newOwnerId: transfer.buyer_id,
+      newOwnerName: transfer.buyer_full_name || transfer.buyer_name,
+      newOwnerCnic: transfer.buyer_cnic,
+      newOwnerFatherName: transfer.buyer_father_name,
+      transferType: "SALE",
+      transferAmount: transfer.transfer_amount || transfer.agreed_price || 0,
+      transferDate: new Date(),
+      transferId,
+      referenceType: "TRANSFER_REQUEST",
+      referenceId: transferId,
+      remarks: `Transfer approved by ${req.user.name || "Officer"}. ${approvalNotes || ""}`.trim(),
+      createdAt: new Date(),
+    });
 
     // Update transfer status to APPROVED
     await client.query(
