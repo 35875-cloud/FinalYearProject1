@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import blockchainService from "../services/blockchain.service.js";
 import fabricGatewayService from "../services/fabricGateway.service.js";
+import ownershipHistoryService from "../services/ownershipHistory.service.js";
 import propertyRegistryIntegrityService from "../services/propertyRegistryIntegrity.service.js";
 import { findNodeById, findNodeByUserId, findNodeFromEmail } from "../config/plraNodes.js";
 
@@ -1117,6 +1118,41 @@ router.post(
              updated_at = NOW()
          WHERE property_id = $1`,
         [propertyId, propertyHash, JSON.stringify(snapshot), newBlock.blockchain_hash]
+      );
+
+      await ownershipHistoryService.recordOwnershipEvent(client, {
+        propertyId,
+        previousOwnerId: null,
+        previousOwnerName: null,
+        previousOwnerCnic: null,
+        newOwnerId: property.owner_id,
+        newOwnerName: property.owner_name,
+        newOwnerCnic: property.owner_cnic,
+        newOwnerFatherName: property.father_name,
+        transferType: "REGISTRATION",
+        transferAmount: null,
+        transferDate: new Date(),
+        referenceType: "PROPERTY_REGISTRATION",
+        referenceId: propertyId,
+        remarks: `Property registration approved by ${req.user.userId}${notes ? `: ${notes}` : ""}`,
+        createdAt: new Date(),
+      });
+
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
+         VALUES ($1, 'PROPERTY_APPROVED_BY_DC', $2, $3, $4)`,
+        [
+          req.user.userId,
+          propertyId,
+          JSON.stringify({
+            propertyId,
+            notes,
+            blockHash: newBlock.blockchain_hash,
+            blockIndex: newBlock.block_index,
+            workflow: "REGISTRATION_VOTING",
+          }),
+          req.ip || "unknown",
+        ]
       );
 
       await client.query("COMMIT");

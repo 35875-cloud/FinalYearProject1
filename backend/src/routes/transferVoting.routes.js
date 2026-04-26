@@ -7,6 +7,7 @@ import blockchainService from "../services/blockchain.service.js";
 import channelService from "../services/channel.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import fabricGatewayService from "../services/fabricGateway.service.js";
+import ownershipHistoryService from "../services/ownershipHistory.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
 import propertyRegistryIntegrityService from "../services/propertyRegistryIntegrity.service.js";
 import { findNodeById, findNodeByUserId, findNodeFromEmail } from "../config/plraNodes.js";
@@ -671,49 +672,24 @@ async function reanchorTransferVotingCaseOnFabric(
 }
 
 async function insertOwnershipHistoryRecord(client, payload) {
-  const tableCandidates = ["property_ownership_history", "ownership_history"];
-  let tableName = null;
-  let columns = [];
-
-  for (const candidate of tableCandidates) {
-    const currentColumns = await getTableColumns(client, candidate);
-    if (currentColumns.length) {
-      tableName = candidate;
-      columns = currentColumns;
-      break;
-    }
-  }
-
-  if (!tableName) return;
-
-  const fieldNames = [];
-  const placeholders = [];
-  const values = [];
-
-  const pushField = (column, value) => {
-    if (!columns.includes(column)) return;
-    values.push(value);
-    fieldNames.push(column);
-    placeholders.push(`$${values.length}`);
-  };
-
-  pushField("property_id", payload.propertyId);
-  pushField("previous_owner_id", payload.previousOwnerId);
-  pushField("new_owner_id", payload.newOwnerId);
-  pushField("transfer_type", "SALE");
-  pushField("transfer_amount", payload.transferAmount);
-  pushField("transfer_date", new Date());
-  pushField("transfer_id", payload.transferId);
-  pushField("remarks", payload.remarks);
-  pushField("created_at", new Date());
-
-  if (!fieldNames.length) return;
-
-  await client.query(
-    `INSERT INTO ${tableName} (${fieldNames.join(", ")})
-     VALUES (${placeholders.join(", ")})`,
-    values
-  );
+  await ownershipHistoryService.recordOwnershipEvent(client, {
+    propertyId: payload.propertyId,
+    previousOwnerId: payload.previousOwnerId,
+    previousOwnerName: payload.previousOwnerName,
+    previousOwnerCnic: payload.previousOwnerCnic,
+    newOwnerId: payload.newOwnerId,
+    newOwnerName: payload.newOwnerName,
+    newOwnerCnic: payload.newOwnerCnic,
+    newOwnerFatherName: payload.newOwnerFatherName,
+    transferType: "SALE",
+    transferAmount: payload.transferAmount,
+    transferDate: new Date(),
+    transferId: payload.transferId,
+    referenceType: "TRANSFER_REQUEST",
+    referenceId: payload.transferId,
+    remarks: payload.remarks,
+    createdAt: new Date(),
+  });
 }
 
 router.get(
@@ -1346,7 +1322,12 @@ router.post(
       await insertOwnershipHistoryRecord(client, {
         propertyId: votingCase.property_id,
         previousOwnerId: votingCase.seller_id,
+        previousOwnerName: votingCase.seller_name,
+        previousOwnerCnic: votingCase.seller_cnic,
         newOwnerId: votingCase.buyer_id,
+        newOwnerName: votingCase.buyer_name,
+        newOwnerCnic: votingCase.buyer_cnic,
+        newOwnerFatherName: votingCase.buyer_father_name,
         transferAmount: normalizeMoney(votingCase.displayAmount),
         transferId,
         remarks: `Transfer finalized through 5-node voting. ${notes || ""}`.trim(),

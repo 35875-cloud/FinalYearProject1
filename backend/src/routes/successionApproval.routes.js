@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import pool from "../config/db.js";
 import fabricGatewayService from "../services/fabricGateway.service.js";
 import fabricPLRAService from "../services/fabricPLRA.service.js";
+import ownershipHistoryService from "../services/ownershipHistory.service.js";
 import successionRuleService from "../services/successionRule.service.js";
 import { findNodeByUserId, findNodeFromEmail } from "../config/plraNodes.js";
 
@@ -1052,22 +1053,28 @@ router.post(
   authenticateToken,
   requireRole(["DC", "ADMIN"]),
   async (req, res) => {
+    const client = await pool.connect();
+
     try {
+      await client.query("BEGIN");
+
       const { successionRequestId } = req.params;
       const detail = await getCaseDetail(successionRequestId);
 
       if (!detail) {
+        await client.query("ROLLBACK");
         return res.status(404).json({ success: false, message: "Succession case not found" });
       }
 
       if (!detail.thresholdReached && String(detail.request.lro_status || "").toUpperCase() !== "APPROVED") {
+        await client.query("ROLLBACK");
         return res.status(409).json({
           success: false,
           message: "Succession case does not yet have enough LRO approvals",
         });
       }
 
-      const updated = await pool.query(
+      const updated = await client.query(
         `UPDATE succession_requests
          SET status = 'COMPLETED',
              blockchain_status = 'COMPLETED',
@@ -1081,7 +1088,9 @@ router.post(
         [successionRequestId, req.user.userId]
       );
 
-      await pool.query(
+      const approvedRequest = updated.rows[0];
+
+      await client.query(
         `INSERT INTO succession_events
            (event_id, succession_request_id, event_type, actor_id, actor_role, metadata, notes, created_at)
          VALUES
@@ -1096,20 +1105,88 @@ router.post(
         ]
       );
 
+      const propertyResult = await client.query(
+        `SELECT property_id, owner_id, owner_name, owner_cnic, father_name
+           FROM properties
+          WHERE property_id = $1
+          LIMIT 1`,
+        [approvedRequest.property_id]
+      );
+
+      const property = propertyResult.rows[0];
+
+      const heirsResult = await client.query(
+        `SELECT
+           heir_id,
+           linked_user_id,
+           full_name,
+           cnic,
+           share_percent,
+           share_fraction_text
+         FROM succession_heirs
+         WHERE succession_request_id = $1
+         ORDER BY created_at ASC, heir_id ASC`,
+        [successionRequestId]
+      );
+
+      for (const heir of heirsResult.rows) {
+        const shareLabel =
+          String(heir.share_fraction_text || "").trim() ||
+          (heir.share_percent !== null && heir.share_percent !== undefined ? `${heir.share_percent}%` : "");
+
+        await ownershipHistoryService.recordOwnershipEvent(client, {
+          propertyId: approvedRequest.property_id,
+          previousOwnerId: approvedRequest.owner_user_id,
+          previousOwnerName: property?.owner_name || detail.request?.owner_name || null,
+          previousOwnerCnic: property?.owner_cnic || null,
+          newOwnerId: heir.linked_user_id,
+          newOwnerName: heir.full_name,
+          newOwnerCnic: heir.cnic,
+          newOwnerFatherName: property?.father_name || null,
+          transferType: "SUCCESSION",
+          transferAmount: null,
+          transferDate: approvedRequest.completed_at || approvedRequest.dc_approved_at || new Date(),
+          referenceType: "SUCCESSION_HEIR",
+          referenceId: heir.heir_id,
+          remarks: `Succession allocation approved${shareLabel ? ` (${shareLabel})` : ""}`,
+          createdAt: approvedRequest.completed_at || approvedRequest.dc_approved_at || new Date(),
+        });
+      }
+
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action_type, target_id, details, ip_address)
+         VALUES ($1, 'SUCCESSION_APPROVED_BY_DC', $2, $3, $4)`,
+        [
+          req.user.userId,
+          successionRequestId,
+          JSON.stringify({
+            successionRequestId,
+            propertyId: approvedRequest.property_id,
+            totalHeirs: heirsResult.rows.length,
+          }),
+          req.ip || "unknown",
+        ]
+      );
+
       const chainResult = await fabricGatewayService.finalizeSuccessionCase(
         successionRequestId,
         req.user.userId,
         "LRO_NODE_1"
       );
 
+      await client.query("COMMIT");
+
       return res.json({
         success: true,
         message: "Succession case approved by DC",
         chainResult,
-        request: updated.rows[0],
+        request: approvedRequest,
       });
     } catch (error) {
+      await client.query("ROLLBACK");
       return res.status(500).json({ success: false, message: error.message });
+    } finally {
+      client.release();
     }
   }
 );

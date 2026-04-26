@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 import blockchainService from "../services/blockchain.service.js";
 import propertyEncumbranceService from "../services/propertyEncumbrance.service.js";
 import propertyFreezeService from "../services/propertyFreeze.service.js";
+import ownershipHistoryService from "../services/ownershipHistory.service.js";
 
 // =====================================================
 // AUTHENTICATION MIDDLEWARE
@@ -191,7 +192,7 @@ async function getViewerShareAllocation(propertyId, userId) {
       LEFT JOIN citizen c ON TRUE
       WHERE r.property_id = $1
         AND (
-          h.linked_user_id = $2
+          h.linked_user_id::text = $2
           OR (c.cnic IS NOT NULL AND h.cnic = c.cnic)
         )
         AND COALESCE(r.dc_status, '') = 'APPROVED'
@@ -513,7 +514,7 @@ router.get("/my-share-properties", authenticateToken, async (req, res) => {
           AND COALESCE(r.dc_status, '') = 'APPROVED'
           AND COALESCE(r.status, '') IN ('COMPLETED', 'APPROVED')
           AND (
-            h.linked_user_id = c.user_id
+            h.linked_user_id::text = c.user_id
             OR (c.cnic IS NOT NULL AND h.cnic = c.cnic)
           )
         ORDER BY COALESCE(r.completed_at, r.updated_at, r.created_at) DESC, h.created_at DESC
@@ -1591,6 +1592,24 @@ router.post("/dc-approve", authenticateToken, async (req, res) => {
       [propertyId]
     );
 
+    await ownershipHistoryService.recordOwnershipEvent(client, {
+      propertyId,
+      previousOwnerId: null,
+      previousOwnerName: null,
+      previousOwnerCnic: null,
+      newOwnerId: property.owner_id,
+      newOwnerName: property.owner_name,
+      newOwnerCnic: property.owner_cnic,
+      newOwnerFatherName: property.father_name,
+      transferType: "REGISTRATION",
+      transferAmount: null,
+      transferDate: new Date(),
+      referenceType: "PROPERTY_REGISTRATION",
+      referenceId: propertyId,
+      remarks: `Property registration approved by ${req.user.userId}${comments ? `: ${comments}` : ""}`,
+      createdAt: new Date(),
+    });
+
     // ✅ STEP 3: CREATE APPROVAL CHAIN RECORD
     await client.query(
       `INSERT INTO approval_chain 
@@ -1807,6 +1826,28 @@ router.get("/history/:propertyId", authenticateToken, async (req, res) => {
     const { propertyId } = req.params;
     
     console.log("📜 Fetching ownership history for:", propertyId);
+
+    const canViewHistory = await ownershipHistoryService.canUserViewPropertyHistory(
+      pool,
+      req.user,
+      propertyId
+    );
+
+    if (!canViewHistory) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view this ownership history"
+      });
+    }
+
+    const latestHistory = await ownershipHistoryService.listPropertyOwnershipHistory(pool, propertyId);
+    console.log("Ownership history records found:", latestHistory.length);
+
+    return res.json({
+      success: true,
+      history: latestHistory,
+      total: latestHistory.length
+    });
 
     let history = [];
     
@@ -2330,6 +2371,22 @@ router.post("/admin/approve-property", authenticateToken, async (req, res) => {
     }
 
     const { propertyId } = req.body;
+    const propertyResult = await pool.query(
+      `SELECT property_id, owner_id, owner_name, owner_cnic, father_name
+         FROM properties
+        WHERE property_id = $1
+        LIMIT 1`,
+      [propertyId]
+    );
+
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found."
+      });
+    }
 
     await pool.query(
       `UPDATE properties 
@@ -2338,6 +2395,24 @@ router.post("/admin/approve-property", authenticateToken, async (req, res) => {
        WHERE property_id = $1`,
       [propertyId]
     );
+
+    await ownershipHistoryService.recordOwnershipEvent(pool, {
+      propertyId,
+      previousOwnerId: null,
+      previousOwnerName: null,
+      previousOwnerCnic: null,
+      newOwnerId: property.owner_id,
+      newOwnerName: property.owner_name,
+      newOwnerCnic: property.owner_cnic,
+      newOwnerFatherName: property.father_name,
+      transferType: "REGISTRATION",
+      transferAmount: null,
+      transferDate: new Date(),
+      referenceType: "PROPERTY_REGISTRATION",
+      referenceId: propertyId,
+      remarks: `Property registration approved by admin ${req.user.userId}`,
+      createdAt: new Date(),
+    });
 
     return res.json({
       success: true,
@@ -2447,6 +2522,24 @@ router.post("/dc-approve", authenticateToken, async (req, res) => {
 
       if (propertyData.rows.length > 0) {
         const property = propertyData.rows[0];
+
+        await ownershipHistoryService.recordOwnershipEvent(pool, {
+          propertyId,
+          previousOwnerId: null,
+          previousOwnerName: null,
+          previousOwnerCnic: null,
+          newOwnerId: property.owner_id,
+          newOwnerName: property.owner_name,
+          newOwnerCnic: property.owner_cnic,
+          newOwnerFatherName: property.father_name,
+          transferType: "REGISTRATION",
+          transferAmount: null,
+          transferDate: new Date(),
+          referenceType: "PROPERTY_REGISTRATION",
+          referenceId: propertyId,
+          remarks: `Property registration approved by DC ${req.user.userId}${comments ? `: ${comments}` : ""}`,
+          createdAt: new Date(),
+        });
         
         // Mine the block - DC is the authority validator
         const newBlock = await blockchainService.mineBlock(property, req.user.userId);
