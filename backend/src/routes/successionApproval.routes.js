@@ -462,7 +462,17 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
     const notes = String(req.body.notes || "").trim() || null;
     const deathCertificateReference =
       String(req.body.deathCertificateReference || "").trim() || null;
-    const requestType = String(req.body.requestType || "ISLAMIC_FAMILY_DIVISION").trim();
+
+    // Map frontend requestType to allowed DB values:
+    //   succession_requests_request_type_check: LIFETIME_DIVISION | DEATH_SUCCESSION
+    // The Islamic family division the citizen performs is a DEATH_SUCCESSION.
+    const rawRequestType = String(req.body.requestType || "").trim();
+    const REQUEST_TYPE_MAP = {
+      ISLAMIC_FAMILY_DIVISION: "DEATH_SUCCESSION",
+      DEATH_SUCCESSION:        "DEATH_SUCCESSION",
+      LIFETIME_DIVISION:       "LIFETIME_DIVISION",
+    };
+    const requestType = REQUEST_TYPE_MAP[rawRequestType.toUpperCase()] || "DEATH_SUCCESSION";
 
     if (!propertyId) {
       return res.status(400).json({
@@ -556,7 +566,7 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''),
-          'PENDING', 'PENDING', 'NOT_SUBMITTED', 'PENDING',
+          'SUBMITTED', 'PENDING', 'NOT_SUBMITTED', 'PENDING',
           $10, $11, $12::jsonb, NOW(), NOW(), NOW(), $13
         )
         RETURNING *
@@ -579,6 +589,19 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
     );
 
     for (const heir of preview.allocations) {
+      // Convert dateOfBirth to YYYY-MM-DD string regardless of whether it
+      // comes back from PostgreSQL as a Date object or an ISO string.
+      // Passing a Date object to NULLIF($8,'')::date causes a type error.
+      let safeDob = null;
+      if (heir.dateOfBirth) {
+        const d = heir.dateOfBirth instanceof Date
+          ? heir.dateOfBirth
+          : new Date(heir.dateOfBirth);
+        if (!isNaN(d.getTime())) {
+          safeDob = d.toISOString().substring(0, 10); // "YYYY-MM-DD"
+        }
+      }
+
       await client.query(
         `
           INSERT INTO succession_heirs (
@@ -600,7 +623,7 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
             created_at
           )
           VALUES (
-            $1, $2, $3::uuid, $4, $5, $6, NULLIF($7, ''), NULLIF($8, '')::date, $9,
+            $1, $2, $3::uuid, $4, $5, $6, NULLIF($7, ''), $8::date, $9,
             $10, $11, $12, $13, $14, $15, NOW()
           )
         `,
@@ -608,11 +631,11 @@ router.post("/requests", authenticateToken, requireCitizen, async (req, res) => 
           crypto.randomUUID(),
           successionRequestId,
           heir.familyMemberId,
-          heir.linkedUserId,
+          heir.linkedUserId || null,
           heir.relationType,
           heir.fullName,
           heir.cnic || "",
-          heir.dateOfBirth || "",
+          safeDob,           // YYYY-MM-DD string or null
           heir.isMinor,
           heir.shareNumerator,
           heir.shareDenominator,
