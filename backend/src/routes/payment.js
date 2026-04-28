@@ -23,36 +23,100 @@ function authenticateToken(req, res, next) {
   }
 }
 
-// ─── HELPER FUNCTIONS (DECLARE ONCE) ───────────────
-/**
- * Hash PIN using SHA-256
- */
+// ─── HELPER FUNCTIONS ──────────────────────────────
 function hashPin(pin) {
   return crypto.createHash('sha256').update(String(pin)).digest('hex');
 }
 
-/**
- * Generate unique transaction reference
- */
 function generateTxnRef() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const rand = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
   return `TXN-${date}-${rand}`;
 }
 
-/**
- * Mask account number for display
- */
 function maskAccount(accNo) {
   if (!accNo || accNo.length < 6) return accNo;
-  return accNo.slice(0, 2) + '••••••••••••' + accNo.slice(-4);
+  return accNo.slice(0, 2) + '************' + accNo.slice(-4);
 }
+
+/**
+ * Auto-create a bank account for any user who doesn't have one.
+ * New citizens registered after the initial data seed never had
+ * accounts inserted, which caused "Seller's bank account not found"
+ * 404 errors during challan payment. This function is idempotent:
+ * it returns the existing account if found, otherwise creates one
+ * with the standard PKR 50,000,000 starting balance.
+ *
+ * Default PIN is '0000' (hashed). The user should set their own PIN
+ * from their account settings page.
+ */
+async function ensureBankAccount(userId, dbClient = pool) {
+  // 1. Try to return the existing active account
+  const existing = await dbClient.query(
+    'SELECT * FROM bank_accounts WHERE user_id = $1 AND is_active = true LIMIT 1',
+    [userId]
+  );
+  if (existing.rows.length > 0) return existing.rows[0];
+
+  // 2. Resolve owner name for account title
+  const userRow = await dbClient.query(
+    'SELECT name FROM users WHERE user_id = $1 LIMIT 1',
+    [userId]
+  );
+  const ownerName = userRow.rows[0]?.name || 'Account Holder';
+
+  // 3. Generate a unique account number  (PK + 14 digits)
+  const accountNo = 'PK' + Date.now().toString().slice(-8) +
+    Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+
+  const banks = [
+    { name: 'HBL - Habib Bank Limited',  code: 'HBL001', city: 'Lahore'     },
+    { name: 'UBL - United Bank Limited', code: 'UBL001', city: 'Karachi'    },
+    { name: 'MCB Bank Limited',          code: 'MCB001', city: 'Islamabad'  },
+    { name: 'Allied Bank Limited',       code: 'ABL001', city: 'Rawalpindi' },
+    { name: 'Bank Alfalah',             code: 'BAF001', city: 'Multan'     },
+  ];
+  const bank = banks[Math.floor(Math.random() * banks.length)];
+
+  // Default PIN = '0000' hashed. User must reset it from their account page.
+  const defaultPinHash = crypto.createHash('sha256').update('0000').digest('hex');
+
+  try {
+    const inserted = await dbClient.query(`
+      INSERT INTO bank_accounts
+        (user_id, account_no, account_title, bank_name, branch_code, branch_city,
+         balance, pin_hash, is_active, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, 50000000, $7, true, NOW(), NOW())
+      ON CONFLICT (user_id) DO UPDATE
+        SET is_active = true, updated_at = NOW()
+      RETURNING *
+    `, [userId, accountNo, ownerName, bank.name, bank.code, bank.city, defaultPinHash]);
+
+    if (inserted.rows.length > 0) {
+      console.log(`🏦 Auto-created bank account for ${userId}: ${accountNo} (default PIN: 0000)`);
+      return inserted.rows[0];
+    }
+  } catch (_) {
+    // ON CONFLICT race — another request created it simultaneously
+  }
+
+  // 4. Fallback: fetch the just-created account
+  const retry = await dbClient.query(
+    'SELECT * FROM bank_accounts WHERE user_id = $1 AND is_active = true LIMIT 1',
+    [userId]
+  );
+  return retry.rows[0] || null;
+}
+
 
 // ─────────────────────────────────────────────────────────────────
 // 1. GET /api/payments/my-account
 // ─────────────────────────────────────────────────────────────────
 router.get('/my-account', authenticateToken, async (req, res) => {
   try {
+    // Auto-create account for new users who have never had one
+    await ensureBankAccount(req.user.userId);
+
     const result = await pool.query(`
       SELECT
         ba.account_id,
@@ -105,6 +169,9 @@ router.get('/my-account', authenticateToken, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────
 router.get('/account/:userId', authenticateToken, async (req, res) => {
   try {
+    // Auto-create account for the target user if missing (e.g. new seller)
+    await ensureBankAccount(req.params.userId);
+
     const result = await pool.query(`
       SELECT
         ba.account_no,
@@ -161,7 +228,7 @@ router.post('/transfer', authenticateToken, async (req, res) => {
     console.log('║ Amount      : PKR', amount);
     console.log('╚═══════════════════════════════════════╝\n');
 
-    // ── Validate input ────────────────────────────────────────────
+    // ── Validate input ─────────────────────────────────────────────
     if (!transferId || !receiverUserId || !amount || !pin) {
       return res.status(400).json({
         success: false,
@@ -178,25 +245,19 @@ router.post('/transfer', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot transfer to yourself' });
     }
 
-    // ── Fetch buyer account ───────────────────────────────────────
-    const senderAcct = await pool.query(
-      'SELECT * FROM bank_accounts WHERE user_id = $1 AND is_active = true',
-      [senderUserId]
-    );
-
-    if (senderAcct.rows.length === 0) {
+    // ── Fetch buyer account (auto-create for new users) ────────────
+    const sender = await ensureBankAccount(senderUserId);
+    if (!sender) {
       return res.status(404).json({ success: false, message: 'Your bank account was not found' });
     }
 
-    const sender = senderAcct.rows[0];
-
-    // ── Verify PIN ────────────────────────────────────────────────
+    // ── Verify PIN ─────────────────────────────────────────────────
     if (hashPin(pin) !== sender.pin_hash) {
       console.log('❌ PIN mismatch for user:', senderUserId);
       return res.status(401).json({ success: false, message: 'Incorrect PIN. Please try again.' });
     }
 
-    // ── Check sufficient balance ──────────────────────────────────
+    // ── Check sufficient balance ───────────────────────────────────
     if (parseFloat(sender.balance) < parsedAmount) {
       return res.status(400).json({
         success: false,
@@ -204,19 +265,13 @@ router.post('/transfer', authenticateToken, async (req, res) => {
       });
     }
 
-    // ── Fetch seller account ──────────────────────────────────────
-    const receiverAcct = await pool.query(
-      'SELECT * FROM bank_accounts WHERE user_id = $1 AND is_active = true',
-      [receiverUserId]
-    );
-
-    if (receiverAcct.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Seller's bank account not found" });
+    // ── Fetch seller account (auto-create for new sellers) ─────────
+    const receiver = await ensureBankAccount(receiverUserId);
+    if (!receiver) {
+      return res.status(404).json({ success: false, message: "Seller's bank account could not be resolved" });
     }
 
-    const receiver = receiverAcct.rows[0];
-
-    // ── Verify this transfer belongs to these two users ───────────
+    // ── Verify this transfer belongs to these two users ────────────
     const transferCheck = await pool.query(`
       SELECT transfer_id, seller_id, buyer_id, agreed_price, payment_status
       FROM transfer_requests
@@ -241,13 +296,13 @@ router.post('/transfer', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'This transfer has already been paid' });
     }
 
-    // ── Snapshot balances BEFORE ──────────────────────────────────
-    const balanceBeforeSender = parseFloat(sender.balance);
+    // ── Snapshot balances BEFORE ───────────────────────────────────
+    const balanceBeforeSender   = parseFloat(sender.balance);
     const balanceBeforeReceiver = parseFloat(receiver.balance);
-    const balanceAfterSender = balanceBeforeSender - parsedAmount;
-    const balanceAfterReceiver = balanceBeforeReceiver + parsedAmount;
+    const balanceAfterSender    = balanceBeforeSender   - parsedAmount;
+    const balanceAfterReceiver  = balanceBeforeReceiver + parsedAmount;
 
-    // ── Generate transaction reference ────────────────────────────
+    // ── Generate transaction reference ─────────────────────────────
     const txnRef = generateTxnRef();
 
     // ╔══════════════════════════════╗
@@ -331,11 +386,9 @@ router.post('/transfer', authenticateToken, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // 6. Mark the CHALLAN message as PAID in channel_messages so it
-    //    persists across page refreshes — this is the source of truth.
+    // 6. Mark the CHALLAN message as PAID in channel_messages
     if (channelId) {
       try {
-        // Find the CHALLAN message for this channel and update its JSON payload
         const challanMsg = await pool.query(
           `SELECT message_id, message_content
            FROM channel_messages
@@ -345,14 +398,14 @@ router.post('/transfer', authenticateToken, async (req, res) => {
         );
         if (challanMsg.rows.length > 0) {
           let payload = {};
-          try { payload = JSON.parse(challanMsg.rows[0].message_content || '{}'); } catch(_) {}
-          payload.status    = 'PAID';
-          payload.txnRef    = txnRef;
-          payload.paidAt    = new Date().toISOString();
-          payload.receipt   = {
+          try { payload = JSON.parse(challanMsg.rows[0].message_content || '{}'); } catch (_) {}
+          payload.status  = 'PAID';
+          payload.txnRef  = txnRef;
+          payload.paidAt  = new Date().toISOString();
+          payload.receipt = {
             txnRef,
-            amount:          parsedAmount,
-            completedAt:     new Date().toISOString(),
+            amount: parsedAmount,
+            completedAt: new Date().toISOString(),
             sender:   { balanceAfter: balanceAfterSender   },
             receiver: { balanceAfter: balanceAfterReceiver },
           };
@@ -372,7 +425,7 @@ router.post('/transfer', authenticateToken, async (req, res) => {
     console.log('   Sender after : PKR', balanceAfterSender);
     console.log('   Receiver after: PKR', balanceAfterReceiver);
 
-    // ── Fetch names for receipt ───────────────────────────────────
+    // ── Fetch names for receipt ────────────────────────────────────
     const names = await pool.query(`
       SELECT user_id, name FROM users WHERE user_id IN ($1, $2)
     `, [senderUserId, receiverUserId]);
@@ -380,7 +433,7 @@ router.post('/transfer', authenticateToken, async (req, res) => {
     const nameMap = {};
     names.rows.forEach(r => { nameMap[r.user_id] = r.name; });
 
-    // ── Return receipt ────────────────────────────────────────────
+    // ── Return receipt ─────────────────────────────────────────────
     return res.json({
       success: true,
       message: 'Payment transferred successfully',
@@ -448,8 +501,7 @@ router.get('/transaction/:txnRef', authenticateToken, async (req, res) => {
 
     const t = result.rows[0];
 
-    // Only allow sender, receiver, or LRO/DC to view
-    const isParty = t.sender_user_id === req.user.userId || t.receiver_user_id === req.user.userId;
+    const isParty   = t.sender_user_id === req.user.userId || t.receiver_user_id === req.user.userId;
     const isOfficer = ['LRO', 'DC', 'ADMIN'].includes(req.user.role);
 
     if (!isParty && !isOfficer) {
@@ -472,14 +524,14 @@ router.get('/transaction/:txnRef', authenticateToken, async (req, res) => {
           accountNo: t.sender_account_no,
           maskedNo: maskAccount(t.sender_account_no),
           balanceBefore: parseFloat(t.balance_before_sender),
-          balanceAfter: parseFloat(t.balance_after_sender)
+          balanceAfter:  parseFloat(t.balance_after_sender)
         },
         receiver: {
           name: t.receiver_name,
           accountNo: t.receiver_account_no,
           maskedNo: maskAccount(t.receiver_account_no),
           balanceBefore: parseFloat(t.balance_before_receiver),
-          balanceAfter: parseFloat(t.balance_after_receiver)
+          balanceAfter:  parseFloat(t.balance_after_receiver)
         },
 
         transferId: t.transfer_id,
