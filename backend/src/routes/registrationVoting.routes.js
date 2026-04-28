@@ -1072,15 +1072,48 @@ router.post(
         return res.status(404).json({ success: false, message: "Property not found" });
       }
 
-      const newBlock = await blockchainService.mineBlock(property, req.user.userId);
+      // ── Finalize on Fabric, re-anchoring if the land record is missing ──
+      // Mirrors the same re-anchor pattern used in the transfer DC approve handler.
+      // snapshot and propertyHash are declared here (outside try) so the catch
+      // branch can use them to re-anchor via submitLandRecord().
       const snapshot = propertyRegistryIntegrityService.buildPropertySnapshot(property);
       const propertyHash = propertyRegistryIntegrityService.hashPropertySnapshot(snapshot);
-      const chainResult = await fabricGatewayService.finalizeLandRecord(
-        propertyId,
-        req.user.userId,
-        propertyHash,
-        "LRO_NODE_1"
-      );
+
+      let chainResult;
+      try {
+        chainResult = await fabricGatewayService.finalizeLandRecord(
+          propertyId,
+          req.user.userId,
+          propertyHash,
+          "LRO_NODE_1"
+        );
+      } catch (fabricError) {
+        if (!/land record not found:/i.test(String(fabricError?.message || ""))) {
+          throw fabricError;
+        }
+
+        // Land record missing on Fabric — re-anchor it then finalize
+        console.warn(
+          `[DC-APPROVE-REG] Land record ${propertyId} not found on Fabric; re-anchoring then finalizing`
+        );
+
+        await fabricGatewayService.submitLandRecord(
+          propertyId,
+          propertyHash,
+          snapshot,
+          regCase?.submitted_by_node || "LRO_NODE_1",
+          regCase?.submitted_by_uid || req.user.userId,
+          "LRO_NODE_1"
+        );
+
+        chainResult = await fabricGatewayService.finalizeLandRecord(
+          propertyId,
+          req.user.userId,
+          propertyHash,
+          "LRO_NODE_1"
+        );
+      }
+      const fabricTxId = chainResult?.txId || null;
 
       await client.query(
         `UPDATE reg_blockchain_cases
@@ -1091,7 +1124,7 @@ router.post(
              fabric_tx_id = $4,
              updated_at = NOW()
          WHERE property_id = $1`,
-        [propertyId, req.user.userId, newBlock.blockchain_hash, newBlock.blockchain_hash]
+        [propertyId, req.user.userId, fabricTxId, fabricTxId]
       );
 
       await client.query(
@@ -1117,7 +1150,7 @@ router.post(
              tamper_reason = NULL,
              updated_at = NOW()
          WHERE property_id = $1`,
-        [propertyId, propertyHash, JSON.stringify(snapshot), newBlock.blockchain_hash]
+        [propertyId, propertyHash, JSON.stringify(snapshot), fabricTxId]
       );
 
       await ownershipHistoryService.recordOwnershipEvent(client, {
@@ -1147,8 +1180,7 @@ router.post(
           JSON.stringify({
             propertyId,
             notes,
-            blockHash: newBlock.blockchain_hash,
-            blockIndex: newBlock.block_index,
+            fabricTxId,
             workflow: "REGISTRATION_VOTING",
           }),
           req.ip || "unknown",
@@ -1163,8 +1195,7 @@ router.post(
         propertyId,
         notes,
         chainResult,
-        blockHash: newBlock.blockchain_hash,
-        blockIndex: newBlock.block_index,
+        fabricTxId,
       });
     } catch (error) {
       await client.query("ROLLBACK");

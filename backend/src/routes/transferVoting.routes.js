@@ -1291,11 +1291,51 @@ router.post(
         });
       }
 
-      const chainResult = await fabricGatewayService.finalizeAgreement(
-        votingCase.channel_id,
-        req.user.userId,
-        "LRO_NODE_1"
-      );
+      // ── Finalize on Fabric, re-anchoring if the agreement record is missing ──
+      // This mirrors the same re-anchor pattern used in the LRO vote handler.
+      // It handles cases where the DB is in READY_FOR_DC but the Fabric ledger
+      // was reset (dev teardown/rebuild) so the on-chain agreement no longer exists.
+      let chainResult;
+      try {
+        chainResult = await fabricGatewayService.finalizeAgreement(
+          votingCase.channel_id,
+          req.user.userId,
+          "LRO_NODE_1"
+        );
+      } catch (fabricError) {
+        if (!isAgreementNotFoundError(fabricError?.message)) {
+          throw fabricError;
+        }
+
+        // Agreement record missing on Fabric — re-anchor it then finalize
+        console.warn(
+          `[DC-APPROVE] Agreement ${votingCase.channel_id} not found on Fabric; re-anchoring then finalizing`
+        );
+
+        const snapshot =
+          votingCase.agreement_snapshot && typeof votingCase.agreement_snapshot === "object"
+            ? votingCase.agreement_snapshot
+            : buildAgreementSnapshot(votingCase);
+
+        await fabricGatewayService.upsertAgreement(
+          votingCase.channel_id,
+          {
+            ...snapshot,
+            status: "READY_FOR_DC",
+            submittedByNode: votingCase.submitted_by_node || "LRO_NODE_1",
+            submittedByUserId: votingCase.submitted_by_uid || req.user.userId,
+            reanchoredByDC: true,
+            reanchoredAt: new Date().toISOString(),
+          },
+          "LRO_NODE_1"
+        );
+
+        chainResult = await fabricGatewayService.finalizeAgreement(
+          votingCase.channel_id,
+          req.user.userId,
+          "LRO_NODE_1"
+        );
+      }
 
       // Allow canonical owner-field mutation only within this approved transfer-finalization transaction.
       await client.query(
@@ -1383,7 +1423,9 @@ router.post(
         "LRO_NODE_1"
       );
 
-      const newBlock = await blockchainService.mineBlock(updatedProperty, req.user.userId);
+      // ── PoA mineBlock() removed: Hyperledger Fabric Raft IS the ledger ──
+      // The Fabric tx IDs from submitLandRecord + finalizeAgreement are used instead.
+      const fabricTxId = landRecordResult?.txId || chainResult?.txId || null;
 
       const previousTransactionResult = await client.query(
         `SELECT transaction_hash
@@ -1425,7 +1467,7 @@ router.post(
           JSON.stringify(transactionPayload),
           propertyTransactionHash,
           previousTransactionResult.rows[0]?.transaction_hash || null,
-          newBlock?.blockchain_hash || null,
+          fabricTxId,
           req.user.userId,
         ]
       );
@@ -1460,7 +1502,7 @@ router.post(
           transferId,
           req.user.userId,
           chainResult?.txId || landRecordResult?.txId || null,
-          newBlock?.blockchain_hash || null,
+          fabricTxId,
         ]
       );
 
@@ -1491,7 +1533,7 @@ router.post(
             propertyHash,
             JSON.stringify(snapshot),
             req.user.userId,
-            newBlock?.blockchain_hash || landRecordResult?.txId || null,
+            fabricTxId,
           ]
         );
       } else {
@@ -1505,7 +1547,7 @@ router.post(
             propertyHash,
             JSON.stringify(snapshot),
             req.user.userId,
-            newBlock?.blockchain_hash || landRecordResult?.txId || null,
+            fabricTxId,
           ]
         );
       }
@@ -1529,8 +1571,7 @@ router.post(
         propertyId: updatedProperty.property_id,
         chainResult,
         landRecordResult,
-        blockHash: newBlock?.blockchain_hash || null,
-        blockIndex: newBlock?.block_index || null,
+        fabricTxId,
       });
     } catch (error) {
       await client.query("ROLLBACK");

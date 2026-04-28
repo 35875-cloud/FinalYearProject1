@@ -1,7 +1,8 @@
 /**
- * CHANNEL SERVICE — Updated
- * Key change: recordAgreement now auto-generates a CHALLAN message
- * when BOTH seller and buyer have agreed.
+ * CHANNEL SERVICE
+ * All INSERT-SELECT statements that reused $1 in both the column list and the
+ * WHERE clause (PostgreSQL error 42P08 "inconsistent types for $1") have been
+ * fixed by pre-fetching the needed row first, then using INSERT...VALUES.
  */
 
 import pkg from 'pg';
@@ -12,11 +13,11 @@ import p2pSchemaService from './p2pSchema.service.js';
 const { Pool } = pkg;
 
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'land_registry',
+  user:     process.env.DB_USER     || 'postgres',
+  host:     process.env.DB_HOST     || 'localhost',
+  database: process.env.DB_NAME     || 'land_registry',
   password: process.env.DB_PASSWORD || 'postgres',
-  port: process.env.DB_PORT || 5432,
+  port:     process.env.DB_PORT     || 5432,
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ async function createChannel(transferId, sellerId, buyerId) {
     }
 
     await client.query(`
-      UPDATE transfer_requests 
+      UPDATE transfer_requests
       SET channel_id = $1, channel_created_at = NOW(), channel_status = 'INACTIVE'
       WHERE transfer_id = $2
     `, [channelId, transferId]);
@@ -49,7 +50,7 @@ async function createChannel(transferId, sellerId, buyerId) {
     `, [channelId, sellerId, buyerId]);
 
     await client.query(`
-      INSERT INTO channel_messages 
+      INSERT INTO channel_messages
         (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       VALUES ($1, $2, $3, 'BUYER', 'SYSTEM', 'Channel created. Waiting for seller acceptance.', true)
     `, [channelId, transferId, buyerId]);
@@ -58,7 +59,7 @@ async function createChannel(transferId, sellerId, buyerId) {
     return {
       success: true, channelId,
       participants: [{ userId: sellerId, role: 'SELLER' }, { userId: buyerId, role: 'BUYER' }],
-      status: 'INACTIVE', createdAt: new Date()
+      status: 'INACTIVE', createdAt: new Date(),
     };
   } catch (error) {
     await client.query('ROLLBACK');
@@ -76,21 +77,21 @@ async function activateChannel(channelId) {
   const client = await pool.connect();
   try {
     const result = await client.query(`
-      UPDATE transfer_requests 
+      UPDATE transfer_requests
       SET channel_status = 'ACTIVE'
       WHERE channel_id = $1
-      RETURNING transfer_id, channel_status
+      RETURNING transfer_id, buyer_id, channel_status
     `, [channelId]);
 
     if (result.rows.length === 0) throw new Error('Channel not found');
+    const { transfer_id, buyer_id } = result.rows[0];
 
+    // INSERT...VALUES (pre-fetched IDs) to avoid $1 type-inference conflict
     await client.query(`
-      INSERT INTO channel_messages 
+      INSERT INTO channel_messages
         (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-      SELECT $1, transfer_id, buyer_id, 'BUYER', 'SYSTEM', 
-             '✅ Chat is now active. You can negotiate the price here.', true
-      FROM transfer_requests WHERE channel_id = $1
-    `, [channelId]);
+      VALUES ($1, $2, $3, 'BUYER', 'SYSTEM', $4, true)
+    `, [channelId, transfer_id, buyer_id, '✅ Chat is now active. You can negotiate the price here.']);
 
     return { success: true, channelId, status: 'ACTIVE' };
   } finally {
@@ -113,19 +114,20 @@ async function sendMessage(channelId, senderId, messageType, messageContent, pri
 
     const senderRole = participant.rows[0].role;
     const transfer = await client.query(
-      'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1', [channelId]
+      'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1 LIMIT 1',
+      [channelId]
     );
     const transferId = transfer.rows[0]?.transfer_id;
 
     const result = await client.query(`
-      INSERT INTO channel_messages 
+      INSERT INTO channel_messages
         (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, price_offer)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [channelId, transferId, senderId, senderRole, messageType, messageContent, priceOffer]);
 
     await client.query(`
-      UPDATE transfer_requests 
+      UPDATE transfer_requests
       SET channel_status = 'NEGOTIATING'
       WHERE channel_id = $1 AND channel_status = 'ACTIVE'
     `, [channelId]);
@@ -137,7 +139,7 @@ async function sendMessage(channelId, senderId, messageType, messageContent, pri
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 4. RECORD AGREEMENT  ← MAIN CHANGE: Auto-sends CHALLAN when both agree
+// 4. RECORD AGREEMENT — auto-generates CHALLAN when both agree
 // ─────────────────────────────────────────────────────────────────
 async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = null) {
   await p2pSchemaService.ensureSchema();
@@ -145,7 +147,6 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
   try {
     await client.query('BEGIN');
 
-    // Get participant role
     const participant = await client.query(
       'SELECT role FROM channel_participants WHERE channel_id = $1 AND user_id = $2',
       [channelId, userId]
@@ -153,19 +154,15 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
     if (participant.rows.length === 0) throw new Error('User is not a participant');
     const role = participant.rows[0].role;
 
-    // ── Pre-fetch transfer row ─────────────────────────────────────
-    // Must do this BEFORE the INSERT below so we have transfer_id and
-    // transfer_amount as JS variables. This avoids reusing $1 in both
-    // the SELECT column list AND the WHERE clause of an INSERT-SELECT,
-    // which causes PostgreSQL error 42P08 (inconsistent types for $1).
+    // Pre-fetch transfer row — avoids $1 type-inference conflict in INSERT-SELECT
     const trFetch = await client.query(
       'SELECT transfer_id, transfer_amount, agreed_price FROM transfer_requests WHERE channel_id = $1',
       [channelId]
     );
     if (trFetch.rows.length === 0) throw new Error('Channel has no linked transfer');
 
-    const transferId     = trFetch.rows[0].transfer_id;
-    const transferAmount = parseFloat(trFetch.rows[0].transfer_amount || 0);
+    const transferId          = trFetch.rows[0].transfer_id;
+    const transferAmount      = parseFloat(trFetch.rows[0].transfer_amount || 0);
     const existingAgreedPrice = parseFloat(trFetch.rows[0].agreed_price || 0);
 
     const finalAgreedPrice =
@@ -177,12 +174,11 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
       throw new Error('A valid agreed price is required before confirmation');
     }
 
-    // ── Update agree flag + lock agreed_price ─────────────────────
     const columnName      = role === 'SELLER' ? 'seller_agreed' : 'buyer_agreed';
     const timestampColumn = role === 'SELLER' ? 'seller_agreed_at' : 'buyer_agreed_at';
 
     await client.query(`
-      UPDATE transfer_requests 
+      UPDATE transfer_requests
       SET ${columnName} = true,
           ${timestampColumn} = NOW(),
           agreed_price = $2,
@@ -194,23 +190,16 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
       WHERE channel_id = $1
     `, [channelId, finalAgreedPrice, agreedTerms]);
 
-    // ── Insert system message (plain VALUES — no SELECT FROM) ──────
-    // Using INSERT...VALUES with the pre-fetched transferId avoids the
-    // $1 type-inference conflict entirely.
     const senderLabel = role === 'SELLER' ? '🤝 Seller' : '🤝 Buyer';
     await client.query(`
-      INSERT INTO channel_messages 
+      INSERT INTO channel_messages
         (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
       VALUES ($1, $2, $3, $4, 'SYSTEM', $5, true)
     `, [
-      channelId,
-      transferId,
-      userId,
-      role,
+      channelId, transferId, userId, role,
       `${senderLabel} has agreed to the terms at PKR ${Number(finalAgreedPrice).toLocaleString('en-PK')}.`,
     ]);
 
-    // Check if BOTH parties have now agreed
     const agreementStatus = await client.query(`
       SELECT seller_agreed, buyer_agreed, agreed_price, transfer_id,
              seller_id, buyer_id,
@@ -225,84 +214,51 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
       WHERE tr.channel_id = $1
     `, [channelId]);
 
-    const row       = agreementStatus.rows[0];
+    const row        = agreementStatus.rows[0];
     const bothAgreed = row.seller_agreed && row.buyer_agreed;
 
     if (bothAgreed) {
-      // ── Set channel to AGREED ──────────────────────────────────
       await client.query(`
-        UPDATE transfer_requests 
+        UPDATE transfer_requests
         SET channel_status = 'AGREED', agreement_timestamp = NOW()
         WHERE channel_id = $1
       `, [channelId]);
 
-      // ── Build the CHALLAN payload ──────────────────────────────
-      const challanId   = `CHAL-${Date.now()}`;
-      const finalPrice  = parseFloat(row.agreed_price) || finalAgreedPrice;
+      const challanId  = `CHAL-${Date.now()}`;
+      const finalPrice = parseFloat(row.agreed_price) || finalAgreedPrice;
 
       const challanPayload = {
-        challanId,
-        type: 'CHALLAN',
-        issuedAt: new Date().toISOString(),
-        status: 'PENDING',            // PENDING → PAID after payment
-        transferId: row.transfer_id,
-        channelId,
-        agreedPrice: finalPrice,
-        seller: {
-          userId:   row.seller_id,
-          name:     row.seller_name,
-          cnic:     row.seller_cnic,
-        },
-        buyer: {
-          userId:   row.buyer_id,
-          name:     row.buyer_name,
-          cnic:     row.buyer_cnic,
-        },
+        challanId, type: 'CHALLAN', issuedAt: new Date().toISOString(), status: 'PENDING',
+        transferId: row.transfer_id, channelId, agreedPrice: finalPrice,
+        seller: { userId: row.seller_id, name: row.seller_name, cnic: row.seller_cnic },
+        buyer:  { userId: row.buyer_id,  name: row.buyer_name,  cnic: row.buyer_cnic  },
         property: {
-          propertyId:  row.property_id,
-          district:    row.district,
-          tehsil:      row.tehsil,
-          mauza:       row.mauza,
-          areaMarla:   row.area_marla,
-          khasraNo:    row.khasra_no,
-          khewatNo:    row.khewat_no,
+          propertyId: row.property_id, district: row.district, tehsil: row.tehsil,
+          mauza: row.mauza, areaMarla: row.area_marla, khasraNo: row.khasra_no, khewatNo: row.khewat_no,
         },
         instructions: 'Buyer must pay the agreed amount to complete this property transfer.',
       };
 
-      // ── Insert CHALLAN as a special chat message ───────────────
       await client.query(`
-        INSERT INTO channel_messages 
+        INSERT INTO channel_messages
           (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
         VALUES ($1, $2, $3, 'SYSTEM', 'CHALLAN', $4, false)
       `, [channelId, row.transfer_id, row.buyer_id, JSON.stringify(challanPayload)]);
 
       await client.query('COMMIT');
 
-      // ── Push via WebSocket ─────────────────────────────────────
       try {
         websocketService.sendToChannel?.(channelId, 'challan_issued', {
-          channelId,
-          challanId,
-          agreedPrice: finalPrice,
-          buyerUserId: row.buyer_id,
+          channelId, challanId, agreedPrice: finalPrice, buyerUserId: row.buyer_id,
           message: '📄 Challan has been issued. Buyer, please proceed to payment.',
         });
       } catch (_) { /* WS failure is non-fatal */ }
 
-      return {
-        success: true, role, agreed: true,
-        bothAgreed: true,
-        challanIssued: true,
-        challanId,
-        agreedPrice: finalPrice,
-        timestamp: new Date(),
-      };
+      return { success: true, role, agreed: true, bothAgreed: true, challanIssued: true, challanId, agreedPrice: finalPrice, timestamp: new Date() };
     }
 
     await client.query('COMMIT');
     return { success: true, role, agreed: true, bothAgreed: false, timestamp: new Date() };
-
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -312,7 +268,7 @@ async function recordAgreement(channelId, userId, agreedTerms, agreedPrice = nul
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 4b. RECORD DISAGREEMENT  ← NEW
+// 4b. RECORD DISAGREEMENT
 // ─────────────────────────────────────────────────────────────────
 async function recordDisagreement(channelId, userId, reason = '') {
   await p2pSchemaService.ensureSchema();
@@ -327,26 +283,28 @@ async function recordDisagreement(channelId, userId, reason = '') {
     if (participant.rows.length === 0) throw new Error('User is not a participant');
     const role = participant.rows[0].role;
 
-    // Reset both agree flags — disagreement reopens negotiation
     await client.query(`
-      UPDATE transfer_requests 
-      SET seller_agreed = false,
-          buyer_agreed  = false,
-          channel_status = 'NEGOTIATING'
+      UPDATE transfer_requests
+      SET seller_agreed = false, buyer_agreed = false, channel_status = 'NEGOTIATING'
       WHERE channel_id = $1
     `, [channelId]);
 
-    const label = role === 'SELLER' ? '❌ Seller' : '❌ Buyer';
-    await client.query(`
-      INSERT INTO channel_messages 
-        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-      SELECT $1, transfer_id, $2, $3, 'SYSTEM',
-             $4, true
-      FROM transfer_requests WHERE channel_id = $1
-    `, [
-      channelId, userId, role,
-      `${label} has disagreed. ${reason ? reason + ' ' : ''}Please continue negotiating.`
-    ]);
+    // Pre-fetch transfer_id — avoids $1 type-inference conflict in INSERT-SELECT
+    const trFetch = await client.query(
+      'SELECT transfer_id FROM transfer_requests WHERE channel_id = $1 LIMIT 1',
+      [channelId]
+    );
+    if (trFetch.rows.length > 0) {
+      const label = role === 'SELLER' ? '❌ Seller' : '❌ Buyer';
+      await client.query(`
+        INSERT INTO channel_messages
+          (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        VALUES ($1, $2, $3, $4, 'SYSTEM', $5, true)
+      `, [
+        channelId, trFetch.rows[0].transfer_id, userId, role,
+        `${label} has disagreed. ${reason ? reason + ' ' : ''}Please continue negotiating.`,
+      ]);
+    }
 
     await client.query('COMMIT');
     return { success: true, role, disagreed: true, timestamp: new Date() };
@@ -366,14 +324,17 @@ async function uploadScreenshot(channelId, screenshotUrl, agreedPrice, agreedTer
   const client = await pool.connect();
   try {
     const agreementCheck = await client.query(
-      `SELECT seller_agreed, buyer_agreed, payment_status, challan_txn_id
+      `SELECT seller_agreed, buyer_agreed, payment_status, challan_txn_id,
+              transfer_id, buyer_id
        FROM transfer_requests
        WHERE channel_id = $1`,
       [channelId]
     );
     if (agreementCheck.rows.length === 0) throw new Error('Channel not found');
-    const { seller_agreed, buyer_agreed, payment_status, challan_txn_id } = agreementCheck.rows[0];
-    const hasAgreement = Boolean(seller_agreed && buyer_agreed);
+
+    const { seller_agreed, buyer_agreed, payment_status, challan_txn_id,
+            transfer_id, buyer_id } = agreementCheck.rows[0];
+    const hasAgreement       = Boolean(seller_agreed && buyer_agreed);
     const hasCompletedPayment = payment_status === 'PAID' || Boolean(challan_txn_id);
 
     if (!hasAgreement && !hasCompletedPayment) {
@@ -381,21 +342,20 @@ async function uploadScreenshot(channelId, screenshotUrl, agreedPrice, agreedTer
     }
 
     await client.query(`
-      UPDATE transfer_requests 
+      UPDATE transfer_requests
       SET agreement_screenshot_url = $1,
-          agreed_price = $2,
-          agreement_text = COALESCE(agreement_text, $3),
-          channel_status = 'AGREED'
+          agreed_price             = $2,
+          agreement_text           = COALESCE(agreement_text, $3),
+          channel_status           = 'AGREED'
       WHERE channel_id = $4
     `, [screenshotUrl, agreedPrice, agreedTerms, channelId]);
 
+    // INSERT...VALUES with pre-fetched IDs — avoids $1 type-inference conflict
     await client.query(`
-      INSERT INTO channel_messages 
+      INSERT INTO channel_messages
         (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-      SELECT $1, transfer_id, buyer_id, 'BUYER', 'SCREENSHOT', 
-             '📎 Payment receipt uploaded. Awaiting LRO approval.', true
-      FROM transfer_requests WHERE channel_id = $1
-    `, [channelId]);
+      VALUES ($1, $2, $3, 'BUYER', 'SCREENSHOT', $4, true)
+    `, [channelId, transfer_id, buyer_id, '📎 Payment receipt uploaded. Awaiting LRO approval.']);
 
     return { success: true, screenshotUrl, agreedPrice, status: 'AGREED' };
   } finally {
@@ -416,7 +376,7 @@ async function getChannelHistory(channelId, userId, limit = 50, offset = 0) {
     if (participant.rows.length === 0) throw new Error('Unauthorized: User is not a participant');
 
     const messages = await client.query(`
-      SELECT 
+      SELECT
         m.message_id, m.sender_id, m.sender_role, m.message_type,
         m.message_content, m.price_offer, m.timestamp, m.is_system_message,
         u.name as sender_name
@@ -446,7 +406,7 @@ async function getChannelDetails(channelId, userId) {
     if (participant.rows.length === 0) throw new Error('Unauthorized: User is not a participant');
 
     const channel = await client.query(`
-      SELECT 
+      SELECT
         tr.transfer_id, tr.channel_id, tr.channel_status, tr.channel_created_at,
         tr.agreement_screenshot_url, tr.agreement_text, tr.agreement_timestamp,
         tr.agreed_price, tr.seller_agreed, tr.buyer_agreed,
@@ -492,16 +452,22 @@ async function closeChannel(channelId) {
       [channelId]
     );
     await client.query(
-      "UPDATE channel_participants SET is_online = false WHERE channel_id = $1",
+      'UPDATE channel_participants SET is_online = false WHERE channel_id = $1',
       [channelId]
     );
-    await client.query(`
-      INSERT INTO channel_messages 
-        (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
-      SELECT $1, transfer_id, buyer_id, 'BUYER', 'SYSTEM',
-             '🔒 Channel closed. Property transfer has been completed.', true
-      FROM transfer_requests WHERE channel_id = $1
-    `, [channelId]);
+    // Pre-fetch to avoid $1 type-inference conflict in INSERT-SELECT
+    const trRow = await client.query(
+      'SELECT transfer_id, buyer_id FROM transfer_requests WHERE channel_id = $1 LIMIT 1',
+      [channelId]
+    );
+    if (trRow.rows.length > 0) {
+      const { transfer_id, buyer_id } = trRow.rows[0];
+      await client.query(`
+        INSERT INTO channel_messages
+          (channel_id, transfer_id, sender_id, sender_role, message_type, message_content, is_system_message)
+        VALUES ($1, $2, $3, 'BUYER', 'SYSTEM', $4, true)
+      `, [channelId, transfer_id, buyer_id, '🔒 Channel closed. Property transfer has been completed.']);
+    }
     return { success: true, status: 'CLOSED' };
   } finally {
     client.release();
@@ -531,7 +497,7 @@ async function getUserChannels(userId) {
   const client = await pool.connect();
   try {
     const channels = await client.query(`
-      SELECT 
+      SELECT
         tr.transfer_id,
         tr.channel_id, tr.channel_status, tr.channel_created_at,
         tr.property_id, tr.seller_agreed, tr.buyer_agreed,
@@ -541,31 +507,31 @@ async function getUserChannels(userId) {
         cp.role as user_role,
         p.district, p.tehsil, p.mauza,
         seller.name AS seller_name,
-        buyer.name AS buyer_name,
+        buyer.name  AS buyer_name,
         CONCAT(p.district, ', ', p.tehsil, ', ', p.mauza) as property_location,
         COUNT(cm.message_id) as total_messages,
-        MAX(cm.timestamp) as last_message_at,
+        MAX(cm.timestamp)    as last_message_at,
         COALESCE(SUM(
           CASE
             WHEN cm.sender_id IS NOT NULL
              AND cm.sender_id <> $1
              AND COALESCE(cm.read_by_other, false) = false
-            THEN 1
-            ELSE 0
+            THEN 1 ELSE 0
           END
         ), 0) as unread_count
       FROM channel_participants cp
       JOIN transfer_requests tr ON cp.channel_id = tr.channel_id
-      JOIN properties p ON tr.property_id = p.property_id
-      LEFT JOIN users seller ON tr.seller_id = seller.user_id
-      LEFT JOIN users buyer ON tr.buyer_id = buyer.user_id
+      JOIN properties p         ON tr.property_id = p.property_id
+      LEFT JOIN users seller    ON tr.seller_id   = seller.user_id
+      LEFT JOIN users buyer     ON tr.buyer_id    = buyer.user_id
       LEFT JOIN channel_messages cm ON cp.channel_id = cm.channel_id
       WHERE cp.user_id = $1
-      GROUP BY tr.channel_id, tr.channel_status, tr.channel_created_at, 
-               tr.transfer_id, tr.property_id, tr.seller_agreed, tr.buyer_agreed,
-               tr.seller_id, tr.buyer_id, tr.agreed_price, tr.transfer_amount,
-               tr.payment_status, tr.challan_txn_id, tr.payment_completed_at,
-               cp.role, p.district, p.tehsil, p.mauza, seller.name, buyer.name
+      GROUP BY
+        tr.channel_id, tr.channel_status, tr.channel_created_at,
+        tr.transfer_id, tr.property_id, tr.seller_agreed, tr.buyer_agreed,
+        tr.seller_id, tr.buyer_id, tr.agreed_price, tr.transfer_amount,
+        tr.payment_status, tr.challan_txn_id, tr.payment_completed_at,
+        cp.role, p.district, p.tehsil, p.mauza, seller.name, buyer.name
       ORDER BY tr.channel_created_at DESC
     `, [userId]);
     return { success: true, channels: channels.rows };
@@ -579,7 +545,7 @@ export default {
   activateChannel,
   sendMessage,
   recordAgreement,
-  recordDisagreement,      // ← new
+  recordDisagreement,
   uploadScreenshot,
   getChannelHistory,
   getChannelDetails,

@@ -206,7 +206,10 @@ router.get("/listings", async (req, res) => {
         SELECT 1
         FROM transfer_requests tr_active
         WHERE tr_active.property_id = p.property_id
-          AND COALESCE(tr_active.status, '') NOT IN ('APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED')
+          AND COALESCE(tr_active.status, '') NOT IN (
+            'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED',
+            'VOTING', 'READY_FOR_DC', 'FINALIZED'
+          )
       )`,
     ];
 

@@ -217,7 +217,7 @@ router.get("/recent-activity", authenticateToken, requireOfficer, async (req, re
 
 router.get("/integrity/summary", authenticateToken, requireOfficer, async (req, res) => {
   try {
-    const integrityRecords = (await propertyRegistryIntegrityService.listRecords()).filter(Boolean);
+    const integrityRecords = (await propertyRegistryIntegrityService.listRecords({ skipFabric: true })).filter(Boolean);
 
     const records = integrityRecords.map((entry) => {
       const property = entry.property || {};
