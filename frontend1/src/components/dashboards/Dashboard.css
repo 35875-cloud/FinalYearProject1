@@ -1,0 +1,43 @@
+/* ============================================================
+   DASHBOARD.CSS — Shared base for all dashboard pages
+   Tokens defined in Citizen.css — this file handles
+   legacy utility classes used across officer/admin pages.
+   Primary: #0B6E6E
+   ============================================================ */
+
+/* ── Page shell ── */
+.dashboard-page {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #F0F6F6;
+  min-height: 100vh;
+  color: #0C1F1F;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+
+/* ── Navbar ── */
+.dashboard-navbar {
+  height: 60px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #E2EDED !important;
+  box-shadow: 0 1px 4px rgba(11,110,110,.06) !important;
+  padding: 0 1.5rem !important;
+}
+
+.dashboard-navbar .navbar-brand {
+  font-family: 'Outfit', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: #0C1F1F !important;
+}
+
+.dashboard-navbar .navbar-brand i {
+  color: #0B6E6E;
+  margin-right: .5rem;
+}
+
+/* Container offset for fixed nav */
+.dashboard-page .container {
+  padding-top: calc(60px + 1.5rem) !important;
+  padding-bottom: 3rem !important;
+}

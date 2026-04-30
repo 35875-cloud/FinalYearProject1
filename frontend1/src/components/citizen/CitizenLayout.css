@@ -1,0 +1,734 @@
+/* ============================================================
+   CitizenLayout.css — Blockchain Land Registry System
+   Theme: Matches Auth / Login page aesthetic
+   Primary: #0047AB  ·  Accent: #ffce12  ·  Mid: #155E75
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Changa+One:ital@0;1&family=Lato:wght@300;400;700;900&family=Orbitron:wght@400..900&family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ── Design Tokens (mirrors Auth.css) ───────────────────────── */
+:root {
+  --cit-primary:        #0047AB;
+  --cit-primary-dark:   #003080;
+  --cit-primary-mid:    #155E75;
+  --cit-primary-light:  #dbeafe;
+  --cit-accent:         #ffce12;
+  --cit-accent-light:   #fef9c3;
+
+  --cit-bg:             linear-gradient(135deg, #0047AB 0%, #155E75 100%);
+  --cit-surface:        #FFFFFF;
+  --cit-surface2:       #f5f9ff;
+  --cit-border:         #c8ddf7;
+  --cit-border-focus:   #0047AB;
+
+  --cit-text:           #111827;
+  --cit-text2:          #374151;
+  --cit-muted:          #6B7280;
+  --cit-error:          #DC2626;
+  --cit-error-bg:       #FEF2F2;
+  --cit-success:        #059669;
+  --cit-success-bg:     #ECFDF5;
+  --cit-warning:        #D97706;
+  --cit-warning-bg:     #FFFBEB;
+
+  --radius-sm:          6px;
+  --radius-md:          10px;
+  --radius-lg:          16px;
+  --radius-xl:          24px;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,.18), 0 4px 16px rgba(0,71,171,.12);
+  --shadow-card:0 24px 64px rgba(0,0,0,.32), 0 8px 24px rgba(0,0,0,.18);
+
+  --font-display: 'Changa One', serif;
+  --font-label:   'Roboto Condensed', sans-serif;
+  --font-body:    'Lato', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --sidebar-w: 260px;
+  --topbar-h:  60px;
+  --transition: all .2s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Global Reset ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Page Shell ─────────────────────────────────────────────── */
+.cit-shell {
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-body);
+  color: var(--cit-text);
+  background: linear-gradient(135deg, #0047AB 0%, #155E75 100%);
+  position: relative;
+  display: block;   /* children are positioned absolutely */
+}
+
+/* Dot-grid overlay */
+.cit-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Mobile overlay (behind open sidebar) ───────────────────── */
+.cit-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 390;
+  backdrop-filter: blur(3px);
+}
+.cit-overlay.is-open { display: block; }
+
+/* ══════════════════════════════════════════════════════════════
+   UNIFIED CARD
+   One single card that holds BOTH the sidebar and the content.
+   Sidebar = left panel  |  Content = right panel
+   ══════════════════════════════════════════════════════════════ */
+.cit-unified-card {
+  position: fixed;
+  inset: 1.25rem;                /* same gap on all four sides */
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;              /* clips both children inside one card */
+  animation: citCardIn .35s cubic-bezier(.4,0,.2,1) both;
+}
+
+@keyframes citCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── LEFT PANEL — sidebar (no independent border/shadow) ─────── */
+.cit-sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--cit-surface);
+  /* Only a right divider — no outer border (card provides that) */
+  border-right: 1px solid var(--cit-border);
+  overflow: hidden;
+  /* NOT fixed/absolute — it's a flex child of the unified card */
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── RIGHT PANEL — topbar + scrollable content ───────────────── */
+.cit-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--cit-surface);
+  overflow: hidden;
+}
+
+/* Topbar — right panel header row */
+.cit-topbar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  gap: .875rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--cit-border);
+  background: var(--cit-surface);
+}
+
+.cit-topbar-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  color: var(--cit-text);
+  letter-spacing: .5px;
+  flex: 1;
+}
+
+.cit-topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--cit-primary-light);
+  border: 1px solid var(--cit-border);
+  border-radius: 100px;
+  padding: 5px 13px;
+  color: var(--cit-primary);
+  font-family: var(--font-label);
+  font-size: .78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.cit-topbar-back:hover {
+  background: var(--cit-primary);
+  border-color: var(--cit-primary);
+  color: white;
+}
+
+.cit-profile-btn {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--cit-primary-dark), var(--cit-primary));
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: .9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,71,171,.30);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.cit-profile-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 18px rgba(0,71,171,.45);
+}
+
+/* Content Card — kept as a semantic wrapper; no visual styling needed */
+.cit-content-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ONLY this div scrolls — the card and sidebar stay perfectly still */
+.cit-content-inner {
+  flex: 1;
+  min-height: 0;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* ── Sidebar Brand Header ───────────────────────────────────── */
+.cit-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 1.25rem;
+  height: var(--topbar-h);   /* exactly 60px — matches topbar height */
+  border-bottom: 1px solid var(--cit-border);
+  flex-shrink: 0;
+}
+
+.cit-sidebar-brand-icon {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, var(--cit-accent) 0%, #f8bd19 100%);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cit-primary);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(255,206,18,.38);
+}
+
+.cit-sidebar-brand-name {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  font-weight: 400;
+  color: var(--cit-text);
+  line-height: 1.2;
+  letter-spacing: .3px;
+}
+
+.cit-sidebar-brand-sub {
+  font-family: var(--font-label);
+  font-size: .62rem;
+  color: var(--cit-muted);
+  letter-spacing: .2px;
+  display: block;
+  margin-top: 1px;
+}
+
+/* ── User Badge (inside sidebar, below brand) ───────────────── */
+.cit-sidebar-user {
+  margin: .875rem .875rem .5rem;
+  background: linear-gradient(135deg, var(--cit-primary-dark), var(--cit-primary));
+  border-radius: var(--radius-lg);
+  padding: .875rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cit-sidebar-user::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 70px;
+  height: 70px;
+  border: 2px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cit-sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,.18);
+  border: 1.5px solid rgba(255,255,255,.30);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+
+.cit-sidebar-user-name {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: .875rem;
+  color: white;
+  line-height: 1.2;
+}
+
+.cit-sidebar-user-role {
+  font-size: .62rem;
+  color: rgba(255,255,255,.68);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-label);
+}
+
+/* ── Nav Section Label ──────────────────────────────────────── */
+.cit-nav-label {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--cit-muted);
+  padding: .5rem .875rem .25rem;
+  font-family: var(--font-label);
+}
+
+/* ── Nav ────────────────────────────────────────────────────── */
+.cit-nav {
+  flex: 1;
+  padding: .375rem .625rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cit-nav::-webkit-scrollbar { width: 4px; }
+.cit-nav::-webkit-scrollbar-thumb { background: var(--cit-border); border-radius: 8px; }
+
+/* ── Nav Link (button-like, matching auth inputs style) ─────── */
+.cit-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: .875rem;
+  color: var(--cit-text2);
+  border: 1.5px solid transparent;
+  transition: var(--transition);
+  position: relative;
+}
+
+.cit-nav-link:hover {
+  background: var(--cit-primary-light);
+  color: var(--cit-primary);
+  border-color: rgba(0,71,171,.15);
+}
+
+.cit-nav-link.active {
+  background: var(--cit-primary-light);
+  color: var(--cit-primary);
+  border-color: rgba(0,71,171,.22);
+  font-weight: 700;
+}
+
+.cit-nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--cit-primary);
+  border-radius: 0 3px 3px 0;
+}
+
+.cit-nav-link-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .78rem;
+  flex-shrink: 0;
+  transition: var(--transition);
+  background: #f0f5ff;
+  color: var(--cit-muted);
+}
+
+.cit-nav-link.active .cit-nav-link-icon,
+.cit-nav-link:hover .cit-nav-link-icon {
+  background: var(--cit-primary);
+  color: white;
+}
+
+/* ── Sidebar Logout Button ──────────────────────────────────── */
+.cit-sidebar-footer {
+  padding: .75rem .625rem;
+  border-top: 1px solid var(--cit-border);
+  flex-shrink: 0;
+}
+
+.cit-logout-btn {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid #FECACA;
+  background: #FEF2F2;
+  cursor: pointer;
+  color: var(--cit-error);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: .82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: var(--transition);
+}
+
+.cit-logout-btn:hover {
+  background: #FEE2E2;
+  border-color: var(--cit-error);
+  transform: translateY(-1px);
+}
+
+/* (layout rules for main, topbar, content-card, content-inner
+    are defined above in the Unified Card section) */
+
+/* ── Hamburger (mobile only) ─────────────────────────────────── */
+.cit-hamburger {
+  display: none !important;
+  border: none;
+  background: rgba(255,255,255,.14);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  backdrop-filter: blur(6px);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.cit-hamburger:hover { background: rgba(255,255,255,.24); }
+
+/* ── Profile Drawer ──────────────────────────────────────────── */
+.cit-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.40);
+  z-index: 490;
+  backdrop-filter: blur(4px);
+}
+
+.cit-profile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  background: var(--cit-surface);
+  box-shadow: -8px 0 48px rgba(0,0,0,.22);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+
+.cit-profile-drawer.is-closed { transform: translateX(100%); }
+
+.cit-profile-header {
+  background: linear-gradient(135deg, var(--cit-primary-dark), var(--cit-primary));
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.cit-profile-header::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  border: 2px solid rgba(255,255,255,.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cit-profile-avatar {
+  width: 50px;
+  height: 50px;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.30);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.cit-profile-name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: .95rem;
+  color: white;
+  letter-spacing: .3px;
+}
+
+.cit-profile-badge {
+  font-size: .65rem;
+  color: rgba(255,255,255,.70);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-label);
+}
+
+.cit-profile-close {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,.14);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.cit-profile-close:hover {
+  background: rgba(255,255,255,.28);
+  transform: rotate(90deg);
+}
+
+.cit-profile-body {
+  flex: 1;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.cit-profile-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--cit-border);
+}
+
+.cit-profile-row-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--cit-primary-light);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cit-primary);
+  font-size: .75rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cit-profile-row-label {
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--cit-muted);
+  margin-bottom: 2px;
+  font-family: var(--font-label);
+}
+
+.cit-profile-row-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: .82rem;
+  color: var(--cit-text);
+  word-break: break-all;
+}
+
+.cit-blockchain-card {
+  margin-top: 1rem;
+  background: linear-gradient(135deg, var(--cit-primary-dark), var(--cit-primary));
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.125rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cit-blockchain-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,71,171,.35); }
+
+.cit-profile-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--cit-border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cit-btn-primary {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(135deg, var(--cit-primary-dark), var(--cit-primary));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: .875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: var(--transition);
+}
+
+.cit-btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(0,71,171,.40);
+  transform: translateY(-1px);
+}
+
+.cit-btn-ghost {
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--cit-muted);
+  border: 1.5px solid var(--cit-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cit-btn-ghost:hover {
+  background: var(--cit-surface2);
+  border-color: #aac4e8;
+}
+
+/* ── Accent Badge (yellow, like nav-badge in auth) ───────────── */
+.cit-accent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cit-accent);
+  color: var(--cit-primary-dark);
+  border-radius: 100px;
+  padding: 3px 9px;
+  font-family: var(--font-label);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+/* ── Status Pills ────────────────────────────────────────────── */
+.cit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  font-family: var(--font-label);
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  /* On mobile the unified card goes full screen */
+  .cit-unified-card {
+    inset: 0;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Sidebar overlays on mobile */
+  .cit-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-w);
+    z-index: 400;
+    border-right: 1px solid var(--cit-border);
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    box-shadow: var(--shadow-card);
+    transform: translateX(-100%);
+  }
+
+  .cit-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .cit-topbar {
+    padding: 0 1rem;
+  }
+
+  .cit-hamburger {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .cit-profile-drawer {
+    width: 100%;
+  }
+}

@@ -11,9 +11,8 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at top right, rgba(13, 124, 124, 0.08), transparent 28%),
-    linear-gradient(180deg, #f7fbfb 0%, #edf5f5 100%);
+  background: linear-gradient(135deg, #0047AB 0%, #155E75 100%);
+  min-height: 100vh;
 }
 
 a,

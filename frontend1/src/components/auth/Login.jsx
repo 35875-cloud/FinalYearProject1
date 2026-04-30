@@ -165,8 +165,8 @@ const Login = () => {
             <div className="auth-login-logo-icon">
               <i className="fas fa-shield-alt"></i>
             </div>
-            <p className="auth-login-brand-name">Blockchain Land Records</p>
-            <p className="auth-login-brand-sub">Punjab Land Registry System</p>
+            <p className="auth-login-brand-name">Land Records</p>
+            <p className="auth-login-brand-sub">Land Registry System</p>
           </div>
 
           <div className="auth-panel-right">

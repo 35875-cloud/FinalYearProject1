@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PLRA Logical ERD</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #d8e1eb;
+      --text: #18324d;
+      --muted: #62758b;
+      --blue: #1d4ed8;
+      --blue-soft: #dbeafe;
+      --teal: #0f766e;
+      --teal-soft: #ccfbf1;
+      --amber: #b45309;
+      --amber-soft: #fef3c7;
+      --violet: #6d28d9;
+      --violet-soft: #ede9fe;
+      --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(29, 78, 216, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 24%),
+        linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 36px 22px 52px;
+    }
+
+    .hero,
+    .section,
+    .note {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(30px, 4vw, 46px);
+      line-height: 1.06;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #f8fbff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .legend h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .legend-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      flex: 0 0 auto;
+    }
+
+    .s-core { background: var(--amber-soft); }
+    .s-flow { background: var(--blue-soft); }
+    .s-succ { background: var(--violet-soft); }
+    .s-ops { background: var(--teal-soft); }
+
+    .diagram {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      padding: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-core { background: var(--amber-soft); color: var(--amber); }
+    .tag-flow { background: var(--blue-soft); color: var(--blue); }
+    .tag-succ { background: var(--violet-soft); color: var(--violet); }
+    .tag-ops { background: var(--teal-soft); color: var(--teal); }
+
+    .svg-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      padding: 12px;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 1000px;
+      height: auto;
+      display: block;
+    }
+
+    .entity-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .entity-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      padding: 16px;
+    }
+
+    .entity-card h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+    }
+
+    .entity-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .note {
+      margin-top: 18px;
+      padding: 18px 22px;
+      background: #10213a;
+      color: #dbe8ff;
+    }
+
+    .note strong {
+      color: #fff;
+    }
+
+    @media (max-width: 1180px) {
+      .hero,
+      .entity-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 18px 12px 34px;
+      }
+
+      .hero,
+      .section,
+      .note {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 31px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">PLRA Blockchain Land Records System</span>
+        <h1>Logical ERD Diagram</h1>
+        <p>
+          This diagram shows the main persisted entities in your database and how they relate to each other.
+          It focuses on the actual business tables behind users, properties, transfers, succession,
+          co-ownership, voting, and operations management.
+        </p>
+        <div class="chips">
+          <span class="chip">Users</span>
+          <span class="chip">Properties</span>
+          <span class="chip">Transfer Workflow</span>
+          <span class="chip">Succession + Co-Owners</span>
+          <span class="chip">Audit + Monitoring</span>
+        </div>
+      </div>
+      <div class="legend">
+        <h2>Reading Guide</h2>
+        <div class="legend-row"><span class="swatch s-core"></span> Core master entities</div>
+        <div class="legend-row"><span class="swatch s-flow"></span> Transaction and workflow entities</div>
+        <div class="legend-row"><span class="swatch s-succ"></span> Succession and co-ownership entities</div>
+        <div class="legend-row"><span class="swatch s-ops"></span> Operational and monitoring entities</div>
+        <div class="legend-row"><strong>1:1</strong> one-to-one, <strong>1:M</strong> one-to-many, <strong>M:N</strong> many-to-many via junction table</div>
+      </div>
+    </section>
+
+    <div class="diagram">
+      <section class="section">
+        <div class="section-head">
+          <h2>1. Core Property and Transfer ERD</h2>
+          <span class="tag tag-core">Core Domain</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Core property and transfer ERD">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+              </marker>
+            </defs>
+
+            <rect x="40" y="50" width="250" height="170" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="62" y="82" font-size="22" font-weight="700" fill="#1d4ed8">users</text>
+            <text x="62" y="112" font-size="15" fill="#334155">PK user_id</text>
+            <text x="62" y="138" font-size="15" fill="#334155">name, email, cnic, role</text>
+            <text x="62" y="164" font-size="15" fill="#334155">approval_status, password_hash</text>
+            <text x="62" y="190" font-size="15" fill="#334155">account security fields</text>
+
+            <rect x="470" y="30" width="290" height="210" rx="18" fill="#fef3c7" stroke="#fcd34d"/>
+            <text x="492" y="62" font-size="22" font-weight="700" fill="#b45309">properties</text>
+            <text x="492" y="92" font-size="15" fill="#334155">PK property_id</text>
+            <text x="492" y="118" font-size="15" fill="#334155">FK owner_id -> users.user_id</text>
+            <text x="492" y="144" font-size="15" fill="#334155">district, tehsil, type, area</text>
+            <text x="492" y="170" font-size="15" fill="#334155">status, blockchain fields</text>
+            <text x="492" y="196" font-size="15" fill="#334155">freeze / encumbrance / co-owner flags</text>
+
+            <rect x="870" y="40" width="280" height="220" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="892" y="72" font-size="22" font-weight="700" fill="#1d4ed8">transfer_requests</text>
+            <text x="892" y="102" font-size="15" fill="#334155">PK transfer_id</text>
+            <text x="892" y="128" font-size="15" fill="#334155">FK property_id -> properties.property_id</text>
+            <text x="892" y="154" font-size="15" fill="#334155">FK seller_id -> users.user_id</text>
+            <text x="892" y="180" font-size="15" fill="#334155">FK buyer_id -> users.user_id</text>
+            <text x="892" y="206" font-size="15" fill="#334155">channel_id, status, payment fields</text>
+            <text x="892" y="232" font-size="15" fill="#334155">approval / rejection fields</text>
+
+            <rect x="450" y="320" width="310" height="150" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="472" y="352" font-size="22" font-weight="700" fill="#1d4ed8">ownership_history</text>
+            <text x="472" y="382" font-size="15" fill="#334155">PK history_id (implementation-dependent)</text>
+            <text x="472" y="408" font-size="15" fill="#334155">FK property_id -> properties.property_id</text>
+            <text x="472" y="434" font-size="15" fill="#334155">FK previous_owner_id -> users.user_id</text>
+            <text x="472" y="460" font-size="15" fill="#334155">FK new_owner_id -> users.user_id</text>
+
+            <line x1="290" y1="135" x2="470" y2="135" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+            <text x="372" y="124" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="760" y1="145" x2="870" y2="145" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+            <text x="805" y="134" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="575" y1="240" x2="575" y2="320" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+            <text x="588" y="286" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="185" y1="220" x2="500" y2="320" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+            <text x="282" y="255" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="1010" y1="260" x2="760" y2="360" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow)"/>
+            <text x="892" y="288" font-size="14" font-weight="700" fill="#475569">1:1</text>
+          </svg>
+        </div>
+        <div class="entity-grid">
+          <article class="entity-card">
+            <h3>users -> properties</h3>
+            <ul>
+              <li>One user can own many properties.</li>
+              <li>One property belongs to one primary owner at a time.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>properties -> transfer_requests</h3>
+            <ul>
+              <li>One property can have many transfer requests over time.</li>
+              <li>Each transfer request belongs to one property.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>properties -> ownership_history</h3>
+            <ul>
+              <li>Ownership history stores previous and new owner transitions for a property.</li>
+              <li>Each transfer completion updates ownership history.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>2. Voting, Succession, and Co-Ownership ERD</h2>
+          <span class="tag tag-succ">Workflow Data</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1500 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Voting, succession, and co-ownership ERD">
+            <defs>
+              <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+              </marker>
+            </defs>
+
+            <rect x="40" y="40" width="250" height="160" rx="18" fill="#fef3c7" stroke="#fcd34d"/>
+            <text x="62" y="74" font-size="21" font-weight="700" fill="#b45309">properties</text>
+            <text x="62" y="104" font-size="15" fill="#334155">PK property_id</text>
+            <text x="62" y="130" font-size="15" fill="#334155">owner_id</text>
+            <text x="62" y="156" font-size="15" fill="#334155">ownership flags</text>
+
+            <rect x="360" y="30" width="260" height="180" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="382" y="64" font-size="21" font-weight="700" fill="#1d4ed8">reg_blockchain_cases</text>
+            <text x="382" y="94" font-size="15" fill="#334155">PK/FK property_id</text>
+            <text x="382" y="120" font-size="15" fill="#334155">status, property_hash</text>
+            <text x="382" y="146" font-size="15" fill="#334155">approval_count, rejection_count</text>
+            <text x="382" y="172" font-size="15" fill="#334155">dc approval + fabric fields</text>
+
+            <rect x="690" y="30" width="260" height="180" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="712" y="64" font-size="21" font-weight="700" fill="#1d4ed8">reg_blockchain_votes</text>
+            <text x="712" y="94" font-size="15" fill="#334155">PK vote_id</text>
+            <text x="712" y="120" font-size="15" fill="#334155">FK property_id</text>
+            <text x="712" y="146" font-size="15" fill="#334155">lro_node_id, lro_user_id</text>
+            <text x="712" y="172" font-size="15" fill="#334155">vote, reason, tx_id</text>
+
+            <rect x="1040" y="30" width="270" height="180" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="1062" y="64" font-size="21" font-weight="700" fill="#1d4ed8">transfer_blockchain_cases</text>
+            <text x="1062" y="94" font-size="15" fill="#334155">PK transfer_id</text>
+            <text x="1062" y="120" font-size="15" fill="#334155">FK property_id</text>
+            <text x="1062" y="146" font-size="15" fill="#334155">channel_id, transfer_hash</text>
+            <text x="1062" y="172" font-size="15" fill="#334155">status + fabric fields</text>
+
+            <rect x="40" y="290" width="250" height="180" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="62" y="324" font-size="21" font-weight="700" fill="#6d28d9">family_members</text>
+            <text x="62" y="354" font-size="15" fill="#334155">PK family_member_id</text>
+            <text x="62" y="380" font-size="15" fill="#334155">FK owner_user_id -> users</text>
+            <text x="62" y="406" font-size="15" fill="#334155">linked_user_id, relation_type</text>
+            <text x="62" y="432" font-size="15" fill="#334155">full_name, cnic, dob</text>
+
+            <rect x="360" y="280" width="280" height="200" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="382" y="314" font-size="21" font-weight="700" fill="#6d28d9">succession_requests</text>
+            <text x="382" y="344" font-size="15" fill="#334155">PK succession_request_id</text>
+            <text x="382" y="370" font-size="15" fill="#334155">FK property_id -> properties</text>
+            <text x="382" y="396" font-size="15" fill="#334155">FK requester_user_id -> users</text>
+            <text x="382" y="422" font-size="15" fill="#334155">FK owner_user_id -> users</text>
+            <text x="382" y="448" font-size="15" fill="#334155">request_type, owner_gender, status</text>
+
+            <rect x="720" y="280" width="280" height="200" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="742" y="314" font-size="21" font-weight="700" fill="#6d28d9">succession_heirs</text>
+            <text x="742" y="344" font-size="15" fill="#334155">PK heir_id</text>
+            <text x="742" y="370" font-size="15" fill="#334155">FK succession_request_id</text>
+            <text x="742" y="396" font-size="15" fill="#334155">FK family_member_id</text>
+            <text x="742" y="422" font-size="15" fill="#334155">linked_user_id, relation_type</text>
+            <text x="742" y="448" font-size="15" fill="#334155">share_percent, fraction_text</text>
+
+            <rect x="1080" y="280" width="290" height="200" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="1102" y="314" font-size="21" font-weight="700" fill="#6d28d9">property_co_owners</text>
+            <text x="1102" y="344" font-size="15" fill="#334155">PK allocation_id</text>
+            <text x="1102" y="370" font-size="15" fill="#334155">FK property_id -> properties</text>
+            <text x="1102" y="396" font-size="15" fill="#334155">user_id, source_reference_id</text>
+            <text x="1102" y="422" font-size="15" fill="#334155">relation_type, share_percent</text>
+            <text x="1102" y="448" font-size="15" fill="#334155">is_primary_owner, is_active</text>
+
+            <rect x="360" y="560" width="300" height="160" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="382" y="594" font-size="21" font-weight="700" fill="#6d28d9">property_co_owner_consents</text>
+            <text x="382" y="624" font-size="15" fill="#334155">PK consent_id</text>
+            <text x="382" y="650" font-size="15" fill="#334155">FK property_id -> properties</text>
+            <text x="382" y="676" font-size="15" fill="#334155">initiated_by_user_id, status</text>
+
+            <rect x="770" y="560" width="320" height="160" rx="18" fill="#ede9fe" stroke="#c4b5fd"/>
+            <text x="792" y="594" font-size="21" font-weight="700" fill="#6d28d9">property_co_owner_consent_votes</text>
+            <text x="792" y="624" font-size="15" fill="#334155">PK vote_id</text>
+            <text x="792" y="650" font-size="15" fill="#334155">FK consent_id, FK property_id</text>
+            <text x="792" y="676" font-size="15" fill="#334155">participant_user_id, allocation_id, vote</text>
+
+            <line x1="290" y1="120" x2="360" y2="120" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="312" y="108" font-size="14" font-weight="700" fill="#475569">1:1</text>
+
+            <line x1="620" y1="120" x2="690" y2="120" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="642" y="108" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="290" y1="120" x2="360" y2="380" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="300" y="250" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="290" y1="120" x2="1080" y2="380" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="676" y="224" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="640" y1="380" x2="720" y2="380" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="664" y="368" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <polyline points="290,420 320,420 320,520 820,520 820,480" fill="none" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="530" y="538" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="1000" y1="380" x2="1080" y2="380" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="1022" y="368" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="170" y1="200" x2="170" y2="640" stroke="#94a3b8" stroke-width="3"/>
+            <line x1="170" y1="640" x2="360" y2="640" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="182" y="626" font-size="14" font-weight="700" fill="#475569">1:M</text>
+
+            <line x1="660" y1="640" x2="770" y2="640" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow2)"/>
+            <text x="694" y="628" font-size="14" font-weight="700" fill="#475569">1:M</text>
+          </svg>
+        </div>
+        <div class="entity-grid">
+          <article class="entity-card">
+            <h3>Registration voting</h3>
+            <ul>
+              <li>One property has one registration case in <code>reg_blockchain_cases</code>.</li>
+              <li>One registration case has many LRO votes in <code>reg_blockchain_votes</code>.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>Succession flow</h3>
+            <ul>
+              <li>One succession request belongs to one property.</li>
+              <li>One succession request has many heirs.</li>
+              <li>Heirs are linked back to <code>family_members</code>.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>Co-ownership</h3>
+            <ul>
+              <li>Approved succession can produce many <code>property_co_owners</code> for one property.</li>
+              <li>Consent requests and votes are stored separately for joint-owner actions.</li>
+              <li><strong>M:N</strong> exists between users and properties through <code>property_co_owners</code>.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>3. P2P and Operations ERD</h2>
+          <span class="tag tag-ops">Support Data</span>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1500 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="P2P and operations ERD">
+            <defs>
+              <marker id="arrow3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+              </marker>
+            </defs>
+
+            <rect x="40" y="40" width="280" height="180" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="62" y="74" font-size="21" font-weight="700" fill="#1d4ed8">channel_participants</text>
+            <text x="62" y="104" font-size="15" fill="#334155">PK participant_id</text>
+            <text x="62" y="130" font-size="15" fill="#334155">channel_id</text>
+            <text x="62" y="156" font-size="15" fill="#334155">FK user_id -> users.user_id</text>
+            <text x="62" y="182" font-size="15" fill="#334155">role, is_online, joined_at</text>
+
+            <rect x="390" y="40" width="300" height="200" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+            <text x="412" y="74" font-size="21" font-weight="700" fill="#1d4ed8">channel_messages</text>
+            <text x="412" y="104" font-size="15" fill="#334155">PK message_id</text>
+            <text x="412" y="130" font-size="15" fill="#334155">channel_id</text>
+            <text x="412" y="156" font-size="15" fill="#334155">FK sender_id -> users.user_id</text>
+            <text x="412" y="182" font-size="15" fill="#334155">transfer_id, transfer_request_id</text>
+            <text x="412" y="208" font-size="15" fill="#334155">message_content, file fields</text>
+
+            <rect x="760" y="40" width="290" height="200" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="782" y="74" font-size="21" font-weight="700" fill="#0f766e">audit_logs</text>
+            <text x="782" y="104" font-size="15" fill="#334155">PK id</text>
+            <text x="782" y="130" font-size="15" fill="#334155">FK user_id -> users.user_id</text>
+            <text x="782" y="156" font-size="15" fill="#334155">action_type, target_id, target_type</text>
+            <text x="782" y="182" font-size="15" fill="#334155">details, status, created_at</text>
+
+            <rect x="1120" y="40" width="300" height="200" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="1142" y="74" font-size="21" font-weight="700" fill="#0f766e">system_backups</text>
+            <text x="1142" y="104" font-size="15" fill="#334155">PK backup_id</text>
+            <text x="1142" y="130" font-size="15" fill="#334155">created_by</text>
+            <text x="1142" y="156" font-size="15" fill="#334155">backup_mode, status</text>
+            <text x="1142" y="182" font-size="15" fill="#334155">backup_path, metadata</text>
+
+            <rect x="1120" y="290" width="300" height="180" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="1142" y="324" font-size="21" font-weight="700" fill="#0f766e">system_restore_runs</text>
+            <text x="1142" y="354" font-size="15" fill="#334155">PK restore_id</text>
+            <text x="1142" y="380" font-size="15" fill="#334155">FK backup_id -> system_backups</text>
+            <text x="1142" y="406" font-size="15" fill="#334155">triggered_by, restore_mode, status</text>
+            <text x="1142" y="432" font-size="15" fill="#334155">source_path, restored_at</text>
+
+            <rect x="390" y="320" width="300" height="180" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="412" y="354" font-size="21" font-weight="700" fill="#0f766e">system_alerts</text>
+            <text x="412" y="384" font-size="15" fill="#334155">PK id</text>
+            <text x="412" y="410" font-size="15" fill="#334155">fingerprint, severity, category</text>
+            <text x="412" y="436" font-size="15" fill="#334155">target_id, target_type, status</text>
+            <text x="412" y="462" font-size="15" fill="#334155">payload, first_seen_at, last_seen_at</text>
+
+            <rect x="760" y="320" width="300" height="180" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="782" y="354" font-size="21" font-weight="700" fill="#0f766e">system_health_snapshots</text>
+            <text x="782" y="384" font-size="15" fill="#334155">PK id</text>
+            <text x="782" y="410" font-size="15" fill="#334155">snapshot_type, overall_status</text>
+            <text x="782" y="436" font-size="15" fill="#334155">payload, created_at</text>
+
+            <rect x="760" y="560" width="300" height="120" rx="18" fill="#ccfbf1" stroke="#5eead4"/>
+            <text x="782" y="594" font-size="21" font-weight="700" fill="#0f766e">system_job_runs</text>
+            <text x="782" y="624" font-size="15" fill="#334155">PK id, job_name, status, details</text>
+            <text x="782" y="650" font-size="15" fill="#334155">started_at, finished_at</text>
+
+            <line x1="320" y1="130" x2="390" y2="130" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow3)"/>
+            <line x1="1270" y1="240" x2="1270" y2="290" stroke="#94a3b8" stroke-width="3" marker-end="url(#arrow3)"/>
+            <text x="1284" y="272" font-size="14" font-weight="700" fill="#475569">1:M</text>
+          </svg>
+        </div>
+        <div class="entity-grid">
+          <article class="entity-card">
+            <h3>P2P communication</h3>
+            <ul>
+              <li><code>channel_participants</code> tracks users inside negotiation channels.</li>
+              <li><code>channel_messages</code> stores the actual chat and attachments.</li>
+              <li><strong>M:N</strong> exists between users and channels through <code>channel_participants</code>.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>Audit and monitoring</h3>
+            <ul>
+              <li><code>audit_logs</code> stores action history by user and target.</li>
+              <li><code>system_alerts</code>, <code>system_health_snapshots</code>, and <code>system_job_runs</code> support monitoring.</li>
+            </ul>
+          </article>
+          <article class="entity-card">
+            <h3>Backup and restore</h3>
+            <ul>
+              <li><code>system_backups</code> stores backup metadata.</li>
+              <li><code>system_restore_runs</code> links restore operations back to the backup source.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="note">
+      <strong>Exact Diagram Type:</strong> This is a <strong>Logical Entity Relationship Diagram (Logical ERD)</strong> because it shows database entities, primary keys, foreign-key relationships, and major business data groupings of the system. It is logical rather than physical because it models data structure, not deployment hardware.
+      <br /><br />
+      <strong>Cardinality Summary:</strong> Your ERD includes <strong>1:1</strong>, <strong>1:M</strong>, and <strong>M:N</strong> relationships. Many-to-many relationships are implemented through junction entities such as <code>property_co_owners</code>, <code>property_co_owner_consent_votes</code>, and <code>channel_participants</code>.
+      <br /><br />
+      <strong>Note:</strong> notifications in your project are generated dynamically from workflow state and are not stored in a dedicated <code>notifications</code> table, so they are not shown as a standalone entity here.
+    </div>
+  </div>
+</body>
+</html>

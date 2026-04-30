@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PLRA System Architecture</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-soft: #eef4ff;
+      --line: #d7dfec;
+      --text: #16324f;
+      --muted: #5e728a;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --teal: #0f766e;
+      --teal-soft: #ccfbf1;
+      --amber: #b45309;
+      --amber-soft: #fef3c7;
+      --rose: #be123c;
+      --rose-soft: #ffe4e6;
+      --violet: #6d28d9;
+      --violet-soft: #ede9fe;
+      --shadow: 0 20px 45px rgba(22, 50, 79, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 30%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 40px 24px 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .hero-card,
+    .legend,
+    .section,
+    .flow-card {
+      background: var(--panel);
+      border: 1px solid rgba(215, 223, 236, 0.9);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #e8f0ff;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .hero-points {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      background: #f6f8fc;
+      border: 1px solid var(--line);
+    }
+
+    .legend {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .legend h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .swatch-users { background: var(--blue-soft); }
+    .swatch-ui { background: var(--teal-soft); }
+    .swatch-core { background: var(--amber-soft); }
+    .swatch-support { background: var(--violet-soft); }
+    .swatch-data { background: #e0f2fe; }
+    .swatch-chain { background: var(--rose-soft); }
+
+    .architecture {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      padding: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .section-tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-users { background: var(--blue-soft); color: var(--blue); }
+    .tag-ui { background: var(--teal-soft); color: var(--teal); }
+    .tag-core { background: var(--amber-soft); color: var(--amber); }
+    .tag-support { background: var(--violet-soft); color: var(--violet); }
+    .tag-data { background: #e0f2fe; color: #075985; }
+    .tag-chain { background: var(--rose-soft); color: var(--rose); }
+
+    .users-grid,
+    .module-grid,
+    .infra-grid,
+    .journey-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .users-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .user-card,
+    .module-card,
+    .infra-card,
+    .flow-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      padding: 18px;
+    }
+
+    .user-card {
+      background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    }
+
+    .user-icon,
+    .module-icon,
+    .infra-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .icon-blue { background: var(--blue-soft); color: var(--blue); }
+    .icon-teal { background: var(--teal-soft); color: var(--teal); }
+    .icon-amber { background: var(--amber-soft); color: var(--amber); }
+    .icon-violet { background: var(--violet-soft); color: var(--violet); }
+    .icon-rose { background: var(--rose-soft); color: var(--rose); }
+    .icon-sky { background: #e0f2fe; color: #0369a1; }
+
+    .card-title {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .card-text {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .frontend-shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .panel-strip {
+      background: linear-gradient(180deg, #dffaf5 0%, #f8fffd 100%);
+      border: 1px solid #b8ede3;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-pill {
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid #cae7df;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .app-window {
+      border: 1px solid #cae7df;
+      border-radius: 22px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .window-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #effaf7;
+      border-bottom: 1px solid #d8efe9;
+    }
+
+    .window-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      background: #a3e4d7;
+    }
+
+    .window-body {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+      min-height: 210px;
+    }
+
+    .ui-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ui-box {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #f8fbff;
+      padding: 14px;
+      min-height: 62px;
+    }
+
+    .ui-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .ui-box span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .modules-shell {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .module-group {
+      border-radius: var(--radius-md);
+      padding: 18px;
+      border: 1px solid var(--line);
+    }
+
+    .group-core {
+      background: linear-gradient(180deg, #fff8ec 0%, #ffffff 100%);
+      border-color: #f4dfb7;
+    }
+
+    .group-support {
+      background: linear-gradient(180deg, #f4f0ff 0%, #ffffff 100%);
+      border-color: #ddd3ff;
+    }
+
+    .module-group h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .module-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .module-card {
+      min-height: 138px;
+    }
+
+    .module-card .card-title {
+      font-size: 16px;
+    }
+
+    .infra-grid {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    .infra-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .chain-steps {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .chain-pill {
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: #fff3f5;
+      border: 1px solid #fecdd3;
+      color: var(--rose);
+    }
+
+    .journey-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .flow-card {
+      padding: 20px;
+    }
+
+    .flow-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      margin-bottom: 10px;
+      background: #e9f1ff;
+      color: var(--blue);
+    }
+
+    .flow-card h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .flow-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .arrow-stack {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin: 4px 0;
+      color: var(--muted);
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      padding: 18px 22px;
+      border-radius: var(--radius-md);
+      background: #10213a;
+      color: #d9e7ff;
+    }
+
+    .footer-note strong {
+      color: white;
+    }
+
+    @media (max-width: 1180px) {
+      .hero,
+      .frontend-shell,
+      .modules-shell,
+      .infra-grid,
+      .journey-grid,
+      .users-grid,
+      .window-body {
+        grid-template-columns: 1fr;
+      }
+
+      .module-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 20px 14px 36px;
+      }
+
+      .hero-card,
+      .legend,
+      .section {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-card">
+        <span class="eyebrow">PLRA Blockchain Land Records System</span>
+        <h1>Clear Architecture Design Diagram</h1>
+        <p>
+          This design uses a hybrid layered architecture. Citizens and government officers use React portals,
+          the business logic runs inside one modular Node.js/Express backend, PostgreSQL stores operational data,
+          and Hyperledger Fabric stores trusted registration and transfer ledger records.
+        </p>
+        <div class="hero-points">
+          <span class="chip">Frontend Portals</span>
+          <span class="chip">Modular Backend</span>
+          <span class="chip">PostgreSQL Database</span>
+          <span class="chip">Hyperledger Fabric</span>
+          <span class="chip">Monitoring + Recovery</span>
+        </div>
+      </div>
+
+      <aside class="legend">
+        <h2>Why This Design</h2>
+        <div class="legend-row"><span class="legend-swatch swatch-users"></span> Separate user roles make the workflow clear.</div>
+        <div class="legend-row"><span class="legend-swatch swatch-ui"></span> Frontend portals give role-based dashboards.</div>
+        <div class="legend-row"><span class="legend-swatch swatch-core"></span> Core modules handle registration, transfer, and blockchain.</div>
+        <div class="legend-row"><span class="legend-swatch swatch-support"></span> Supporting modules add succession, monitoring, analytics, and controls.</div>
+        <div class="legend-row"><span class="legend-swatch swatch-data"></span> PostgreSQL keeps fast relational and workflow data.</div>
+        <div class="legend-row"><span class="legend-swatch swatch-chain"></span> Fabric keeps trusted ledger verification for critical actions.</div>
+      </aside>
+    </section>
+
+    <div class="architecture">
+      <section class="section">
+        <div class="section-head">
+          <h2>1. User Entry Points</h2>
+          <span class="section-tag tag-users">Users</span>
+        </div>
+        <div class="users-grid">
+          <article class="user-card">
+            <div class="user-icon icon-blue">C</div>
+            <h3 class="card-title">Citizen</h3>
+            <p class="card-text">Registers, views owned properties, manages sale listings, transfer requests, succession, and notifications.</p>
+          </article>
+          <article class="user-card">
+            <div class="user-icon icon-blue">L</div>
+            <h3 class="card-title">LRO</h3>
+            <p class="card-text">Reviews registration cases, transfer voting cases, succession cases, and officer workflow alerts.</p>
+          </article>
+          <article class="user-card">
+            <div class="user-icon icon-blue">D</div>
+            <h3 class="card-title">DC</h3>
+            <p class="card-text">Performs final approval or rejection for registration, transfer, and succession workflows.</p>
+          </article>
+          <article class="user-card">
+            <div class="user-icon icon-blue">A</div>
+            <h3 class="card-title">Admin</h3>
+            <p class="card-text">Monitors health, views audits, handles recovery, restrictions, backups, integrity, and analytics.</p>
+          </article>
+        </div>
+      </section>
+
+      <div class="arrow-stack" aria-hidden="true">↓ ↓ ↓</div>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>2. Presentation Layer</h2>
+          <span class="section-tag tag-ui">Frontend</span>
+        </div>
+        <div class="frontend-shell">
+          <div class="panel-strip">
+            <div class="panel-pill">Citizen Portal</div>
+            <div class="panel-pill">LRO Portal</div>
+            <div class="panel-pill">DC Portal</div>
+            <div class="panel-pill">Admin Portal</div>
+            <div class="panel-pill">Realtime Chat / Notifications</div>
+          </div>
+
+          <div class="app-window">
+            <div class="window-bar">
+              <span class="window-dot"></span>
+              <span class="window-dot"></span>
+              <span class="window-dot"></span>
+            </div>
+            <div class="window-body">
+              <div class="ui-column">
+                <div class="ui-box">
+                  <strong>React Frontend</strong>
+                  <span>Role-based dashboards, forms, tables, approval queues, property views, analytics panels, and restriction notices.</span>
+                </div>
+                <div class="ui-box">
+                  <strong>API Communication</strong>
+                  <span>REST API calls for business workflows and WebSocket/Socket.IO for negotiation and realtime updates.</span>
+                </div>
+              </div>
+              <div class="ui-column">
+                <div class="ui-box">
+                  <strong>User Experience Goal</strong>
+                  <span>Let each actor clearly see what action is pending, what the current status is, and what happens next.</span>
+                </div>
+                <div class="ui-box">
+                  <strong>Examples</strong>
+                  <span>Registration queues, transfer inbox, citizen marketplace, succession planner, admin monitoring dashboard.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="arrow-stack" aria-hidden="true">↓ ↓ ↓</div>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>3. Application Layer</h2>
+          <span class="section-tag tag-core">Backend Modules</span>
+        </div>
+        <div class="modules-shell">
+          <div class="module-group group-core">
+            <h3>Core Modules</h3>
+            <div class="module-grid">
+              <article class="module-card">
+                <div class="module-icon icon-amber">R</div>
+                <h4 class="card-title">Property Registration Management</h4>
+                <p class="card-text">Property creation, LRO review, voting, DC approval, proof generation, and final registration visibility.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-amber">T</div>
+                <h4 class="card-title">Property Transfer Management</h4>
+                <p class="card-text">Listing, buyer request, negotiation, challan/payment, voting, DC approval, and ownership update.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-amber">B</div>
+                <h4 class="card-title">Blockchain Ledger Management</h4>
+                <p class="card-text">Fabric connectivity, chaincode interaction, proof queries, tamper checks, and ledger verification.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-teal">U</div>
+                <h4 class="card-title">User Management and Authentication</h4>
+                <p class="card-text">Registration, login, approval status, roles, profile access, password reset, and secured routes.</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="module-group group-support">
+            <h3>Supporting Modules</h3>
+            <div class="module-grid">
+              <article class="module-card">
+                <div class="module-icon icon-violet">O</div>
+                <h4 class="card-title">Ownership History</h4>
+                <p class="card-text">Tracks previous and current owners over time for each property.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">N</div>
+                <h4 class="card-title">Notification Management</h4>
+                <p class="card-text">Citizen, LRO, DC, and admin alerts for workflow events and pending actions.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">M</div>
+                <h4 class="card-title">Marketplace and Negotiation</h4>
+                <p class="card-text">Seller listings, buyer requests, district filtering, negotiation channels, and summaries.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">S</div>
+                <h4 class="card-title">Succession Management</h4>
+                <p class="card-text">Family members, inheritance rules, succession requests, heir shares, and approval flow.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">J</div>
+                <h4 class="card-title">Joint Ownership</h4>
+                <p class="card-text">Co-owner shares, joint property state, and protection from solo transfer actions.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">P</div>
+                <h4 class="card-title">Property Restriction Management</h4>
+                <p class="card-text">Freeze, dispute hold, mortgage, lien, encumbrance, and transfer blocking rules.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">A</div>
+                <h4 class="card-title">Audit, Recovery, Monitoring</h4>
+                <p class="card-text">Audit logs, repair tools, migrations, backup/restore, health checks, and alerts.</p>
+              </article>
+              <article class="module-card">
+                <div class="module-icon icon-violet">R</div>
+                <h4 class="card-title">Analytics and Reporting</h4>
+                <p class="card-text">Administrative summaries, succession analytics, trend reporting, and printable reports.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="arrow-stack" aria-hidden="true">↓ ↓ ↓</div>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>4. Data and Blockchain Layers</h2>
+          <span class="section-tag tag-chain">Trust + Storage</span>
+        </div>
+        <div class="infra-grid">
+          <div class="infra-stack">
+            <article class="infra-card">
+              <div class="infra-icon icon-sky">DB</div>
+              <h3 class="card-title">PostgreSQL Database</h3>
+              <p class="card-text">
+                Stores operational data including users, properties, transfers, succession, co-owners, notifications,
+                audit logs, backups, repair state, and analytics data.
+              </p>
+            </article>
+            <article class="infra-card">
+              <div class="infra-icon icon-teal">RT</div>
+              <h3 class="card-title">Realtime Layer</h3>
+              <p class="card-text">
+                Socket.IO powers negotiation chat, live updates, and fast communication between buyers, sellers, and dashboards.
+              </p>
+            </article>
+          </div>
+
+          <article class="infra-card">
+            <div class="infra-icon icon-rose">BC</div>
+            <h3 class="card-title">Hyperledger Fabric Blockchain</h3>
+            <p class="card-text">
+              Stores trusted registration and transfer ledger operations through the Fabric gateway and channel integration.
+            </p>
+            <div class="chain-steps">
+              <span class="chain-pill">Gateway Integration</span>
+              <span class="chain-pill">Channel: landregistry</span>
+              <span class="chain-pill">Chaincode: voting</span>
+              <span class="chain-pill">Chaincode: land-agreement</span>
+              <span class="chain-pill">Peers + Orderers + Ledger</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>5. What Happens in the System</h2>
+          <span class="section-tag tag-support">Workflow View</span>
+        </div>
+        <div class="journey-grid">
+          <article class="flow-card">
+            <div class="flow-number">1</div>
+            <h3>User starts action</h3>
+            <p>Citizen, LRO, DC, or Admin opens the frontend portal and performs an action like registration, transfer, succession, or monitoring.</p>
+          </article>
+          <article class="flow-card">
+            <div class="flow-number">2</div>
+            <h3>Backend applies business rules</h3>
+            <p>The Node.js backend checks role permissions, validates the workflow, updates the right module, and records the new state in PostgreSQL.</p>
+          </article>
+          <article class="flow-card">
+            <div class="flow-number">3</div>
+            <h3>Trusted record is committed</h3>
+            <p>Critical registration and transfer outcomes are pushed to Hyperledger Fabric for trusted ledger proof and later verification.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer-note">
+      <strong>Design Choice:</strong> This is a hybrid layered architecture with a modular monolith backend. It fits your project because one backend coordinates many land-record workflows, while PostgreSQL handles application data and Hyperledger Fabric handles trusted blockchain proof.
+    </div>
+  </div>
+</body>
+</html>
