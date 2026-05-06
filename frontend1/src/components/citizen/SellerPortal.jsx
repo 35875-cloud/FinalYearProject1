@@ -298,7 +298,9 @@ const ListingRow = ({ index, listing, onList, onUnlist }) => {
   const frozen = Boolean(listing.is_frozen);
   const coOwned = false;
   const encumbered = Boolean(listing.is_encumbered);
-  const saleBlocked = frozen || coOwned || encumbered;
+  const activeTransfer = Boolean(listing.active_transfer_id);
+  const saleBlocked = frozen || coOwned || encumbered || activeTransfer;
+  const unlistBlocked = frozen || coOwned || encumbered;
 
   return (
     <div style={{
@@ -386,6 +388,18 @@ const ListingRow = ({ index, listing, onList, onUnlist }) => {
               Encumbered
             </span>
           )}
+          {activeTransfer && (
+            <span style={{
+              background: "#FEE2E2",
+              color: "#991B1B",
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: ".78rem",
+              fontWeight: 700,
+            }}>
+              Transfer Active
+            </span>
+          )}
           {listing.pending_requests > 0 && (
             <span style={{
               background: "#FFFBEB",
@@ -406,6 +420,8 @@ const ListingRow = ({ index, listing, onList, onUnlist }) => {
             ? listing.co_owner_summary || "Marketplace locked until shared-owner consent workflow is available"
             : encumbered
             ? listing.encumbrance_summary || "Marketplace locked by active encumbrance"
+            : activeTransfer
+            ? `Marketplace hidden while transfer ${listing.active_transfer_id} is ${listing.active_transfer_status || "active"}`
             : listing.is_for_sale
             ? `PKR ${fmt(listing.asking_price || 0)}`
             : "Not visible on marketplace"}
@@ -433,21 +449,21 @@ const ListingRow = ({ index, listing, onList, onUnlist }) => {
           }}
         >
           <i className={`fas ${saleBlocked ? "fa-lock" : listing.is_for_sale ? "fa-pen" : "fa-store"}`} />
-          {frozen ? "Hold Active" : coOwned ? "Co-Owners Active" : encumbered ? "Encumbrance Active" : listing.is_for_sale ? "Update Price" : "List on Market"}
+          {frozen ? "Hold Active" : coOwned ? "Co-Owners Active" : encumbered ? "Encumbrance Active" : activeTransfer ? "Transfer Active" : listing.is_for_sale ? "Update Price" : "List on Market"}
         </button>
         {listing.is_for_sale && (
           <button
             onClick={() => onUnlist(listing)}
-            disabled={saleBlocked}
+            disabled={unlistBlocked}
             style={{
               padding: "9px 14px",
               borderRadius: 10,
               border: `1.5px solid ${T.border}`,
               background: "#fff",
-              color: saleBlocked ? "#94A3B8" : T.text2,
+              color: unlistBlocked ? "#94A3B8" : T.text2,
               fontWeight: 700,
               fontSize: ".88rem",
-              cursor: saleBlocked ? "not-allowed" : "pointer",
+              cursor: unlistBlocked ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -514,9 +530,11 @@ const SellerPortal = () => {
     try {
       const [listingsRes, requestsRes, ownedRes] = await Promise.all([
         fetch(`${BASE}/api/marketplace/seller/listings`, {
+          cache: "no-store",
           headers: { Authorization: `Bearer ${authToken}` },
         }),
         fetch(`${BASE}/api/marketplace/seller/requests`, {
+          cache: "no-store",
           headers: { Authorization: `Bearer ${authToken}` },
         }),
         fetch(`${BASE}/api/properties/my-properties`, {
@@ -564,6 +582,8 @@ const SellerPortal = () => {
               is_encumbered: Boolean(item.is_encumbered),
               active_encumbrance_count: item.active_encumbrance_count || 0,
               encumbrance_summary: item.encumbrance_summary || null,
+              active_transfer_id: null,
+              active_transfer_status: null,
               asking_price: item.asking_price || null,
               listed_at: item.listed_at || item.created_at,
               pending_requests: 0,
@@ -594,6 +614,7 @@ const SellerPortal = () => {
     try {
       const response = await fetch(`${BASE}/api/marketplace/listings`, {
         method: "POST",
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
@@ -625,6 +646,7 @@ const SellerPortal = () => {
     try {
       const response = await fetch(`${BASE}/api/marketplace/listings`, {
         method: "POST",
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",

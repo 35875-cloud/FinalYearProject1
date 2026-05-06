@@ -17,6 +17,7 @@ const LOGIN_2FA_CHALLENGE_MINUTES = parseInt(
   10
 );
 
+
 // =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
@@ -384,7 +385,7 @@ async function issueLoginOtpChallenge({
     routePath: req.originalUrl,
     httpMethod: req.method,
     status: "SUCCESS",
-  }).catch(() => {});
+  }).catch(() => { });
 
   const isDevelopment = process.env.NODE_ENV !== "production";
   return {
@@ -422,7 +423,7 @@ async function issueLoginTotpChallenge({
     routePath: req.originalUrl,
     httpMethod: req.method,
     status: "SUCCESS",
-  }).catch(() => {});
+  }).catch(() => { });
 
   return {
     challengeToken: generateLoginChallengeToken(user.user_id, user.role, normalizedEmail),
@@ -431,11 +432,11 @@ async function issueLoginTotpChallenge({
     setupRequired,
     ...(setupRequired && manualEntryKey
       ? {
-          manualEntryKey,
-          issuer: LOGIN_TOTP_ISSUER,
-          accountLabel: normalizedEmail,
-          otpauthUrl: createOtpAuthUrl(normalizedEmail, manualEntryKey),
-        }
+        manualEntryKey,
+        issuer: LOGIN_TOTP_ISSUER,
+        accountLabel: normalizedEmail,
+        otpauthUrl: createOtpAuthUrl(normalizedEmail, manualEntryKey),
+      }
       : {}),
   };
 }
@@ -501,7 +502,7 @@ async function finalizeSuccessfulLogin({ user, email, ipAddress, req, loginIdent
     routePath: req.originalUrl,
     httpMethod: req.method,
     status: "SUCCESS",
-  }).catch(() => {});
+  }).catch(() => { });
 
   console.log("\n" + "=".repeat(60));
   console.log("LOGIN SUCCESSFUL");
@@ -532,9 +533,9 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: "Access denied. No token provided." 
+    return res.status(401).json({
+      success: false,
+      message: "Access denied. No token provided."
     });
   }
 
@@ -543,9 +544,9 @@ function authenticateToken(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ 
-      success: false, 
-      message: "Invalid or expired token" 
+    return res.status(403).json({
+      success: false,
+      message: "Invalid or expired token"
     });
   }
 }
@@ -563,7 +564,7 @@ router.post("/register-citizen", async (req, res) => {
     const father_name = fatherName ? fatherName.trim() : null;
     const father_cnic = fatherCnic ? fatherCnic.replace(/\D/g, "") : null;
     const normalizedGender = normalizeGender(gender);
-    
+
     // Debug log
     console.log("✅ Processing father_name:", father_name);
     console.log("✅ Processing father_cnic:", father_cnic);
@@ -572,7 +573,7 @@ router.post("/register-citizen", async (req, res) => {
     if (!name || !cnic || !email || !mobile || !password || !role || !normalizedGender) {
       return res.json({ success: false, message: "All fields are required" });
     }
-    
+
     // Log fatherName for debugging
     console.log("📝 Registration received - Father Name:", fatherName);
 
@@ -621,9 +622,9 @@ router.post("/register-citizen", async (req, res) => {
 
     // ✅ DEVELOPMENT MODE: Return OTP in response for auto-fill
     const isDevelopment = process.env.NODE_ENV !== 'production';
-    
-    return res.json({ 
-      success: true, 
+
+    return res.json({
+      success: true,
       message: "Verification code generated",
       ...(isDevelopment && { otp: otp }) // Only include OTP in development
     });
@@ -705,10 +706,10 @@ router.post("/verify-otp", async (req, res) => {
 
     // ✅ CRITICAL: Determine approval status based on role
     const roleUpper = role.toUpperCase();
-    
+
     // These roles REQUIRE admin approval
     const rolesNeedingApproval = [
-      'LAND RECORD OFFICER', 
+      'LAND RECORD OFFICER',
       'LRO',
       'DC',
       'DEPUTY COMMISSIONER',
@@ -716,7 +717,7 @@ router.post("/verify-otp", async (req, res) => {
     ];
 
     const needsApproval = rolesNeedingApproval.includes(roleUpper);
-    
+
     // Set approval status and active status
     const approvalStatus = needsApproval ? 'PENDING' : 'APPROVED';
     const isActive = needsApproval ? false : true;
@@ -734,19 +735,19 @@ router.post("/verify-otp", async (req, res) => {
 
     // Insert user with proper approval status
     // Add requested_at to your main user insert
-await pool.query(
-  `INSERT INTO users (
+    await pool.query(
+      `INSERT INTO users (
     id, user_id, role, name, cnic, email, mobile, password_hash, 
     public_key, encrypted_private_key, blockchain_address, 
     approval_status, is_active, father_name, father_cnic, gender, requested_at
   ) 
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
-  [
-    id, userID, roleUpper, name, cnic, email, mobile, hash, 
-    publicKey, encryptedPrivateKey, blockchainAddress, 
-    approvalStatus, isActive, father_name, father_cnic, normalizedGender
-  ]
-);
+      [
+        id, userID, roleUpper, name, cnic, email, mobile, hash,
+        publicKey, encryptedPrivateKey, blockchainAddress,
+        approvalStatus, isActive, father_name, father_cnic, normalizedGender
+      ]
+    );
 
     // Insert blockchain identity
     await pool.query(
@@ -775,8 +776,8 @@ await pool.query(
     // Send appropriate email based on approval status
     if (needsApproval) {
       await deliverLocalNotice(
-        email, 
-        "Registration Pending Approval", 
+        email,
+        "Registration Pending Approval",
         `Dear ${name},
 
 Thank you for registering as ${role}.
@@ -810,8 +811,8 @@ Please review and approve/reject this registration in the admin panel.`
     } else {
       // Citizen registration - auto-approved
       await deliverLocalNotice(
-        email, 
-        "Welcome to Blockchain Land Records!", 
+        email,
+        "Welcome to Blockchain Land Records!",
         `Welcome ${name}!
 
 Your account has been successfully created and is ready to use.
@@ -828,8 +829,8 @@ Blockchain Land Records Team`
 
     return res.json({
       success: true,
-      message: needsApproval 
-        ? "Registration submitted. Pending admin approval." 
+      message: needsApproval
+        ? "Registration submitted. Pending admin approval."
         : "User registered successfully",
       userID,
       blockchainAddress,
@@ -847,9 +848,9 @@ Blockchain Land Records Team`
       });
     }
 
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1030,7 +1031,7 @@ router.post("/verify-login-otp", async (req, res) => {
         routePath: req.originalUrl,
         httpMethod: req.method,
         status: "FAILED",
-      }).catch(() => {});
+      }).catch(() => { });
 
       return res.json({
         success: false,
@@ -1068,7 +1069,7 @@ router.post("/verify-login-otp", async (req, res) => {
         routePath: req.originalUrl,
         httpMethod: req.method,
         status: "SUCCESS",
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     const loginResult = await finalizeSuccessfulLogin({
@@ -1180,9 +1181,9 @@ router.post("/login-legacy-fallback", async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || "unknown";
 
     if (!identifier || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "User ID or CNIC and password required" 
+      return res.status(400).json({
+        success: false,
+        message: "User ID or CNIC and password required"
       });
     }
 
@@ -1190,9 +1191,9 @@ router.post("/login-legacy-fallback", async (req, res) => {
 
     if (!user) {
       await recordLoginAttempt(identifier, ipAddress, false, "User not found");
-      return res.json({ 
-        success: false, 
-        message: "Invalid login ID or password" 
+      return res.json({
+        success: false,
+        message: "Invalid login ID or password"
       });
     }
 
@@ -1229,7 +1230,7 @@ router.post("/login-legacy-fallback", async (req, res) => {
 
     // ✅ CRITICAL: Check approval status for restricted roles
     const restrictedRoles = [
-      'LAND RECORD OFFICER', 
+      'LAND RECORD OFFICER',
       'LRO',
       'DC',
       'DEPUTY COMMISSIONER',
@@ -1239,21 +1240,21 @@ router.post("/login-legacy-fallback", async (req, res) => {
     if (restrictedRoles.includes(user.role.toUpperCase())) {
       // Check if pending approval
       if (user.approval_status === 'PENDING') {
-          await recordLoginAttempt(loginEmail, ipAddress, false, "Account pending approval");
+        await recordLoginAttempt(loginEmail, ipAddress, false, "Account pending approval");
         return res.json({
           success: false,
           message: "Your account is pending admin approval. Please wait for approval confirmation email.",
           reason: "PENDING_APPROVAL"
         });
       }
-      
+
       // Check if rejected
       if (user.approval_status === 'REJECTED') {
-          await recordLoginAttempt(loginEmail, ipAddress, false, "Account rejected");
+        await recordLoginAttempt(loginEmail, ipAddress, false, "Account rejected");
         return res.json({
           success: false,
-          message: user.rejection_reason 
-            ? `Your registration was not approved. Reason: ${user.rejection_reason}` 
+          message: user.rejection_reason
+            ? `Your registration was not approved. Reason: ${user.rejection_reason}`
             : "Your account registration was not approved. Please contact support.",
           reason: "ACCOUNT_REJECTED"
         });
@@ -1261,10 +1262,10 @@ router.post("/login-legacy-fallback", async (req, res) => {
 
       // Check if account is not active even after approval
       if (!user.is_active) {
-          await recordLoginAttempt(loginEmail, ipAddress, false, "Account inactive");
-        return res.json({ 
-          success: false, 
-          message: "Your account is currently inactive. Please contact administrator." 
+        await recordLoginAttempt(loginEmail, ipAddress, false, "Account inactive");
+        return res.json({
+          success: false,
+          message: "Your account is currently inactive. Please contact administrator."
         });
       }
     }
@@ -1273,22 +1274,22 @@ router.post("/login-legacy-fallback", async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
-        await handleFailedLogin(loginEmail, ipAddress);
-        await recordLoginAttempt(loginEmail, ipAddress, false, "Invalid password");
-        return res.json({ 
-          success: false, 
-          message: "Invalid login ID or password" 
-        });
-      }
+      await handleFailedLogin(loginEmail, ipAddress);
+      await recordLoginAttempt(loginEmail, ipAddress, false, "Invalid password");
+      return res.json({
+        success: false,
+        message: "Invalid login ID or password"
+      });
+    }
 
     // Reset failed login attempts and update last login
     await pool.query(
-        "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE user_id = $1",
-        [user.user_id]
-      );
+      "UPDATE users SET failed_login_attempts = 0, last_login = NOW() WHERE user_id = $1",
+      [user.user_id]
+    );
 
-      // Generate JWT token
-      const token = generateJWT(user.user_id, user.role, user.email || "");
+    // Generate JWT token
+    const token = generateJWT(user.user_id, user.role, user.email || "");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Store JWT session
@@ -1299,16 +1300,16 @@ router.post("/login-legacy-fallback", async (req, res) => {
     );
 
     // Record successful login
-      await recordLoginAttempt(loginEmail, ipAddress, true);
+    await recordLoginAttempt(loginEmail, ipAddress, true);
     await auditService.writeLog({
       userId: user.user_id,
       actionType: "LOGIN_SUCCESS",
       targetId: user.user_id,
       targetType: "USER",
       details: {
-          loginIdentifier: identifier,
-          email: user.email || null,
-          cnic: user.cnic || null,
+        loginIdentifier: identifier,
+        email: user.email || null,
+        cnic: user.cnic || null,
         role: user.role,
         approvalStatus: user.approval_status,
       },
@@ -1316,7 +1317,7 @@ router.post("/login-legacy-fallback", async (req, res) => {
       routePath: req.originalUrl,
       httpMethod: req.method,
       status: "SUCCESS",
-    }).catch(() => {});
+    }).catch(() => { });
 
     console.log("\n" + "=".repeat(60));
     console.log("✅  LOGIN SUCCESSFUL");
@@ -1339,9 +1340,9 @@ router.post("/login-legacy-fallback", async (req, res) => {
 
   } catch (err) {
     console.error("❌ Login error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1584,21 +1585,21 @@ router.post("/logout", async (req, res) => {
 router.get("/pending-approvals", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Admin only." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
       });
     }
 
     const pendingUsers = await pool.query(
-  `SELECT 
+      `SELECT 
     user_id, name, email, cnic, mobile, role,
     created_at, requested_at, approval_status
    FROM users
    WHERE approval_status = 'PENDING'
    AND role IN ('LAND RECORD OFFICER', 'LRO', 'DC', 'ADMIN')
    ORDER BY requested_at DESC`
-);
+    );
 
     return res.json({
       success: true,
@@ -1608,9 +1609,9 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Get pending approvals error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1619,18 +1620,18 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
 router.post("/approve-user", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Admin only." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
       });
     }
 
     const { userId, notes } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "User ID required" 
+      return res.status(400).json({
+        success: false,
+        message: "User ID required"
       });
     }
 
@@ -1661,7 +1662,7 @@ router.post("/approve-user", authenticateToken, async (req, res) => {
 
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
-      
+
       await deliverLocalNotice(
         user.email,
         "Account Approved - Blockchain Land Records",
@@ -1682,9 +1683,9 @@ router.post("/approve-user", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Approve user error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1693,18 +1694,18 @@ router.post("/approve-user", authenticateToken, async (req, res) => {
 router.post("/reject-user", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Admin only." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
       });
     }
 
     const { userId, reason } = req.body;
 
     if (!userId || !reason) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "User ID and rejection reason required" 
+      return res.status(400).json({
+        success: false,
+        message: "User ID and rejection reason required"
       });
     }
 
@@ -1736,7 +1737,7 @@ router.post("/reject-user", authenticateToken, async (req, res) => {
 
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
-      
+
       await deliverLocalNotice(
         user.email,
         "Account Registration Update - Blockchain Land Records",
@@ -1757,9 +1758,9 @@ router.post("/reject-user", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Reject user error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1880,9 +1881,9 @@ router.patch("/profile", authenticateToken, async (req, res) => {
 router.get("/all-registrations", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Admin only." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
       });
     }
 
@@ -1948,9 +1949,9 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Get all registrations error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });
@@ -1966,9 +1967,9 @@ router.get("/all-registrations", authenticateToken, async (req, res) => {
 router.get("/pending-approvals", authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Admin only." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only."
       });
     }
 
@@ -2011,9 +2012,9 @@ router.get("/pending-approvals", authenticateToken, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Get pending approvals error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error: " + err.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
     });
   }
 });

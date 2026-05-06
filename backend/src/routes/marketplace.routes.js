@@ -10,6 +10,26 @@ import propertyFreezeService from "../services/propertyFreeze.service.js";
 const router = express.Router();
 
 let schemaReady = false;
+const TERMINAL_TRANSFER_STATUSES = [
+  "APPROVED",
+  "REJECTED",
+  "CANCELLED",
+  "EXPIRED",
+  "FINALIZED",
+  "COMPLETED",
+];
+
+function activeTransferPredicate(alias = "tr") {
+  return `UPPER(COALESCE(${alias}.status, '')) NOT IN (${TERMINAL_TRANSFER_STATUSES.map((status) => `'${status}'`).join(", ")})`;
+}
+
+function preventMarketplaceCaching(_req, res, next) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+  next();
+}
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -167,6 +187,7 @@ async function createTransferFromAcceptedRequest(client, requestRow) {
   return { transferId, channelId, transferAmount, totalAmount };
 }
 
+router.use(preventMarketplaceCaching);
 router.use(authenticateToken, requireCitizen);
 
 router.get("/districts", async (req, res) => {
@@ -206,10 +227,7 @@ router.get("/listings", async (req, res) => {
         SELECT 1
         FROM transfer_requests tr_active
         WHERE tr_active.property_id = p.property_id
-          AND COALESCE(tr_active.status, '') NOT IN (
-            'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED',
-            'VOTING', 'READY_FOR_DC', 'FINALIZED'
-          )
+          AND ${activeTransferPredicate("tr_active")}
       )`,
     ];
 
@@ -320,10 +338,20 @@ router.get("/seller/listings", async (req, res) => {
           p.freeze_reference_no,
           p.freeze_notes,
           p.freeze_started_at,
+          active_transfer.transfer_id AS active_transfer_id,
+          active_transfer.status AS active_transfer_status,
           COALESCE(req_stats.pending_requests, 0) AS pending_requests,
           COALESCE(req_stats.accepted_requests, 0) AS accepted_requests,
           COALESCE(req_stats.rejected_requests, 0) AS rejected_requests
         FROM properties p
+        LEFT JOIN LATERAL (
+          SELECT tr.transfer_id, tr.status
+          FROM transfer_requests tr
+          WHERE tr.property_id = p.property_id
+            AND ${activeTransferPredicate("tr")}
+          ORDER BY tr.created_at DESC
+          LIMIT 1
+        ) active_transfer ON TRUE
         LEFT JOIN (
           SELECT
             property_id,
@@ -397,6 +425,26 @@ router.post("/listings", async (req, res) => {
       return res.status(409).json({
         success: false,
         message: `Property has an active encumbrance${propertyResult.rows[0].encumbrance_summary ? `: ${propertyResult.rows[0].encumbrance_summary}` : ""}`,
+      });
+    }
+
+    const activeTransfer = await pool.query(
+      `
+        SELECT transfer_id, status
+        FROM transfer_requests tr
+        WHERE tr.property_id = $1
+          AND ${activeTransferPredicate("tr")}
+        ORDER BY tr.created_at DESC
+        LIMIT 1
+      `,
+      [propertyId]
+    );
+
+    if (activeTransfer.rows.length > 0 && String(action).toUpperCase() !== "UNLIST") {
+      const transfer = activeTransfer.rows[0];
+      return res.status(409).json({
+        success: false,
+        message: `Property cannot be listed while transfer ${transfer.transfer_id} is ${transfer.status || "active"}. Complete or cancel that transfer first.`,
       });
     }
 
@@ -646,9 +694,9 @@ router.post("/request/:requestId/accept", async (req, res) => {
     const activeTransfer = await client.query(
       `
         SELECT transfer_id
-        FROM transfer_requests
-        WHERE property_id = $1
-          AND COALESCE(status, '') NOT IN ('APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED')
+        FROM transfer_requests tr
+        WHERE tr.property_id = $1
+          AND ${activeTransferPredicate("tr")}
         LIMIT 1
       `,
       [requestRow.property_id]

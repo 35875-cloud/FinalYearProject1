@@ -153,8 +153,9 @@ class FabricClientCompatibility {
         const parsed = JSON.parse(raw);
         const explicitHostOverride = this.getConfiguredHostOverride();
         const resolvedHostOverride = explicitHostOverride || await this.resolveHostOverride();
+        const profileHasLoopback = profileUsesLoopback(parsed);
         const effectiveHostOverride =
-          explicitHostOverride || !profileUsesLoopback(parsed)
+          explicitHostOverride || profileHasLoopback
             ? resolvedHostOverride
             : null;
 

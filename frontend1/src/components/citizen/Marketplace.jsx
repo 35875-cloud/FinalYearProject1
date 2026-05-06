@@ -311,6 +311,7 @@ const PropertyMarketplace = () => {
   const api = useCallback((path, options = {}) => (
     fetch(`${BASE}${path}`, {
       ...options,
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${authToken}`,
         'Content-Type': 'application/json',

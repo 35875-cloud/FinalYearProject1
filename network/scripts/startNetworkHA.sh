@@ -16,6 +16,7 @@ ${COMPOSE_CMD} \
   -f "${NETWORK_DIR}/docker-compose.fabric.yml" \
   -f "${NETWORK_DIR}/docker-compose.fabric-orderer-ha.yml" \
   --profile chaincode \
+  --profile transfer-chaincode \
   up -d
 
 echo "Waiting for services to initialize..."

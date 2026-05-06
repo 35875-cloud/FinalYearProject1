@@ -260,8 +260,9 @@ class FabricGatewayService {
     const profile = JSON.parse(raw);
     const explicitHostOverride = this.getConfiguredHostOverride();
     const resolvedHostOverride = explicitHostOverride || await this.resolveHostOverride();
+    const profileHasLoopback = profileUsesLoopback(profile);
     const hostOverride =
-      explicitHostOverride || !profileUsesLoopback(profile)
+      explicitHostOverride || profileHasLoopback
         ? resolvedHostOverride
         : null;
 
